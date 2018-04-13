@@ -50,21 +50,24 @@ NS_LOG_COMPONENT_DEFINE ("Isa100HelperLocations");
 namespace ns3 {
 
 void
-Isa100Helper::SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc)
+Isa100Helper::SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc, vector<bool> allNodesFailedStatus) //Rajith added vector<bool> allNodesFailedStatusr
 {
-	for (uint32_t i = 0; i < dc.GetN(); i++)
+        int j = 0;	
+        for (uint32_t i = 0; i < allNodesFailedStatus.size(); i++) // Rajith change dc.GetN() to 
 	{
 		Ptr<ConstantPositionMobilityModel> senderMobility = CreateObject<ConstantPositionMobilityModel> ();
 		Vector v=positionAlloc->GetNext();
-		senderMobility->SetPosition (v); // Server
+                
+                if(!allNodesFailedStatus[i]){
+		        senderMobility->SetPosition (v); // Server
 
-		Ptr<NetDevice> baseDevice = m_devices.Get(i);
-
-		Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
-		netDevice->GetPhy ()->SetMobility (senderMobility);
+		        Ptr<NetDevice> baseDevice = m_devices.Get(j); //Rajith i changed to j
+		        Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
+		        netDevice->GetPhy ()->SetMobility (senderMobility);
+                        j++;
+                }
 	}
 }
-
 
 void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, Vector sinkLocation)
 {
@@ -116,12 +119,10 @@ void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> pos
       count++;
     } while (conflict);
 
+    //NS_LOG_UNCOND("Rajith Locations in GenerateLocationsFixedNumNodes: "<<i<<", "<<x<<", "<<y);
     // At this point valid x,y coordinates have been generated
     checkDist.push_back(Vector(x,y,0));
     positionAlloc->Add(Vector(x,y,0));
-
-
-
 
     m_locationTrace(i,x,y,0.0);
   }

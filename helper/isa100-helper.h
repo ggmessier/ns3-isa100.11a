@@ -184,7 +184,7 @@ public:
    * @param dc node container.
    * @param positionAlloc A list containing the node position vectors.
    */
-  void SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc);
+  void SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc, vector<bool> allNodesFailedStatus); //Rajith 0408
 
   /** Generate random positions for a fixed number of nodes in a square coverage area.
    * - The result of this function is stored in positionAlloc and not directly in the nodes.
