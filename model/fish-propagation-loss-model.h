@@ -4,6 +4,7 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/position-allocator.h"
 #include "ns3/boolean.h"
+#include "ns3/vector.h" //Rajith added 0408
 
 namespace ns3 {
 
@@ -144,7 +145,7 @@ public:
   FishLogDistanceLossModel ();
 
   // Using this constructor implies a stationary network (shadowing doesn't change)
-  FishLogDistanceLossModel (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd);
+  FishLogDistanceLossModel (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd,std::vector<bool> allNodesFailedStatus);
 
   /** Set the node positions and generate shadowing values for them.
    *
@@ -152,8 +153,7 @@ public:
    * @param numNodes Number of nodes.
    * @param shadowingStd Shadowing standard deviation.
    */
-  void GenerateNewShadowingValues (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd);
-
+  void GenerateNewShadowingValues (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd, std::vector<bool> allNodesFailedStatus); //Rajith added)
 
 
 

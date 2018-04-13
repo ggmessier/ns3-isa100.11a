@@ -129,10 +129,11 @@ void Isa100Battery::DecrementEnergy(string category, double amount)
   m_energyConsumptionTrace(addr, category, amount, m_energy, m_initEnergy);
 
   NS_LOG_LOGIC(Simulator::Now().GetSeconds() << "s: Node " << addr << " has consumed " << amount << "uJ in category " << category << " (Total Battery: " << m_energy << ")");
+  //NS_LOG_UNCOND("Battery energy at depletion: "<<m_energy);// Rajith 0409
 
 	if(m_energy <= 0){
 		m_energy = 0;
-	  m_energyConsumptionTrace(addr, "DEPLETION", amount, m_energy, m_initEnergy);
+	        m_energyConsumptionTrace(addr, "DEPLETION", amount, m_energy, m_initEnergy);
 
 		if(!m_depletionCallback.IsNull()){
 			m_depletionCallback(addr);

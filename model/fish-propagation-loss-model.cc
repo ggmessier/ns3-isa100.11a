@@ -24,6 +24,7 @@
 #include "ns3/log.h"
 #include "ns3/mobility-model.h"
 #include "ns3/double.h"
+#include "ns3/vector.h" //Rajith added 0408
 
 namespace ns3 {
 
@@ -216,12 +217,12 @@ FishLogDistanceLossModel::FishLogDistanceLossModel ()
   m_isStationary = false;
 }
 
-FishLogDistanceLossModel::FishLogDistanceLossModel (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd)
+FishLogDistanceLossModel::FishLogDistanceLossModel (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd, std::vector<bool> allNodesFailedStatus) //Rajith added
 {
-	GenerateNewShadowingValues(positionAlloc,numNodes,shadowingStd);
+	GenerateNewShadowingValues(positionAlloc,numNodes,shadowingStd,allNodesFailedStatus);
 }
 
-void FishLogDistanceLossModel::GenerateNewShadowingValues (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd)
+void FishLogDistanceLossModel::GenerateNewShadowingValues (Ptr<ListPositionAllocator> positionAlloc, uint16_t numNodes, double shadowingStd, std::vector<bool> allNodesFailedStatus) //Rajith added vector<bool> allNodesFailedStatus
 {
 	NS_LOG_FUNCTION(this);
 
@@ -232,12 +233,14 @@ void FishLogDistanceLossModel::GenerateNewShadowingValues (Ptr<ListPositionAlloc
 
   // Create position vector to index map
   std::vector<Vector> posVect;
-  for (uint16_t i = 0; i < numNodes; i++)
+  for (uint16_t i = 0; i < allNodesFailedStatus.size(); i++)
   {
-    posVect.push_back(positionAlloc->GetNext());
+    if(!allNodesFailedStatus[i])   posVect.push_back(positionAlloc->GetNext());
+    else  positionAlloc->GetNext();
+
   }
 
-  m_shadowingLookup.clear();
+   m_shadowingLookup.clear();
 
   // Generate the lookup map for shadowing values
   for (uint16_t i = 0; i < numNodes; i++)
@@ -301,7 +304,7 @@ FishLogDistanceLossModel::DoCalcRxPower (double txPowerDbm,
     key << (int32_t)a->GetPosition().x << (int32_t)a->GetPosition().y << (int32_t)a->GetPosition().z
         << (int32_t)b->GetPosition().x << (int32_t)b->GetPosition().y << (int32_t)b->GetPosition().z;
 
-
+    //NS_LOG_UNCOND("Rajith Shadowing key: "<<key.str()); //Rajith 0408
     std::map<std::string, double>::const_iterator it = m_shadowingLookup.find(key.str());
     NS_ASSERT_MSG(it != m_shadowingLookup.end(), "Prop Model could not find shadowing value!");
     shadowingDb = it->second;
