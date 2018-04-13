@@ -16,6 +16,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  *
  * Author:   Michael Herrmann <mjherrma@ucalgary.ca>
+             Rajith Madduma Bandarage <rajith.maddumabandar@ucalgary.ca>
  */
 
 #include "ns3/core-module.h"
@@ -25,7 +26,9 @@
 #include "ns3/trace-helper.h"
 
 #include <iomanip>
-
+//#include "ns3/ascii-file.h"
+#include <iostream>
+#include <fstream>
 
 // ************************************************** DEFINES *************************************************
 // Defines for simulation
@@ -78,6 +81,8 @@ NS_LOG_COMPONENT_DEFINE ("RandomNetworkTdma");
 double networkLifetime;
 Time terminateCheckPeriod;
 int terminateSim = 0;
+int totalFailedNodesCount = 0;
+int initialTotalFailedNodesCount = 0;
 
 // ************************ CALLBACK FUNCTIONS ******************************
 
@@ -123,6 +128,7 @@ static void LogReportTx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
 
 	reportTxNum[nodeInd]++;
 	reportTxTime[nodeInd] = Simulator::Now();
+        //NS_LOG_UNCOND("Log report Tx: "<<reportTxNum[nodeInd]);
 
 //	*stream->GetStream() << "Tx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr << std::endl;
 }
@@ -135,6 +141,7 @@ static void LogReportRx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
 
 	reportRxNum[nodeInd]++;
 	reportTotalDelay[nodeInd] += Simulator::Now() - reportTxTime[nodeInd];
+        //NS_LOG_UNCOND("Log report Rx: "<<reportRxNum[nodeInd]);
 
 //	*stream->GetStream() << "Rx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr << std::endl;
 }
@@ -142,95 +149,43 @@ static void LogReportRx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
 static void LogHops(Ptr<OutputStreamWrapper> stream, vector<int> hops)
 {
 	double avgHops = 0;
-	for(int iHop=0; iHop < hops.size(); iHop++)
+	for(unsigned int iHop=0; iHop < hops.size(); iHop++) //Rajith 0408 Changed int to unsigned int
 		avgHops += hops[iHop];
 
 	*stream->GetStream() << "AvgHops," << avgHops/hops.size() << std::endl;
 }
 
+/* Rajith 0408 Not used
 static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, double y, double z)
 {
 	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y);
 	*stream->GetStream() << "Node " << node << ": (" << x << "," << y << ") " << distToSink << "m from sink." << std::endl;
 }
+*/ // Rajith 0408 Not used
 
+// Rajith function for the simulation ====================================================================================================================
+//========================================================================================================================================================
+//========================================================================================================================================================
 
-// ************************************************ MAIN BEGIN ************************************************
-int main (int argc, char *argv[])
+struct NodeFailedInformation
 {
-//	  LogComponentEnable("FishPropagationLossModel",LOG_LEVEL_LOGIC);
-//		LogComponentEnable("Isa100Dl",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("Isa100HelperScheduling",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("MinHopTdmaOptimizer",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("ConvexIntTdmaOptimizer",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("TdmaOptimizerBase",LOG_LEVEL_LOGIC);
+        vector<double> energyOfBatteries;
+        Ptr<ListPositionAllocator> positionAlloc;
+        vector<bool> allnodesFailedStatus;
+};
 
-
-//	  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("Isa100Battery",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("Isa100Routing",LOG_LEVEL_LOGIC);
-
-
-	/*  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
-	  LogComponentEnable("Isa100Processor",LOG_LEVEL_LOGIC);
-	*/
-
-
-	// Command Line Arguments
-  uint32_t seed = 1002;
-  std::string optString;
-  unsigned int numSensorNodes=0;
-
-  int iter = -1;
-
-  CommandLine cmd;
-  cmd.AddValue("rndSeed", "Seed for random number generation.", seed);
-  cmd.AddValue("iter", "Iteration number.", iter);
-  cmd.AddValue("nnodes", "Number of sensor nodes.",numSensorNodes);
-//  cmd.AddValue("optType", "0 = min hop, 1 = Goldsmith, 2 = Convex Int", optimizerType);
-  cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, ConvInt10ms, ConvIntPckt",optString);
-
-  cmd.Parse (argc, argv);
-
-  uint16_t optimizerType;
+struct NodeFailedInformation NodeFailureFunction(bool initialCall, uint32_t seed, int iter, unsigned int numSensorNodes, uint16_t optimizerType, std::string optString, Time slotDuration, Ptr<ListPositionAllocator> positionAlloc, vector<bool> allnodesFailedStatus, vector<double> energyOfBatteries) 
+{
+  terminateSim = 0;
   bool multiplePacketsPerSlot = false;
-  Time slotDuration;
   unsigned int numSlotsPerFrame;
-
-
-  if(optString == "MinHop10ms"){
-  	optimizerType = TDMA_MIN_HOP;
-  	slotDuration = MilliSeconds(10);
-  }
-  else if(optString == "MinHopPckt"){
-  	optimizerType = TDMA_MIN_HOP;
-  	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
-  }
-  else if(optString == "Goldsmith10ms"){
-  	optimizerType = TDMA_GOLDSMITH;
-  	slotDuration = MilliSeconds(10);
-  }
-  else if(optString == "GoldsmithPckt"){
-  	optimizerType = TDMA_GOLDSMITH;
-  	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
-  }
-  else if(optString == "ConvInt10ms"){
-  	optimizerType = TDMA_CONVEX_INT;
-  	slotDuration = MilliSeconds(10);
-  }
-  else if(optString == "ConvIntPckt"){
-  	optimizerType = TDMA_CONVEX_INT;
-  	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
-  }
-  else
-  	NS_FATAL_ERROR("Command line optimization string incorrect.");
+  NodeFailedInformation nodeFailedInfo; //Rajith Nodefailure struct 0408
+  nodeFailedInfo.positionAlloc = positionAlloc; //Rajith position allocation info 0408
 
   numSlotsPerFrame = ceil(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds());
 
   NS_LOG_UNCOND("Optimization: " << optString << ", Iter: " << iter);
   NS_LOG_UNCOND("Slot Duration: " << slotDuration.GetSeconds() << "s, Slots Per Superframe: " << numSlotsPerFrame);
-
-
 
   terminateCheckPeriod = Seconds(numSlotsPerFrame*slotDuration.GetSeconds());
   Simulator::Schedule(terminateCheckPeriod/2,&TerminateSimulation);
@@ -244,47 +199,48 @@ int main (int argc, char *argv[])
   std::string filename;
   std::stringstream ss;
 
-  std::string filePath = "/Users/gmessier/prj/net/sim/ns3/ns-3.27/";
+  std::string filePath = "/home/rajith/NS-3 Rajith/Results/";
 	ss.str( std::string() );
 	ss.clear();
-	ss << filePath << "N" << numSensorNodes << "_" << optString << "_";
+	ss << filePath << "N" << numSensorNodes << "_" << optString << "_"<< initialTotalFailedNodesCount << "_"; //Rajith 0408
   std::string filePrefix = ss.str();
 
   uint16_t numNodes = 1 + numSensorNodes;
-  double fieldSizeY = ( (double)numSensorNodes / SENSOR_DENSITY ) / FIELD_SIZE_X;
+  double fieldSizeY = 0;
+  
+  fieldSizeY = ( (double)numSensorNodes / SENSOR_DENSITY ) / FIELD_SIZE_X;
+  
+  nodeFailedInfo.allnodesFailedStatus = allnodesFailedStatus; //Rajith Nodefailure status update 0408
+  nodeFailedInfo.energyOfBatteries = energyOfBatteries;
 
-
+  uint16_t newNumNodes = numNodes - initialTotalFailedNodesCount;
   // routing debug
-//  numNodes = 6;
+  //  numNodes = 6;
 
-
-  reportTxNum.assign(numNodes,0);
-  reportRxNum.assign(numNodes,0);
-  reportTxTime.assign(numNodes,Seconds(0.0));
-  reportTotalDelay.assign(numNodes,Seconds(0.0));
-
-
+  reportTxNum.assign(newNumNodes,0);
+  reportRxNum.assign(newNumNodes,0);
+  reportTxTime.assign(newNumNodes,Seconds(0.0));
+  reportTotalDelay.assign(newNumNodes,Seconds(0.0));
 
   NS_LOG_UNCOND("Number of Nodes: " << numNodes);
 
 
-  if (!numSensorNodes){
+  if (!newNumNodes){
     NS_FATAL_ERROR("Number of transmit nodes cannot be zero!");
   }
 
   // Cannot simulate more than 256 nodes
-  NS_ASSERT_MSG(numNodes <= 256, "Simulation can only support upto 256 nodes total. Num Nodes = " << numNodes);
+  NS_ASSERT_MSG(newNumNodes <= 256, "Simulation can only support upto 256 nodes total. Num Nodes = " << numNodes);
 
 	// Change the random number seed to alter the random number sequence used by the simulator.
   RngSeedManager::SetSeed (seed);
   NS_LOG_UNCOND("Seed: " << seed);
-
+  
   // ********************************************* HELPER ************************************************
 
   Ptr<Isa100Helper> isaHelper = CreateObject<Isa100Helper>();
-
-
-  // ******************************************* DL & PHY ATTRIBUTES ********************************************
+	
+  // ******************************************* DL & PHY ATTRIBUTES ******************************************** 
 
   // These are ISA100 frame size parameters.  Look in the ISA100 standard for more information.
   isaHelper->SetDlAttribute("SuperFramePeriod",UintegerValue(numSlotsPerFrame));
@@ -309,7 +265,6 @@ int main (int argc, char *argv[])
   isaHelper->SetTrxCurrentAttribute ("Slope", DoubleValue (0.0003013));
   isaHelper->SetTrxCurrentAttribute ("Offset", DoubleValue (0.01224));
 
-
   // ********************************************* CHANNEL MODEL ************************************************
 
   NS_LOG_UNCOND("Constructing the channel model...");
@@ -325,7 +280,6 @@ int main (int argc, char *argv[])
   // Channel hopping, channels 11-26 are available in the hopping pattern (802.15.4 channel page 0, OQPSK)
   // Nodes will operate on channel 11.
   uint8_t hoppingPattern[] = { 11 };
-
 
   // ********************************************* FILE STREAMS ************************************************
   Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
@@ -357,74 +311,68 @@ int main (int argc, char *argv[])
 
 	isaHelper->TraceConnectWithoutContext ("HopTrace", MakeBoundCallback (&LogHops, reportStream));
 
-
 	// ********************************************** NODE LOCATIONS **********************************************
-	NS_LOG_UNCOND(" Creating network...");
+        if(initialCall){ //Rajith 0408
+	        NS_LOG_UNCOND(" Creating network...");
 
-//  isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
+        //  isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
 
 
-	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+	        //Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>(); //Rajith 0407
 
-	ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0);
+	        ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0);
 
-	isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);
+	        isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);
 
-	*(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";
-	*(reportStream->GetStream()) << "FieldRatio," << fieldSizeY/FIELD_SIZE_Y << "\n";
+	        *(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";
+	        *(reportStream->GetStream()) << "FieldRatio," << fieldSizeY/FIELD_SIZE_Y << "\n";
+                //}
+        } //Rajith 0408
 
-	// routing debug
-
-/*
-  	double scale = 100;
-  positionAlloc->Add(ns3::Vector(0,0,0));
-  positionAlloc->Add(ns3::Vector(-scale/2,scale,0));
-  positionAlloc->Add(ns3::Vector(0,scale,0));
-  positionAlloc->Add(ns3::Vector(scale/2,scale,0));
-  positionAlloc->Add(ns3::Vector(scale/4,2*scale,0));
-  positionAlloc->Add(ns3::Vector(scale/4,3*scale,0));
-*/
-
-	propLossModel->GenerateNewShadowingValues(positionAlloc,numNodes,SHADOWING_STD_DEV_DB);
-
+        propLossModel->GenerateNewShadowingValues(positionAlloc,newNumNodes,SHADOWING_STD_DEV_DB,nodeFailedInfo.allnodesFailedStatus);
+        
 
 	// ********************************************* CREATE NODES **********************************************
 
-  // Nodes 'container' class.
-  NodeContainer nc;
-  nc.Create(numNodes);
+        // Nodes 'container' class.
+        NodeContainer nc = NodeContainer();
+        nc.Create(newNumNodes);
 
-	NetDeviceContainer devContainer;
+	NetDeviceContainer devContainer = NetDeviceContainer();
 	devContainer = isaHelper->Install(nc, channel, 0);
 
-	isaHelper->SetDeviceConstantPosition(devContainer,positionAlloc);
+	isaHelper->SetDeviceConstantPosition(devContainer,positionAlloc,nodeFailedInfo.allnodesFailedStatus);
 
-
+        int j = 1;
 	for (int16_t i = 1; i < numNodes; i++)
 	{
-		Ptr<Isa100Processor> processor = CreateObject<Isa100Processor>();
+                if(!nodeFailedInfo.allnodesFailedStatus[i]){
+                        Ptr<Isa100Processor> processor = CreateObject<Isa100Processor>();
 
-		processor->SetAttribute("ActiveCurrent", DoubleValue(0.0078));
-		processor->SetAttribute("SleepCurrent", DoubleValue(0.0000026));
-		processor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
+		        processor->SetAttribute("ActiveCurrent", DoubleValue(0.0078));
+		        processor->SetAttribute("SleepCurrent", DoubleValue(0.0000026));
+		        processor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
 
-		isaHelper->InstallProcessor(i,processor);
+		        isaHelper->InstallProcessor(j,processor);
 
-		Ptr<Isa100Sensor> sensor = CreateObject<Isa100Sensor>();
+		        Ptr<Isa100Sensor> sensor = CreateObject<Isa100Sensor>();
 
-		sensor->SetAttribute("ActiveCurrent", DoubleValue(SENSOR_SAMPLE_POWER_W/3.0));
-		sensor->SetAttribute("IdleCurrent", DoubleValue(0.0));
-		sensor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
-		sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
+		        sensor->SetAttribute("ActiveCurrent", DoubleValue(SENSOR_SAMPLE_POWER_W/3.0));
+		        sensor->SetAttribute("IdleCurrent", DoubleValue(0.0));
+		        sensor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
+		        sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
 
-		isaHelper->InstallSensor(i,sensor);
+		        isaHelper->InstallSensor(j,sensor);
 
-		Ptr<Isa100Battery> battery = CreateObject<Isa100Battery>();
+		        Ptr<Isa100Battery> battery = CreateObject<Isa100Battery>();
 
-		battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
-		battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
+                        battery->SetInitEnergy(nodeFailedInfo.energyOfBatteries[i]);
+		
+                        battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
 
-		isaHelper->InstallBattery(i,battery);
+		        isaHelper->InstallBattery(j,battery);
+                        j++;
+                }
 	}
 
 	// Sink application
@@ -432,7 +380,7 @@ int main (int argc, char *argv[])
 
 	sinkNodeApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
 	sinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-  sinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
+        sinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
 
 
 
@@ -442,7 +390,8 @@ int main (int argc, char *argv[])
 	// Create the sensor node applications
 	Mac16AddressValue address;
 	Ptr<Isa100NetDevice> netDevice;
-	for (int16_t i = 1; i < numNodes; i++)
+
+	for (int16_t i = 1; i < newNumNodes; i++)
 	{
 		Ptr<Isa100FieldNodeApplication> sensorNodeApp = CreateObject<Isa100FieldNodeApplication>();
 
@@ -453,7 +402,7 @@ int main (int argc, char *argv[])
 		sensorNodeApp->SetAttribute("DestAddress",Mac16AddressValue(SINK_ADDR));
 		sensorNodeApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
 		sensorNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-	  sensorNodeApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+	        sensorNodeApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
 
 		// Hook the application and sensor toegether
 		sensorNodeApp->SetSensor(netDevice->GetSensor());
@@ -466,7 +415,7 @@ int main (int argc, char *argv[])
 
 	// Traces
   Ptr<NetDevice> baseDevice;
-  for (uint16_t i = 0; i < numNodes; i++){
+  for (uint16_t i = 0; i < newNumNodes; i++){
     baseDevice = devContainer.Get(i);
     netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
@@ -497,7 +446,7 @@ int main (int argc, char *argv[])
     scheduleStream->GetStream()->flush();
     reportStream->GetStream()->flush();
 
-    return 0;
+    return nodeFailedInfo;
   }
 
 
@@ -517,23 +466,32 @@ int main (int argc, char *argv[])
   int totReportTx = 0, totReportRx = 0;
   Time totDelay = Seconds(0.0);
   bool starvedNode = false;
+  double batteryResidualEnergy = 0;       
 
+  int k = 1;
   for (int16_t i = 1; i < numNodes; i++){
-  	baseDevice = devContainer.Get(i);
+        if(!nodeFailedInfo.allnodesFailedStatus[i]){
+  	baseDevice = devContainer.Get(k);
   	netDevice = baseDevice->GetObject<Isa100NetDevice>();
+        //v = positionAlloc->GetNext();
 
   	netDevice->GetBattery()->PrintEnergySummary(energyStream);
+        batteryResidualEnergy = netDevice->GetBattery()->GetEnergy();
 
-  	totReportTx += reportTxNum[i];
-  	totReportRx += reportRxNum[i];
-  	totDelay += reportTotalDelay[i];
+        nodeFailedInfo.energyOfBatteries[i] = batteryResidualEnergy;
+        //NS_LOG_UNCOND("batteryResidualEnergy: "<<k<<", "<<batteryResidualEnergy); //Rajith battery residual energy
+        if(batteryResidualEnergy==0)  nodeFailedInfo.allnodesFailedStatus[i] = true;
 
-  	if(reportRxNum[i] == 0){
+  	totReportTx += reportTxNum[k];
+  	totReportRx += reportRxNum[k];
+  	totDelay += reportTotalDelay[k];
+
+  	if(reportRxNum[k] == 0){
   		starvedNode = true;
-  		NS_LOG_UNCOND("*Starved Node*: " << i);
+  		NS_LOG_UNCOND("*Starved Node*: " << k);
   	}
-
-
+        k++;
+        }
  // 	NS_LOG_UNCOND(" Node " << i << ", Tx: " << reportTxNum[i] << " Rx: " << reportRxNum[i]);
 
   }
@@ -554,7 +512,243 @@ int main (int argc, char *argv[])
   scheduleStream->GetStream()->flush();
   reportStream->GetStream()->flush();
  // locationStream->GetStream()->flush();
+ return nodeFailedInfo;
+}
+// end of Rajith function for the simulation =============================================================================================================
+//========================================================================================================================================================
+//========================================================================================================================================================
+// end of 
 
+// ************************************************ MAIN BEGIN ************************************************
+int main (int argc, char *argv[])
+{
+
+  // *************** Command Line Arguments ***************
+  uint32_t seed = 1002;
+  std::string optString;
+  int numSensorNodes=0;
+
+  int iter = -1;
+
+  CommandLine cmd;
+  cmd.AddValue("rndSeed", "Seed for random number generation.", seed);
+  cmd.AddValue("iter", "Iteration number.", iter);
+  cmd.AddValue("nnodes", "Number of sensor nodes.",numSensorNodes);
+//  cmd.AddValue("optType", "0 = min hop, 1 = Goldsmith, 2 = Convex Int", optimizerType);
+  cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, ConvInt10ms, ConvIntPckt",optString);
+
+  cmd.Parse (argc, argv);
+
+  uint16_t optimizerType;
+  Time slotDuration;
+
+
+  if(optString == "MinHop10ms"){
+  	optimizerType = TDMA_MIN_HOP;
+  	slotDuration = MilliSeconds(10);
+  }
+  else if(optString == "MinHopPckt"){
+  	optimizerType = TDMA_MIN_HOP;
+  	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
+  }
+  else if(optString == "Goldsmith10ms"){
+  	optimizerType = TDMA_GOLDSMITH;
+  	slotDuration = MilliSeconds(10);
+  }
+  else if(optString == "GoldsmithPckt"){
+  	optimizerType = TDMA_GOLDSMITH;
+  	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
+  }
+  else if(optString == "ConvInt10ms"){
+  	optimizerType = TDMA_CONVEX_INT;
+  	slotDuration = MilliSeconds(10);
+  }
+  else if(optString == "ConvIntPckt"){
+  	optimizerType = TDMA_CONVEX_INT;
+  	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
+  }
+  else
+  	NS_FATAL_ERROR("Command line optimization string incorrect.");
+
+  // end of *************** Command Line Arguments ***************
+
+  // *************** Reading Files for Energies and Locations ***************
+
+   std::string filePath = "/home/rajith/NS-3 Rajith/InOut/";
+   bool initialCall = true;
+   vector<double> energyOfBatteries(numSensorNodes+1,DEFAULT_INITIAL_ENERGY_J*1e6);
+   vector<bool> allnodesFailedStatus(numSensorNodes+1);
+   std::string line;
+   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+   std::stringstream ss;
+
+   //Reading Energies
+   ss.str(std::string());
+   ss.clear(); 
+   ss << filePath <<"IO_residualEnergies.txt";
+   ifstream myfile (ss.str());
+   int nNode = 1;
+   if (myfile.is_open())
+   {
+    while (getline (myfile,line))
+    {
+       initialCall = false;
+       istringstream buffer(line);
+       buffer >> energyOfBatteries[nNode];
+       if(energyOfBatteries[nNode]==0) {
+                allnodesFailedStatus[nNode] = true;
+                initialTotalFailedNodesCount++;
+       }
+       nNode++;
+     }
+    myfile.close();
+   }else NS_LOG_UNCOND("Unable to open the file: "<<ss.str()); 
+   // end of Reading Energies
+
+   //Reading Locations
+   double loc[3];
+   ss.str(std::string());
+   ss.clear(); 
+   ss << filePath <<"IO_positionAlloc.txt";
+   ifstream myfile2 (ss.str());
+   if (myfile2.is_open())
+   {
+    while (getline (myfile2,line))
+    {
+       istringstream buffer(line);
+       buffer >> loc[0];
+       buffer >> loc[1];
+       buffer >> loc[2];
+
+       positionAlloc->Add(Vector(loc[0],loc[1],loc[2]));
+     }
+    myfile2.close();
+   }else NS_LOG_UNCOND("Unable to open the file: "<<ss.str()); 
+   // end of Reading Locations    
+
+  // end of *************** Reading Files for Energies and Locations ***************
+
+  // *************** Calling NodeFailureFunction ***************
+   NodeFailedInformation Nf = NodeFailureFunction(initialCall, seed, iter, numSensorNodes, optimizerType, optString, slotDuration, positionAlloc, allnodesFailedStatus, energyOfBatteries); //Rajith 0407
+   
+   for(int i=1; i < numSensorNodes+1; i++){
+        if(Nf.allnodesFailedStatus[i]) totalFailedNodesCount++;
+   }
+
+   NS_LOG_UNCOND("Total faild node count: "<<totalFailedNodesCount);
+   NS_LOG_UNCOND("----------------------------------------------------------------------------------");
+
+  // end of *************** Calling NodeFailureFunction ***************
+   
+  // *************** Writing Files for Energies and Locations ***************
+
+   AsciiTraceHelper asciiTraceHelper;
+   //Writing Energies
+   std::string filename = "";
+   ss.str( std::string() );
+   ss.clear();
+   ss << filePath << "N" << numSensorNodes << "_" << optString << "_";
+   std::string filePrefix = ss.str();
+
+   Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
+
+   CREATE_STREAM_FILENAME("residualEnergies.txt");
+   Ptr<OutputStreamWrapper> residualEnergies = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+   for(int i=1; i < numSensorNodes+1; i++){
+        *(residualEnergies->GetStream()) << Nf.energyOfBatteries[i] << "\n";
+   }
+   
+   residualEnergies->GetStream()->flush();
+
+   //std::ifstream src(filename, std::ios::binary);
+   filename = "";
+   ss.str( std::string() );
+   ss.clear();
+   ss << filePath << "IO" << "_";
+   filePrefix = ss.str();
+
+   //Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
+   CREATE_STREAM_FILENAME("residualEnergies.txt");
+   OutputStreamWrapper(filename,std::ios::trunc); //Rajith 0410
+   Ptr<OutputStreamWrapper> residualEnergies_cp = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+   for(int i=1; i < numSensorNodes+1; i++){
+        *(residualEnergies_cp->GetStream()) << Nf.energyOfBatteries[i] << "\n";
+   }
+   
+   residualEnergies_cp->GetStream()->flush();
+   //end of Writing Energies
+
+   //Writing Locations
+   filename = "";
+   ss.str( std::string() );
+   ss.clear();
+   ss << filePath << "N" << numSensorNodes << "_" << optString << "_";
+   filePrefix = ss.str();
+
+   //Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
+
+   CREATE_STREAM_FILENAME("positionAlloc.txt");
+   Ptr<OutputStreamWrapper> positionAllocOut = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+   for(int i=0; i < numSensorNodes+1; i++){
+        Vector v=positionAlloc->GetNext();
+        *(positionAllocOut->GetStream()) << v.x << " " << v.y << " " << v.z <<"\n";
+   }
+   
+   positionAllocOut->GetStream()->flush();
+
+   //src(filename, std::ios::binary);
+   filename = "";
+   ss.str( std::string() );
+   ss.clear();
+   ss << filePath << "IO" << "_";
+   filePrefix = ss.str();
+
+   //Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
+
+   CREATE_STREAM_FILENAME("positionAlloc.txt");
+   OutputStreamWrapper(filename,std::ios::trunc); //Rajith 0410
+   Ptr<OutputStreamWrapper> positionAllocOut_cp = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+   for(int i=0; i < numSensorNodes+1; i++){
+        Vector v=positionAlloc->GetNext();
+        *(positionAllocOut_cp->GetStream()) << v.x << " " << v.y << " " << v.z <<"\n";
+   }
+
+   positionAllocOut_cp->GetStream()->flush();
+   //end of Writing Locations
+
+   //writing failed Node count 0410
+   filename = "";
+   ss.str( std::string() );
+   ss.clear();
+   ss << filePath;
+   filePrefix = ss.str();
+
+   //Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
+
+   CREATE_STREAM_FILENAME("Failed_Node_Count.txt");
+   Ptr<OutputStreamWrapper> Failed_Node_Count = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+   *(Failed_Node_Count->GetStream()) << totalFailedNodesCount <<"\n";
+
+   Failed_Node_Count->GetStream()->flush();
+   //end of Writing Locations
+
+  // end of *************** Writing Files for Energies and Locations ***************
+
+   /*
+   AsciiFile asciifile;
+   ss.str( std::string() );
+   ss.clear();
+   ss << filePath << "IO" << "_"; //Rajith 0408
+   filePrefix = ss.str();
+   // *y=filename;
+   CREATE_STREAM_FILENAME("residualEnergies.txt");
+   asciifile.open(&filename,std::ios::in);
+   std::string readss;
+   asciifile.read(readss 5);
+   NS_LOG_UNCOND("Rajith Read file test: "<<readss);
+   asciifile.close();
+   */
+   
 	return 0;
 }
 
