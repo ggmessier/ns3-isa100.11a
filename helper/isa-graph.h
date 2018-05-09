@@ -21,7 +21,6 @@ class IsaGraph;
 	{
 		private:
 
-		    NodeContainer cG;
 			vector<vector<Ptr<Node>>> Edges;
 
 		public:
@@ -45,6 +44,10 @@ class IsaGraph;
 			void printGraph();
 
 			Ptr<IsaGraph> flipEdge();
+
+			void GraphFlows (void);
+
+			void BreadthFirstSearchFlows(int parent, int dest, vector<bool> visited, int path[], int &path_index);
 
 	};
 

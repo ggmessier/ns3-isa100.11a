@@ -32,14 +32,13 @@ namespace ns3 {
 		IsaGraph::IsaGraph(NodeContainer c)
 		{
 			NS_LOG_FUNCTION (this);
-			(this)->cG = c;
-
 	        for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
 	        {
 			   {
 				   vector<Ptr<Node>> tempNodeList;
 				   tempNodeList.push_back(i->operator ->());
 				   (this)->Edges.push_back(tempNodeList);
+
 			   }
 	         }
 		}
@@ -74,13 +73,13 @@ namespace ns3 {
         uint32_t IsaGraph::getNumofNodes (void)
 		{
         	NS_LOG_FUNCTION (this);
-        	return (this)->cG.GetN();
+        	return (this)->Edges.size();
 		}
 
         Ptr<Node> IsaGraph::GetGraphSrcNode (uint32_t src)
         {
         	NS_LOG_FUNCTION (this);
-        	return (this)->cG.Get(src);
+        	return (this)->Edges[src][0];
         }
 
          //Print the graph
@@ -101,16 +100,24 @@ namespace ns3 {
                  }
                  NS_LOG_UNCOND("\n");
             }
-         }
+        }
 
         Ptr<IsaGraph> IsaGraph::flipEdge()
         {
         	NS_LOG_FUNCTION (this);
-        	Ptr<IsaGraph> G = CreateObject<IsaGraph>((this)->cG);
-        	vector<vector<Ptr<Node>>> tempEdges = Edges;
-        	for (uint32_t i = 0; i<G->getNumofNodes();++i)
+        	uint32_t nNodes = (this)->getNumofNodes();
+        	vector<vector<Ptr<Node>>> tempEdges = (this)->Edges;
+        	Ptr<IsaGraph> G = CreateObject<IsaGraph>();
+        	for (uint32_t i = 0; i < nNodes;++i)
+            {
+       		     vector<Ptr<Node>> tempNodeList;
+			     tempNodeList.push_back((this)->GetGraphSrcNode(i));
+			     G->Edges.push_back(tempNodeList);
+            }
+
+        	for (uint32_t i = 0; i < nNodes;++i)
 			{
-				 Ptr<Node> src = tempEdges[i][0];
+        		 Ptr<Node> src = (this)->GetGraphSrcNode(i);
 				 while (!tempEdges[i].empty())
 				 {
 					 Ptr<Node> dest = tempEdges[i].back();
@@ -121,5 +128,55 @@ namespace ns3 {
 			}
         	return G;
          }
+
+        void IsaGraph::GraphFlows (void)
+        {
+            NS_LOG_FUNCTION (this);
+            uint32_t nNodes = (this)->getNumofNodes();
+
+            vector<bool> visited(nNodes);
+
+            int *path = new int[nNodes];
+            int path_index = 0;
+
+            for (int i = 0; i < nNodes; i++)
+                visited.push_back(false);
+
+            for (int i = 0; i < nNodes; i++)
+            {
+            	NS_LOG_UNCOND("GW to Node"<<i <<"\n");
+            	BreadthFirstSearchFlows(0, i, visited, path, path_index);
+            }
+
+        }
+
+        void IsaGraph::BreadthFirstSearchFlows(int parent, int dest, vector<bool> visited, int path[], int &path_index)
+        {
+        	NS_LOG_FUNCTION (this);
+            visited[parent] = true;
+            path[path_index] = parent;
+            path_index++;
+
+            if (parent == dest)
+            {
+                for (int i = 0; i<path_index; i++)
+                    NS_LOG_UNCOND(path[i] << " ");
+                NS_LOG_UNCOND("\n");
+            }
+            else
+            {
+                vector<Ptr<Node>> tempNodeList = Edges[parent];
+                while (!tempNodeList.empty())
+                {
+                	uint32_t nextNode = tempNodeList.back()->GetId();
+               	 	if (nextNode==parent) break;
+               	 	BreadthFirstSearchFlows(nextNode, dest, visited, path, path_index);
+               	 	tempNodeList.pop_back();
+                }
+            }
+
+            path_index--;
+            visited[parent] = false;
+        }
 
  };
