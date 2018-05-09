@@ -49,6 +49,7 @@ int main (int argc, char *argv[])
             Ptr<IsaGraph> G_R = G->flipEdge();
             NS_LOG_UNCOND("Flipped");
             G_R->printGraph();
+            G->GraphFlows();
 
 	return 0;
 }
