@@ -28,28 +28,54 @@ int main (int argc, char *argv[])
 	nc.Add(acessPoint_2);
 
 	NodeContainer nc2;
-	nc2.Create(5);
+	nc2.Create(8);
 	nc.Add(nc2);
 
     Ptr<IsaGraph> G = CreateObject<IsaGraph>(nc);
 
-            G->addEdge(nc.Get(0), nc.Get(1));
-            G->addEdge(nc.Get(0), nc.Get(2));
-            G->addEdge(nc.Get(1), nc.Get(3));
-            G->addEdge(nc.Get(2), nc.Get(4));
-            G->addEdge(nc.Get(2), nc.Get(5));
-            G->addEdge(nc.Get(5), nc.Get(4));
-            G->addEdge(nc.Get(4), nc.Get(7));
-            G->addEdge(nc.Get(3), nc.Get(7));
-            G->addEdge(nc.Get(3), nc.Get(6));
+	G->AddEdge(nc.Get(0), nc.Get(1));
+	G->AddEdge(nc.Get(0), nc.Get(2));
+	G->AddEdge(nc.Get(1), nc.Get(3));
+	G->AddEdge(nc.Get(1), nc.Get(4));
+	G->AddEdge(nc.Get(2), nc.Get(3));
+	G->AddEdge(nc.Get(2), nc.Get(4));
+	G->AddEdge(nc.Get(2), nc.Get(5));
+	G->AddEdge(nc.Get(3), nc.Get(6));
+	G->AddEdge(nc.Get(3), nc.Get(4));
+	G->AddEdge(nc.Get(4), nc.Get(7));
+	G->AddEdge(nc.Get(4), nc.Get(8));
+	G->AddEdge(nc.Get(5), nc.Get(4));
+	G->AddEdge(nc.Get(5), nc.Get(7));
+	G->AddEdge(nc.Get(5), nc.Get(9));
+	G->AddEdge(nc.Get(6), nc.Get(8));
+	G->AddEdge(nc.Get(7), nc.Get(8));
+	G->AddEdge(nc.Get(7), nc.Get(9));
+	G->AddEdge(nc.Get(8), nc.Get(10));
+	G->AddEdge(nc.Get(9), nc.Get(10));
 
-            // print the adjacency list representation of the above graph
+	// print the adjacency list representation of the above graph
+	G->PrintGraph();
+//	Ptr<IsaGraph> G_R = G->FlipEdge();
+//	NS_LOG_UNCOND("Flipped");
+//	G_R->PrintGraph();
+//	G->GraphFlows();
 
-            G->printGraph();
-            Ptr<IsaGraph> G_R = G->flipEdge();
-            NS_LOG_UNCOND("Flipped");
-            G_R->printGraph();
-            G->GraphFlows();
+	//Initialize the reliable broadcast graph
+	NodeContainer nc_GB;
+	nc_GB.Add(gateWay);
+	nc_GB.Add(acessPoint_1);
+	nc_GB.Add(acessPoint_2);
+
+	Ptr<IsaGraph> G_B = CreateObject<IsaGraph>(nc_GB);
+	G_B->AddEdge(nc_GB.Get(0), nc_GB.Get(1));
+	G_B->AddEdge(nc_GB.Get(0), nc_GB.Get(2));
+	G_B->SetHopCount(0,0);
+	G_B->SetHopCount(1,1);
+	G_B->SetHopCount(2,1);
+
+	G_B->ReliableBroadcastGraph(G);
+	NS_LOG_UNCOND("Reliable Broadcast Graph");
+	G_B->PrintGraph();
 
 	return 0;
 }
