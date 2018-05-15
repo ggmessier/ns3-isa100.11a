@@ -10,10 +10,26 @@
 
 #include "ns3/core-module.h"
 #include "ns3/isa100-11a-module.h"
+#include <algorithm>
 
 using namespace std;
 
 namespace ns3 {
+
+typedef struct{
+
+	Ptr<Node> head;
+	double avg_hop_count;
+	vector <Ptr<Node>> neighbors;
+	vector <Ptr<Node>> parents;
+
+}GraphNode;
+
+bool Compare_Average_Hop( const GraphNode & e1, const GraphNode & e2) {
+  if( e1.avg_hop_count != e2.avg_hop_count)
+    return (e1.avg_hop_count < e2.avg_hop_count);
+  return ((e1.head < e2.head) && (e1.neighbors < e2.neighbors) && (e1.parents < e2.parents));
+}
 
 class IsaGraph;
 
@@ -21,7 +37,7 @@ class IsaGraph;
 	{
 		private:
 
-			vector<vector<Ptr<Node>>> Edges;
+			map <uint32_t, GraphNode> graphNodeMap;
 
 		public:
 
@@ -33,21 +49,37 @@ class IsaGraph;
 
 			vector<Ptr<Node>> GetEdges (Ptr<Node> src);
 
-			Ptr<Node> GetGraphSrcNode (uint32_t src);
+			Ptr<Node> GetGraphSrcNode (uint32_t id);
 
-			uint32_t getNumofNodes (void);
+			GraphNode GetGraphNode (uint32_t id);
 
-			void addEdge(Ptr<Node> src, Ptr<Node> dest);
+			uint32_t GetNumofNodes (void);
 
-			void addGraphNode(Ptr<Node> src);
+			void AddEdge(Ptr<Node> src, Ptr<Node> dest);
 
-			void printGraph();
+			void AddGraphNode(Ptr<Node> src);
 
-			Ptr<IsaGraph> flipEdge();
+			void PrintGraph();
+
+			Ptr<IsaGraph> FlipEdge();
 
 			void GraphFlows (void);
 
-			void BreadthFirstSearchFlows(int parent, int dest, vector<bool> visited, int path[], int &path_index);
+			void BreadthFirstSearchFlows(int parent, int dest, map <uint32_t, bool> visited, int path[], int &path_index);
+
+			void SetHopCount(uint32_t id, double hopCount);
+
+			bool ReliableBroadcastGraph(Ptr<IsaGraph> G);
+
+			bool BroadcastGraph(Ptr<IsaGraph> G);
+
+			void UpdateSVector(Ptr<IsaGraph> G);
+
+//			void ClearSVector();
+
+		protected:
+
+			map <uint32_t, GraphNode> EdgesForS;
 
 	};
 
