@@ -245,7 +245,7 @@ namespace ns3 {
 							if(nodeMaxoutgoingEdges.head->GetId() == 0){ //gateway node ID = 0
 									maxOutgoingEdges = outgoingEdges;
 									nodeMaxoutgoingEdges = G->graphNodeMap[it->first];
-							}else if(nodeMaxoutgoingEdges.avg_hop_count<hop_count){
+							}else if(nodeMaxoutgoingEdges.avg_hop_count>hop_count){
 								maxOutgoingEdges = outgoingEdges;
 								nodeMaxoutgoingEdges = G->graphNodeMap[it->first];
 							}
