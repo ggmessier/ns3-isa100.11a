@@ -44,7 +44,10 @@ int main (int argc, char *argv[])
 	nc2.Create(8);
 	nc.Add(nc2);
 
-    Ptr<IsaGraph> G = CreateObject<IsaGraph>(nc);
+  Ptr<IsaGraph> G = CreateObject<IsaGraph>(nc);
+
+  G->AddAccessPoint(1);
+  G->AddAccessPoint(2);
 
 	G->AddEdge(nc.Get(0), nc.Get(1));
 	G->AddEdge(nc.Get(0), nc.Get(2));
