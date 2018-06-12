@@ -48,6 +48,17 @@ typedef struct
   bool m_reliability;                 ///< Reliability status of the head node in the graph.
 } GraphNode;
 
+/** Defining structure for selected edges of downlink graph of v
+ *
+ */
+typedef struct
+{
+  GraphNode* m_u1;                     ///< Pointer for the selected node first parent.
+  GraphNode* m_u2;                     ///< Pointer for the selected node second parent.
+  double m_avgHopCount;               ///< Average hop count from the Gateway, Calculated by pair vlaue of parents +1.
+  bool m_Sr;                          ///< Whether to include in reliable selection
+} DownlinkEdgesForSelection;
+
 /** Comparator to support graph Nodes sorting based on average hop count
  *
  */
@@ -94,9 +105,26 @@ public:
    * @param dest Edge ending node pointer
    * @param id ID of the Node
    */
-  void AddGraphNode (Ptr<Node> src);
+  void AddGraphNode (GraphNode graphNode);
+  void AddNode(Ptr<Node> src);
   Ptr<Node> GetGraphSrcNode (uint32_t id);
   GraphNode GetGraphNode (uint32_t id);
+
+  /** Set/ Get gateway of the graph
+   *- return the gateway graph nodes
+   *
+   * @param id ID of the Node
+   */
+  void AddGateway(uint32_t id);
+  Ptr<GraphNode> GetGetway (void);
+
+  /** Set/ Get Access point nodes of the graph
+   *- return vector of access point graph nodes
+   *
+   * @param id ID of the Node
+   */
+  void AddAccessPoint(uint32_t id);
+  vector<Ptr<GraphNode>> GetAccessPoints (void);
 
   /** Get number of nodes in graph
    *
@@ -133,7 +161,7 @@ public:
   void SetHopCount (uint32_t id, double hopCount);
   double GetHopCount (uint32_t id);
 
-  /** Relaible broadcast graph creation
+  /** Reliable broadcast graph creation
    *
    * @param G graph to create the reliable broadcast graph
    * @param edgesForS map of node with
@@ -148,14 +176,39 @@ public:
    */
   map <uint32_t, GraphNode> UpdateSVector (Ptr<IsaGraph> G, map <uint32_t, GraphNode> edgesForS);
 
-  /** Relaible uplink graph creation
+  /** Reliable uplink graph creation
    *
    * @param G graph to create the reliable uplink graph
    */
   bool ReliableUplinkGraph (Ptr<IsaGraph> G);
 
+  /** Reliable downlink graphs creation
+   *- return pointers to the downlink graphs for each node (map with their ids)
+   *
+   * @param G graph to create the reliable downlink graphs
+   * @param edgesForS graph nodes for the selection criteria of reliable graphs
+   * @param downlinkGraphs List of reliable downlink graphs
+   * @param v node that required to construct the downlink graph
+   */
+  map <uint32_t, Ptr<IsaGraph>> ReliableDownlinkGraphs (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
+  map <uint32_t, Ptr<IsaGraph>> DownlinkGraphs (Ptr<IsaGraph> G, map <uint32_t, GraphNode> edgesForS, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
+  map <uint32_t, Ptr<IsaGraph>> ConstructDownlinkGraphs (Ptr<IsaGraph> G, Ptr<GraphNode> v, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
+
+  /** return selected edges for respective downlink graph if all three conditions are satisfied
+   *- C1 v has at least two parents u1, u2, and they form a cycle.
+   *- C2 u1 is u2’s parent in u2’s local downlink graph. (u1 and u2 form a directed cycle)
+   *- C3 u2 (u1) has at least one parent from the cycle in Gu1 (Gu2)
+   *
+   * @param G graph to create the reliable downlink graphs
+   * @param downlinkGraphs List of reliable downlink graphs
+   * @param tempParents temporary vector to store the parents of a selected node of EdgesOfS
+   */
+  DownlinkEdgesForSelection ThreeConditions (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs, vector<Ptr<GraphNode>> tempParents);
+
 private:
   map <uint32_t, GraphNode> m_graphNodeMap;       ///< Map of graph nodes with their node IDs.
+  vector<Ptr<GraphNode>> m_accessPoints;          ///< Access point nodes of the graph
+  Ptr<GraphNode> m_gateway;                       ///< gateway of the graph
 
 };
 
