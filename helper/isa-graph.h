@@ -39,12 +39,12 @@ namespace ns3 {
 /** Defining Node information structure for graph routing.
  *
  */
-typedef struct
+typedef struct GraphNodeT
 {
   Ptr<Node> m_head;                   ///< Pointer for the node.
   double m_avgHopCount;               ///< Average hop count from the Gateway, Calculated by Average of parents +1.
-  vector <Ptr<Node> > m_neighbors;    ///< Neighbors of the head node.
-  vector <Ptr<Node> > m_parents;      ///< Parents of the head node.
+  vector <Ptr<GraphNodeT> > m_neighbors;    ///< Neighbors of the head node.
+  vector <Ptr<GraphNodeT> > m_parents;      ///< Parents of the head node.
   bool m_reliability;                 ///< Reliability status of the head node in the graph.
 } GraphNode;
 
@@ -53,8 +53,8 @@ typedef struct
  */
 typedef struct
 {
-  GraphNode* m_u1;                     ///< Pointer for the selected node first parent.
-  GraphNode* m_u2;                     ///< Pointer for the selected node second parent.
+  Ptr<GraphNode> m_u1;                     ///< Pointer for the selected node first parent.
+  Ptr<GraphNode> m_u2;                     ///< Pointer for the selected node second parent.
   double m_avgHopCount;               ///< Average hop count from the Gateway, Calculated by pair vlaue of parents +1.
   bool m_Sr;                          ///< Whether to include in reliable selection
 } DownlinkEdgesForSelection;
@@ -94,10 +94,10 @@ public:
    * @param src Pointer for the node/ Edge initiating node pointer
    * @param dest Edge ending node pointer
    */
-  void AddEdge (Ptr<Node> src, Ptr<Node> dest);
-  vector<Ptr<Node> > GetEdges (Ptr<Node> src);
+  void AddEdge (uint32_t src, uint32_t dest);
+  vector<Ptr<GraphNode> > GetEdges (uint32_t src);
 
-  /** Add/Get node of the graph
+  /** Add/ Get/ Remove node of the graph
    * GetGraphSrcNode return the pointer for the Node with ID = id
    * GetGraphNode return the graph Node struct data for the Node with ID = id
    *
@@ -107,8 +107,9 @@ public:
    */
   void AddGraphNode (GraphNode graphNode);
   void AddNode(Ptr<Node> src);
-  Ptr<Node> GetGraphSrcNode (uint32_t id);
+  Ptr<Node> GetGraphNodeHead (uint32_t id);
   GraphNode GetGraphNode (uint32_t id);
+  void RemoveGraphNode(uint32_t id);
 
   /** Set/ Get gateway of the graph
    *- return the gateway graph nodes
