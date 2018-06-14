@@ -46,49 +46,50 @@ int main (int argc, char *argv[])
 
   Ptr<IsaGraph> G = CreateObject<IsaGraph>(nc);
 
+  G->AddGateway(0);
   G->AddAccessPoint(1);
   G->AddAccessPoint(2);
 
-	G->AddEdge(nc.Get(0), nc.Get(1));
-	G->AddEdge(nc.Get(0), nc.Get(2));
-	G->AddEdge(nc.Get(1), nc.Get(3));
-	G->AddEdge(nc.Get(1), nc.Get(4));
-	G->AddEdge(nc.Get(2), nc.Get(3));
-	G->AddEdge(nc.Get(2), nc.Get(4));
-	G->AddEdge(nc.Get(2), nc.Get(5));
-	G->AddEdge(nc.Get(3), nc.Get(6));
-	G->AddEdge(nc.Get(3), nc.Get(4));
-	G->AddEdge(nc.Get(4), nc.Get(7));
-	G->AddEdge(nc.Get(4), nc.Get(8));
-	G->AddEdge(nc.Get(5), nc.Get(4));
-	G->AddEdge(nc.Get(5), nc.Get(7));
-	G->AddEdge(nc.Get(5), nc.Get(9));
-	G->AddEdge(nc.Get(6), nc.Get(8));
-	G->AddEdge(nc.Get(7), nc.Get(8));
-	G->AddEdge(nc.Get(7), nc.Get(9));
-	G->AddEdge(nc.Get(8), nc.Get(10));
-	G->AddEdge(nc.Get(9), nc.Get(10));
+	G->AddEdge(0,1);
+	G->AddEdge(0,2);
+	G->AddEdge(1,3);
+	G->AddEdge(1,4);
+	G->AddEdge(2,3);
+	G->AddEdge(2,4);
+	G->AddEdge(2,5);
+	G->AddEdge(3,6);
+	G->AddEdge(3,4);
+	G->AddEdge(4,7);
+	G->AddEdge(4,8);
+	G->AddEdge(5,4);
+	G->AddEdge(5,7);
+	G->AddEdge(5,9);
+	G->AddEdge(6,8);
+	G->AddEdge(7,8);
+	G->AddEdge(7,9);
+	G->AddEdge(8,10);
+	G->AddEdge(9,10);
 
 	// for biderectional connectivity
-  G->AddEdge(nc.Get(1), nc.Get(0));
-  G->AddEdge(nc.Get(2), nc.Get(0));
-  G->AddEdge(nc.Get(3), nc.Get(1));
-  G->AddEdge(nc.Get(4), nc.Get(1));
-  G->AddEdge(nc.Get(3), nc.Get(2));
-  G->AddEdge(nc.Get(4), nc.Get(2));
-  G->AddEdge(nc.Get(5), nc.Get(2));
-  G->AddEdge(nc.Get(6), nc.Get(3));
-  G->AddEdge(nc.Get(4), nc.Get(3));
-  G->AddEdge(nc.Get(7), nc.Get(4));
-  G->AddEdge(nc.Get(8), nc.Get(4));
-  G->AddEdge(nc.Get(4), nc.Get(5));
-  G->AddEdge(nc.Get(7), nc.Get(5));
-  G->AddEdge(nc.Get(9), nc.Get(5));
-  G->AddEdge(nc.Get(8), nc.Get(6));
-  G->AddEdge(nc.Get(8), nc.Get(7));
-  G->AddEdge(nc.Get(9), nc.Get(7));
-  G->AddEdge(nc.Get(10), nc.Get(8));
-  G->AddEdge(nc.Get(10), nc.Get(9));
+  G->AddEdge(1,0);
+  G->AddEdge(2,0);
+  G->AddEdge(3,1);
+  G->AddEdge(4,1);
+  G->AddEdge(3,2);
+  G->AddEdge(4,2);
+  G->AddEdge(5,2);
+  G->AddEdge(6,3);
+  G->AddEdge(4,3);
+  G->AddEdge(7,4);
+  G->AddEdge(8,4);
+  G->AddEdge(4,5);
+  G->AddEdge(7,5);
+  G->AddEdge(9,5);
+  G->AddEdge(8,6);
+  G->AddEdge(8,7);
+  G->AddEdge(9,7);
+  G->AddEdge(10,8);
+  G->AddEdge(10,9);
 
 	// print the adjacency list representation of the above graph
 	G->PrintGraph();
@@ -110,16 +111,25 @@ int main (int argc, char *argv[])
   nc_GU.Add(acessPoint_2);
 
 	Ptr<IsaGraph> G_B = CreateObject<IsaGraph>(nc_GB);      ///< Broadcast graph creation
+
+  G_B->AddGateway(0);
+  G_B->AddAccessPoint(1);
+  G_B->AddAccessPoint(2);
+
 	Ptr<IsaGraph> G_U = CreateObject<IsaGraph>(nc_GU);      ///< Uplink graph creation
 
-	G_B->AddEdge(nc_GB.Get(0), nc_GB.Get(1));
-	G_B->AddEdge(nc_GB.Get(0), nc_GB.Get(2));
+  G_U->AddGateway(0);
+  G_U->AddAccessPoint(1);
+  G_U->AddAccessPoint(2);
+
+	G_B->AddEdge(0,1);
+	G_B->AddEdge(0,2);
 	G_B->SetHopCount(0,0);
 	G_B->SetHopCount(1,1);
 	G_B->SetHopCount(2,1);
 
-	G_U->AddEdge(nc_GU.Get(1), nc_GU.Get(0));
-	G_U->AddEdge(nc_GU.Get(2), nc_GU.Get(0));
+	G_U->AddEdge(1, 0);
+	G_U->AddEdge(2, 0);
 	G_U->SetHopCount(0,0);
 	G_U->SetHopCount(1,1);
 	G_U->SetHopCount(2,1);
