@@ -191,20 +191,21 @@ public:
    * @param downlinkGraphs List of reliable downlink graphs
    * @param v node that required to construct the downlink graph
    */
-  map <uint32_t, Ptr<IsaGraph>> ReliableDownlinkGraphs (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
-  map <uint32_t, Ptr<IsaGraph>> DownlinkGraphs (Ptr<IsaGraph> G, map <uint32_t, GraphNode> edgesForS, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
+  map <uint32_t, Ptr<IsaGraph>> ReliableDownlinkGraphs (Ptr<IsaGraph> G);
   map <uint32_t, Ptr<IsaGraph>> ConstructDownlinkGraphs (Ptr<IsaGraph> G, Ptr<GraphNode> v, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
 
   /** return selected edges for respective downlink graph if all three conditions are satisfied
    *- C1 v has at least two parents u1, u2, and they form a cycle.
-   *- C2 u1 is u2’s parent in u2’s local downlink graph. (u1 and u2 form a directed cycle)
+   *- C2 u1 is u2’s parent in u2’s "local" downlink graph (Node and it's immediate parents).
    *- C3 u2 (u1) has at least one parent from the cycle in Gu1 (Gu2)
    *
    * @param G graph to create the reliable downlink graphs
    * @param downlinkGraphs List of reliable downlink graphs
    * @param tempParents temporary vector to store the parents of a selected node of EdgesOfS
    */
-  DownlinkEdgesForSelection ThreeConditions (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs, vector<Ptr<GraphNode>> tempParents);
+  bool C1Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2);
+  bool C2Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2, Ptr<IsaGraph> G);
+  bool C3Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
 
 private:
   map <uint32_t, GraphNode> m_graphNodeMap;       ///< Map of graph nodes with their node IDs.

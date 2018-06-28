@@ -69,8 +69,21 @@ vector<Ptr<GraphNode>> IsaGraph::GetEdges (uint32_t src)
 void IsaGraph::AddEdge (uint32_t src, uint32_t dest)
 {
   NS_LOG_FUNCTION (this);
-  (this)->m_graphNodeMap[src].m_neighbors.push_back (&((this)->m_graphNodeMap[dest]));
-  (this)->m_graphNodeMap[dest].m_parents.push_back (&((this)->m_graphNodeMap[src]));
+  vector<Ptr<GraphNode>> srcNeighbors = (this)->m_graphNodeMap[src].m_neighbors;
+  vector<Ptr<GraphNode>> destParents = (this)->m_graphNodeMap[dest].m_parents;
+
+  Ptr<GraphNode> srcNode = &((this)->m_graphNodeMap[src]);
+  Ptr<GraphNode> destNode = &((this)->m_graphNodeMap[dest]);
+
+  if (count(srcNeighbors.begin(),srcNeighbors.end(),destNode) == 0)
+    {
+      (this)->m_graphNodeMap[src].m_neighbors.push_back (destNode);
+    }
+
+  if (count(destParents.begin(),destParents.end(),srcNode) == 0)
+    {
+      (this)->m_graphNodeMap[src].m_neighbors.push_back (srcNode);
+    }
 }
 
 void IsaGraph::AddNode (Ptr<Node> src)
@@ -95,7 +108,11 @@ void IsaGraph::AddGraphNode (GraphNode graphNode)
          it != graphNode.m_neighbors.end (); ++it)
       {
         tempNodeId= it->operator ->()->m_head->GetId();
-        (this)->m_graphNodeMap[tempNodeId] .m_parents.push_back(&((this)->m_graphNodeMap[nodeId]));
+        vector<Ptr<GraphNode>> tempParents = (this)->m_graphNodeMap[tempNodeId].m_parents;
+        if (count(tempParents.begin(),tempParents.end(),&graphNode) == 0)
+          {
+            (this)->m_graphNodeMap[tempNodeId].m_parents.push_back(&graphNode);
+          }
       }
 
   // update the neighbors of newly adding graph node parents
@@ -103,13 +120,17 @@ void IsaGraph::AddGraphNode (GraphNode graphNode)
          it != graphNode.m_parents.end (); ++it)
       {
         tempNodeId= it->operator ->()->m_head->GetId();
-        (this)->m_graphNodeMap[tempNodeId] .m_neighbors.push_back(&((this)->m_graphNodeMap[nodeId]));
+        vector<Ptr<GraphNode>> tempNeighbors = (this)->m_graphNodeMap[tempNodeId].m_parents;
+        if (count(tempNeighbors.begin(),tempNeighbors.end(),&graphNode) == 0)
+          {
+            (this)->m_graphNodeMap[tempNodeId] .m_neighbors.push_back(&graphNode);
+          }
       }
-
 }
 
 void IsaGraph::RemoveGraphNode(uint32_t id)
 {
+  NS_LOG_FUNCTION (this);
   GraphNode graphNode = (this)->m_graphNodeMap[id];
   uint32_t tempNodeId;
 
@@ -307,7 +328,7 @@ bool IsaGraph::BroadcastGraph (Ptr<IsaGraph> G, map <uint32_t, GraphNode> edgesF
             {
               uint32_t outgoingEdges = 0;
               hop_count = (this)->m_graphNodeMap[tempParents[0].m_head->GetId()].m_avgHopCount + 1;
-              G->m_graphNodeMap[it->first].m_avgHopCount = hop_count;
+               G->m_graphNodeMap[it->first].m_avgHopCount = hop_count;
               vector<Ptr<Node> > tempNeighbours = G->m_graphNodeMap[it->first].m_neighbors;
               for (uint32_t i = 0; i < tempNeighbours.size (); i++)
                 {
@@ -431,320 +452,438 @@ bool IsaGraph::ReliableUplinkGraph (Ptr<IsaGraph> G)
   return true;
 }
 
-map <uint32_t, Ptr<IsaGraph>> IsaGraph::ReliableDownlinkGraphs (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs)
-{
-  NS_LOG_FUNCTION (this);
-  return (this)->DownlinkGraphs(G, (this)->m_graphNodeMap, downlinkGraphs);
-}
-
-map <uint32_t, Ptr<IsaGraph>> IsaGraph::DownlinkGraphs (Ptr<IsaGraph> G, map <uint32_t, GraphNode> edgesForS, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs)
+map <uint32_t, Ptr<IsaGraph>> IsaGraph::ReliableDownlinkGraphs (Ptr<IsaGraph> G)
 {
   NS_LOG_FUNCTION (this);
 
-  bool S_2 = false;                 ///< vector for nodes have at least two edges from VB
-  bool S_1 = false;                 ///< vector for nodes have one edge from VB
-  GraphNode nodeMinHopSr;           ///< Graph Node with minimum hops from the gateway and satisfying the three conditions
-  GraphNode nodeMinHopS_1;          ///< Graph Node with minimum hops from the gateway and which not satisfying the three conditions
-  GraphNode nodeMaxoutgoingEdges;   ///< Graph Node with maximum outgoing edges
-  uint32_t maxOutgoingEdges = 0;    ///< Number of outgoing edges of the maximum outgoing edges node
+  Ptr<IsaGraph> S = CreateObject<IsaGraph>();        ///< graph S to count the nodes already explored.
 
-  nodeMaxoutgoingEdges = (this)->GetGetway().operator *();
-  edgesForS = (this)->UpdateSVector (G, edgesForS);
-  bool minHopSr = false;                                      ///< For Sr nodes (S_2 nodes satisfying three conditions)
-  bool minHopS_1 = false;                                     ///< For S' (not Sr) nodes
-  nodeMinHopSr.m_avgHopCount = 0;
-  nodeMinHopS_1.m_avgHopCount = 0;
+  map <uint32_t, Ptr<IsaGraph>> downlinkGraphs_G;               ///< Downlink graphs of the graph G
 
-  for (map<uint32_t, GraphNode>::const_iterator it = edgesForS.begin ();
-       it != edgesForS.end (); ++it)
+  // ***** begin ***** create Downlink graphs for all access points of the graph G
+  Ptr<Node> gateWay = G->m_gateway->m_head;
+  S->AddNode(gateWay);
+  for (vector<Ptr<GraphNode>>::const_iterator it = G->m_accessPoints.begin ();
+               it != G->m_accessPoints.end (); ++it)
+            {
+                Ptr<IsaGraph> G_AP = CreateObject<IsaGraph> ();                      ///< Downlink graph creation for access points
+                G_AP->AddNode(gateWay);
+                G_AP->AddGateway(gateWay->GetId());                               // Set gate way of the Downlink graph
+                Ptr<Node> accessPoint = it->operator ->()->m_head;
+                S->AddNode(accessPoint);
+                G_AP->AddNode(accessPoint);
+                G_AP->AddAccessPoint(accessPoint->GetId());                       // Set access point of the Downlink graph
+                G_AP->AddEdge(gateWay->GetId(), accessPoint->GetId());            // adding edge e(g,i)
+                G_AP->SetHopCount(accessPoint->GetId(), 1);
+                downlinkGraphs_G[accessPoint->GetId()] = G_AP;                      // Set Gi (Downlink graph for ith node) - For Access points
+            }
+  // ***** end ***** create Downlink graphs for all access points of the graph G
+
+  map <uint32_t, GraphNode> edgesForS;                ///< vector to determine the number of parents of the respective node
+
+  while (S->GetNumofNodes() != G->GetNumofNodes ())      // while S != V (Nodes of the Graph G)
     {
-      if ((this)->m_graphNodeMap.count (it->first) != 1)
-        { //considering only the V - VB nodes
-          double hop_count;
-          vector<Ptr<GraphNode>> tempParents;
+      edgesForS = S->UpdateSVector (G, G->m_graphNodeMap);       // Nodes and edges that need to be consider for the Downlink graph creation
 
-          for (uint32_t i = 0; i < (it->second).m_parents.size (); ++i)
-            {
-              uint32_t nextNode = (it->second).m_parents[i].operator -> ()->m_head->GetId ();
-              if ((this)->m_graphNodeMap.count (nextNode))
-                {
-                  tempParents.push_back (&(this)->m_graphNodeMap[nextNode]);
-                }
-            }
+      GraphNode nodeMinHopPv;           ///< Graph Node with minimum hops from the gateway and satisfying the three conditions
+      GraphNode nodeMinHopS_2;           ///< Graph Node with minimum hops from the gateway and satisfying the three conditions
+      GraphNode nodeMinHopS_1;          ///< Graph Node with minimum hops from the gateway and which not satisfying the three conditions
 
-          if (tempParents.size () >= 2)              //nodes having at least two edges from S
-            {
-              DownlinkEdgesForSelection Edges = (this)->ThreeConditions(G, downlinkGraphs, tempParents);
-              if ((Edges.m_Sr) && (!minHopSr || (nodeMinHopSr.m_avgHopCount > Edges.m_avgHopCount)))
-                {
-                  nodeMinHopSr.m_avgHopCount = Edges.m_avgHopCount;
-                  nodeMinHopSr.m_head = it->first;
-                  nodeMinHopSr.m_parents[0] = Edges.m_u1->m_head;
-                  nodeMinHopSr.m_parents[1] = Edges.m_u2->m_head;
-                  minHopSr = true;
-                }
-              else if (!minHopSr && (!minHopS_1 || (nodeMinHopS_1.m_avgHopCount > Edges.m_avgHopCount)))
-                {
-                  nodeMinHopS_1.m_avgHopCount = Edges.m_avgHopCount;
-                  nodeMinHopS_1.m_head = it->first;
-                  nodeMinHopS_1.m_parents[0] = Edges.m_u1->m_head;
-                  nodeMinHopS_1.m_parents[1] = Edges.m_u2->m_head;
-                  minHopS_1 = true;
-                }
-            }
-          else if (tempParents.size () == 1 && !S_2)              //nodes having one edge from S
-            {
-              //Code required *********************************
-            }
+      // initially set the hop counts as the maximum possible +1
+      uint32_t notPossibleHopCount = G->GetNumofNodes ()+1;
+      nodeMinHopS_2.m_avgHopCount = notPossibleHopCount;
+      nodeMinHopPv.m_avgHopCount = notPossibleHopCount;
+      nodeMinHopS_1.m_avgHopCount = notPossibleHopCount;
+
+      for (map<uint32_t, GraphNode>::const_iterator it = edgesForS.begin ();
+             it != edgesForS.end (); ++it)
+          {
+            if (S->m_graphNodeMap.count (it->first) != 1)   // check whether node is already in the explored node list or not
+              {
+                GraphNode tempNode;                     // Node which having two parents considering at the moment (temporary Node v)
+                vector<Ptr<GraphNode>> tempParents;     // temporary vector for  all the parents of the tempNode in S (explored Nodes)
+                tempNode.m_head = it->second.m_head;
+
+                for (uint32_t i = 0; i < (it->second).m_parents.size (); ++i)
+                  {
+                    uint32_t nextNode = (it->second).m_parents[i].operator -> ()->m_head->GetId ();
+                    if (S->m_graphNodeMap.count (nextNode))
+                      {
+                        tempParents.push_back (&S->m_graphNodeMap[nextNode]);
+                      }
+                  }
+
+                if (tempParents.size () >= 2)              //nodes having at least two edges from S
+                  {
+                    //iterate over all the edges to find the edge pair that need to add to the Downlink graph of the respective node
+                    vector<Ptr<GraphNode>> tempNew = tempParents;               ///< copy of temParents vector
+
+                    while (!tempNew.empty())
+                      {
+                        Ptr<GraphNode> u1 = tempNew.back();                // get the first parent of the node v
+                        uint32_t u1Id = u1->m_head->GetId();
+                        tempNew.pop_back();
+
+                        tempNode.m_parents[0] = u1->m_head;       // add parent u1 to the parents list
+
+                        for (vector<Ptr<GraphNode>>::const_iterator it = tempNew.begin ();
+                             it != tempNew.end (); ++it)
+                          {
+                            Ptr<GraphNode> u2 = it->operator *();         //get the next parent of the node v
+                            uint32_t u2Id = u2->m_head->GetId();
+                            tempNode.m_parents[1] = u2->m_head;
+                            tempNode.m_avgHopCount = (downlinkGraphs_G[u1Id]->GetHopCount(u1Id) + downlinkGraphs_G[u2Id]->GetHopCount(u2Id))/2;
+
+                            if(G->C1Condition(u1, u2) && (G->C2Condition(u1, u2, downlinkGraphs_G)
+                                || G->C3Condition(u1, u2, downlinkGraphs_G)))
+                              {
+                                if(nodeMinHopPv.m_avgHopCount>tempNode.m_avgHopCount)
+                                  {
+                                    nodeMinHopPv = tempNode;
+                                  }
+                              }
+                            else if (nodeMinHopS_2.m_avgHopCount>tempNode.m_avgHopCount)
+                              {
+                                nodeMinHopS_2 = tempNode;
+                              }
+                          }
+                      }
+                    // end of iteration over all edge pairs of v
+                  }
+                else if (tempParents.size () == 1)              //nodes having one edge from S
+                  {
+                    Ptr<GraphNode> u1 = tempParents.back();                // get the first parent of the node v
+                    uint32_t u1Id = u1->m_head->GetId();
+
+                    if(nodeMinHopS_1.m_avgHopCount>downlinkGraphs_G[u1Id]->GetHopCount(u1Id))
+                      {
+                        nodeMinHopS_1.m_avgHopCount = downlinkGraphs_G[u1Id]->GetHopCount(u1Id);    // setting the average hop count of parents to S_1 Node
+                      }
+                  }
+              }
+          }// end of iterator of selected edges (edgesForS)
+
+      if (nodeMinHopPv.m_avgHopCount < notPossibleHopCount)
+        {
+          nodeMinHopPv.m_reliability = true;            // C1 and (C2 or C3) condition satisfying. Therefore, Node is having reliable downlink graph
+          nodeMinHopS_2 = nodeMinHopPv;
         }
-    }
 
-  if (minHopSr)
-    {
-      (this)->AddNode (nodeMinHopSr.m_head);
-      NS_LOG_UNCOND ("S_2 Node:" << nodeMinHopSr.m_head->GetId ());   //temporary
-      (this)->SetHopCount (nodeMinHopSr.m_head->GetId (), nodeMinHopSr.m_avgHopCount);
-      NS_LOG_UNCOND ("Avg Hop Count:" << nodeMinHopSr.m_avgHopCount); //temporary
-      NS_LOG_UNCOND ("Edge 1 :" << nodeMinHopSr.m_parents[0]->m_head->GetId ()); //temporary
-      NS_LOG_UNCOND ("Edge 2 :" << nodeMinHopSr.m_parents[1]->m_head->GetId ()); //temporary
-      (this)->AddEdge (nodeMinHopSr.m_parents[0]->m_head->GetId (), nodeMinHopSr.m_head->GetId());
-      (this)->AddEdge (nodeMinHopSr.m_parents[1]->m_head->GetId (), nodeMinHopSr.m_head->GetId());
-      (this)->SetReliability(nodeMinHopSr.m_head->GetId ());
-      downlinkGraphs = (this)->ConstructDownlinkGraphs(G, &(nodeMinHopSr), downlinkGraphs);
-    }
-  else if (minHopS_1)
-    {
-      (this)->AddNode (nodeMinHopS_1.m_head);
-      NS_LOG_UNCOND ("S_2 Node:" << nodeMinHopS_1.m_head->GetId ());   //temporary
-      (this)->SetHopCount (nodeMinHopS_1.m_head->GetId (), nodeMinHopS_1.m_avgHopCount);
-      NS_LOG_UNCOND ("Avg Hop Count:" << nodeMinHopS_1.m_avgHopCount); //temporary
-      NS_LOG_UNCOND ("Edge 1 :" << nodeMinHopS_1.m_parents[0]->m_head->GetId ()); //temporary
-      NS_LOG_UNCOND ("Edge 2 :" << nodeMinHopS_1.m_parents[1]->m_head->GetId ()); //temporary
-      (this)->AddEdge (nodeMinHopS_1.m_parents[0]->m_head->GetId(), nodeMinHopS_1.m_head->GetId());
-      (this)->AddEdge (nodeMinHopS_1.m_parents[1]->m_head->GetId(), nodeMinHopS_1.m_head->GetId());
-      (this)->SetReliability(nodeMinHopS_1.m_head->GetId ());
-      downlinkGraphs = (this)->ConstructDownlinkGraphs(G, &(nodeMinHopS_1), downlinkGraphs);
-    }
-  else if (S_1)
-    {
+      if(nodeMinHopS_2.m_avgHopCount < notPossibleHopCount)
+        {
+          nodeMinHopS_2.m_avgHopCount++;                  // hop count of u1u2 average considered for above algorithm, but hv is +1 to it.
+          downlinkGraphs_G = ConstructDownlinkGraphs(G,&nodeMinHopS_2, downlinkGraphs_G);
+          S->AddNode(nodeMinHopS_2.m_head);
+        }
+      else if(nodeMinHopS_1.m_avgHopCount < notPossibleHopCount)
+        {
+          nodeMinHopS_1.m_avgHopCount++;                  // hop count of u1 considered for above algorithm, but hv is +1 to it.
+          uint32_t nodeId = nodeMinHopS_1.m_head->GetId();
+          uint32_t nodeParentId = nodeMinHopS_1.m_parents[0]->m_head->GetId();
 
-      //Code required *********************************
+          Ptr<IsaGraph> G_v = CreateObject<IsaGraph> ();                      ///< Downlink graph creation for the selected Node
+          G_v = downlinkGraphs_G[nodeParentId];
+          G_v->AddGraphNode(nodeMinHopS_1);             // add graph node S_1
+          G_v->AddEdge(nodeParentId, nodeId);           // Adding edge of u1 and v
+          downlinkGraphs_G[nodeId] = G_v;               // Add Downlink graph to the graph list
+          S->AddNode(nodeMinHopS_1.m_head);
+        }
 
-    }
+    } // end of while loop for S != V
 
-  if ((this)->GetNumofNodes () < G->GetNumofNodes ())
-    {
-      (this)->DownlinkGraphs (G, edgesForS, downlinkGraphs);
-    }
-
-  return downlinkGraphs;
+  return downlinkGraphs_G;
 }
 
 map <uint32_t, Ptr<IsaGraph>> IsaGraph::ConstructDownlinkGraphs (Ptr<IsaGraph> G, Ptr<GraphNode> v, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs)
 {
   Ptr<IsaGraph> Gv = CreateObject<IsaGraph> ();                      ///< initial downlink graph (Gv) creation with v
-  Ptr<IsaGraph> S = CreateObject<IsaGraph> ();                       ///< initiate a graph to store the traversed nodes
-  Ptr<IsaGraph> VvminusS = CreateObject<IsaGraph> ();                ///< To track down the nodes in Vv but not in the S
 
-  Gv->AddGraphNode(v.operator *());                                  // add v with e(u1,v) & e(u2,v) edges and calculated average hop count
-  uint32_t u1 = v->m_parents[0]->m_head->GetId();                            ///< get u1 node id (u1 and u2 nodes are the immediate parents of node v)
-  Ptr<IsaGraph> Gu1 = downlinkGraphs[u1];                            ///< initiate a graph to copy Gu1 reliable graph
+  Ptr<GraphNode> u1 = v->m_parents[0];            // first parent of the node v
+  Ptr<GraphNode> u2 = v->m_parents[1];            // second parent of the node v
 
-  // Updating Gv graph with the Gu1 (reliable downlink graph of node u1)
-  for (map<uint32_t, GraphNode>::const_iterator it = Gu1->m_graphNodeMap.begin ();
-       it != Gu1->m_graphNodeMap.end (); ++it)
+  uint32_t vId = v->m_head->GetId();              // Id of the Node v
+  uint32_t u1Id = u1->m_head->GetId();            // Id of the first parent of v
+  uint32_t u2Id = u2->m_head->GetId();            // Id of the second parent of v
+
+  vector<Ptr<GraphNode>> u2Parents = downlinkGraphs[u2Id]->GetGraphNode(u2Id).m_parents;    // parents of node u1 in it's respective Downlink graph
+  vector<Ptr<GraphNode>> u1Parents = downlinkGraphs[u1Id]->GetGraphNode(u1Id).m_parents;    // parents of node u1 in it's respective Downlink graph
+  uint32_t u1HopCount = downlinkGraphs[u1Id]->GetGraphNode(u1Id).m_avgHopCount;             // hop count of u1 in it's Downlink graph
+  uint32_t u2HopCount = downlinkGraphs[u2Id]->GetGraphNode(u2Id).m_avgHopCount;             // hop count of u2 in it's Downlink graph
+
+  /*  check u1 and u2 satisfy C1 and C2 conditions
+   *
+   *             u1 <   <--->X (in G)
+   *             |   |       |
+   *             |    >  u2 <
+   *             |       |
+   *              >  v  <
+   */
+  if ((this)->C1Condition(u1, u2) && (this)->C2Condition(u1, u2, G))
     {
-      Gv->AddGraphNode(it->second);
+      if (count(u2Parents.begin(),u2Parents.end(),u1->m_head) >= 1)
+        {
+          /*  Check u1-> u2 is in Gu2
+           *
+           *           u1<--->u2 (Gu2)
+           *            |     |
+           *             > v <
+           */
+
+          Gv = downlinkGraphs[u2Id];
+          Gv->AddGraphNode(v.operator *());         //Add Node v
+          Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+          Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+          Gv->AddEdge(u2Id, u1Id);                  //Add edge u2 ---> u1
+          downlinkGraphs[vId] = Gv;
+        }
+      else
+        {
+          /*
+           *     (Gu1) u1<--->u2
+           *            |     |
+           *             > v <
+           */
+          Gv = downlinkGraphs[u1Id];
+          Gv->AddGraphNode(v.operator *());         //Add Node v
+          Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+          Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+          Gv->AddEdge(u2Id, u1Id);                  //Add edge u2 ---> u1
+          Gv->AddEdge(u1Id, u2Id);                  //Add edge u1 ---> u2
+          downlinkGraphs[vId] = Gv;
+        }
     }
-
-  S->AddGraphNode(Gu1->GetGetway().operator *());                    // adding gateway to the traversed nodes
-  S->AddGateway(Gu1->GetGetway()->m_head->GetId());
-  S->AddGraphNode(Gv->m_graphNodeMap[u1]);                           // adding u1 to the traversed nodes
-  S->AddGraphNode(Gv->GetGraphNode(v->m_head->GetId()));             // adding v to the traversed nodes
-
-  // Adding access points vector to the S vector
-  S->m_accessPoints = Gu1->m_accessPoints;                           // this need to be re-consider if two AP clusters are serving the node v
-
-  VvminusS = Gv;                                                     // Vv-S = Gv = g, u1, u2 (if exist), Gu1, v
-  VvminusS->RemoveGraphNode(v->m_head->GetId());                     // Vv-S = g, u1, u2 (if exist), Gu1
-
-  // Gu1 - reliable downlink graph of node u1
-  if (v->m_parents.size() != 1)       // if u2 is not null
+  /*  u1 (u2) has at least one parent from the cycle in Gu2 (Gu1)
+   *
+   *             x1   <--->  x2 (find x1 which is parent of u1 (u2))
+   *           /    \        |
+   *          |       >  u2 < (u1)
+   *          |         | |
+   *           > u1 <-->  |   (u2)
+   *              |       |
+   *               >  v  <
+   *
+   */
+  else if ((this)->C1Condition(u1, u2) && (this)->C3Condition(u1, u2,downlinkGraphs))
     {
-      uint32_t u2 = v->m_parents[1]->m_head->GetId();                         ///< get u2 node id (u1 and u2 nodes are the immediate parents of node v)
-
-      // begin() - e(u1,u2) edge setup
-      if(count(G->m_graphNodeMap[u1].m_neighbors.begin(), G->m_graphNodeMap[u1].m_neighbors.end (), &(G->m_graphNodeMap[u2])))
+      for (vector<Ptr<GraphNode>>::const_iterator it1 = u2Parents.begin ();
+                it1 != u2Parents.end (); ++it1)
         {
-          Gv->AddEdge(u1, u2);
-        }
-
-      if(count(G->m_graphNodeMap[u2].m_neighbors.begin(), G->m_graphNodeMap[u2].m_neighbors.end (), &(G->m_graphNodeMap[u1])))
-        {
-          Gv->AddEdge(u2, u1);
-        }
-      // end() - e(u1,u2) edge setup
-
-      // add missing nodes from Gu2 to Gv
-      Ptr<IsaGraph> Gu2 = downlinkGraphs[u2];
-
-      for (map<uint32_t, GraphNode>::const_iterator it = Gu2->m_graphNodeMap.begin ();
-           it != Gu2->m_graphNodeMap.end (); ++it)
-        {
-          if (!Gv->m_graphNodeMap.count(it->first))
+          vector<Ptr<GraphNode>> neighborsOfU2Parent = it1->operator ->()->m_neighbors;
+          for (vector<Ptr<GraphNode>>::const_iterator it2 = neighborsOfU2Parent.begin ();
+                          it2 != neighborsOfU2Parent.end (); ++it2)
             {
-              Gv->AddGraphNode(it->second);                           // Gv = g, u1, u2, Gu1, Gu2, v
-              VvminusS->AddGraphNode(it->second);                     // Vv-S = g, u1, u2 (if exist), Gu1, Gu2 (if exist)
+              if (it2->operator ->() == u1)
+                {
+                  Gv = downlinkGraphs[u2Id];
+                  Gv->AddNode(u1->m_head);                                    //Add node u1 to Gv
+                  Gv->AddEdge(it1->operator ->()->m_head->GetId(), u1Id);     //Add edge parent of u2 with u1
+                  Gv->AddGraphNode(v.operator *());                           //Add Node v
+                  Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+                  Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+                  Gv->AddEdge(u2Id, u1Id);                  //Add edge u2 ---> u1
+                  Gv->AddEdge(u1Id, u2Id);                  //Add edge u1 ---> u2
+                  downlinkGraphs[vId] = Gv;
+                }
             }
         }
 
-      S->AddGraphNode(Gv->m_graphNodeMap[u2]);                        // adding u2 to the traversed nodes
-      VvminusS->RemoveGraphNode(u2);                                  // Vv-S = g, u1, Gu1, Gu2 (if exist) [no u2]
-    }
-
-  VvminusS->RemoveGraphNode(S->GetGetway()->m_head->GetId());         // Vv-S = u1, Gu1, Gu2 (if exist) [no g, u2]
-  VvminusS->RemoveGraphNode(u1);                                      // Vv-S = Gu1, Gu2 (if exist) [no g, u1, u2]
-
-  map <uint32_t, GraphNode> edgesForS;
-
-  while (Gv->GetNumofNodes() > S->GetNumofNodes())            // while nodes of S is not equal to nodes of Gv
-  {
-    // begin() - check whether Access points vector has two edges to S or not *************************
-    uint32_t outgoingEdgesFromAccessPoints = 0;                    ///< outgoing edges from access points vector to traversed nodes
-    for (map<uint32_t, GraphNode>::const_iterator it1 = S->m_graphNodeMap.begin ();
-               it1 != S->m_graphNodeMap.end (); ++it1)
+      if (u2HopCount < u1HopCount)
+        {
+          for (vector<Ptr<GraphNode>>::const_iterator it1 = u1Parents.begin ();
+                                it1 != u1Parents.end (); ++it1)
             {
-            for (vector<Ptr<GraphNode>>::const_iterator it2 = G->GetAccessPoints().begin ();
-                     it2 != G->GetAccessPoints().end (); ++it2)
-                  {
-                    // find for node having a edge from access points vector
-                    if(count(it2->operator ->()->m_neighbors.begin(),it2->operator ->()->m_neighbors.end(),
-                             it1->second.m_head))
-                      {
-                        ++outgoingEdgesFromAccessPoints;
-                      }
-                  }
+              vector<Ptr<GraphNode>> neighborsOfU1Parent = it1->operator ->()->m_neighbors;
+              for (vector<Ptr<GraphNode>>::const_iterator it2 = neighborsOfU1Parent.begin ();
+                              it2 != neighborsOfU1Parent.end (); ++it2)
+                {
+                  if (it2->operator ->() == u2)
+                    {
+                      Gv = downlinkGraphs[u1Id];
+                      Gv->AddNode(u2->m_head);                                    //Add node u1 to Gv
+                      Gv->AddEdge(it1->operator ->()->m_head->GetId(), u2Id);     //Add edge parent of u2 with u1
+                      Gv->AddGraphNode(v.operator *());                           //Add Node v
+                      Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+                      Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+                      Gv->AddEdge(u2Id, u1Id);                  //Add edge u2 ---> u1
+                      Gv->AddEdge(u1Id, u2Id);                  //Add edge u1 ---> u2
+                      downlinkGraphs[vId] = Gv;
+                    }
+                }
             }
-
-    // if two or more outgoing edges are available from access point vector
-    if(outgoingEdgesFromAccessPoints >= 2)
-      {
-        for (vector<Ptr<GraphNode>>::const_iterator it = G->GetAccessPoints().begin ();
-                     it != G->GetAccessPoints().end (); ++it)
-                  {
-                    S->AddGraphNode(it->operator *());
-                  }
-        break;
-      }
-    // end() - check whether Access points vector has two edges to S or not *************************
-
-    edgesForS = S->UpdateSVector (G, edgesForS);
-
-    for (map<uint32_t, GraphNode>::const_iterator it = edgesForS.begin ();
-        it != edgesForS.end (); ++it)
-     {
-       if ((this)->m_graphNodeMap.count (it->first) != 1)
-         { //considering only the V - VB nodes
-           double hop_count;
-           vector<GraphNode> tempParents;
-
-           for (uint32_t i = 0; i < (it->second).m_parents.size (); ++i)
-             {
-               uint32_t nextNode = (it->second).m_parents[i].operator -> ()->m_head->GetId ();
-               if ((this)->m_graphNodeMap.count (nextNode))
-                 {
-                   tempParents.push_back ((this)->m_graphNodeMap[nextNode]);
-                 }
-             }
-
-           if (tempParents.size () >= 2)
-             {
-               // code is required...
-             }
-           else if (tempParents.size () == 1 && !S_2)
-             {
-               // code is required...
-             }
-         }
-     }// end of for loop for edges of S vector
-  } // end of while loop
-
-
+        }
+    }
+  else
+    {
+      bool edgeU1toU2 = (count(G->m_graphNodeMap[u1Id].m_neighbors.begin(),
+                               G->m_graphNodeMap[u1Id].m_neighbors.end (), &(G->m_graphNodeMap[u2Id])) >= 1);
+      bool edgeU2toU1 = (count(G->m_graphNodeMap[u2Id].m_neighbors.begin(),
+                               G->m_graphNodeMap[u2Id].m_neighbors.end (), &(G->m_graphNodeMap[u1Id])) >= 1);
+      if(edgeU1toU2 && edgeU2toU1)
+        {
+          if(u1HopCount < u2HopCount)
+            {
+              Gv = downlinkGraphs[u1Id];
+              Gv->AddNode(u2->m_head);                  //Add node u1 to Gv
+            }
+          else
+            {
+              Gv = downlinkGraphs[u2Id];
+              Gv->AddNode(u1->m_head);                  //Add node u1 to Gv
+            }
+          Gv->AddGraphNode(v.operator *());         //Add Node v
+          Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+          Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+          Gv->AddEdge(u2Id, u1Id);                  //Add edge u2 ---> u1
+          Gv->AddEdge(u1Id, u2Id);                  //Add edge u1 ---> u2
+          downlinkGraphs[vId] = Gv;
+        }
+      else if(!edgeU1toU2 && !edgeU2toU1)
+        {
+          if(u1HopCount < u2HopCount)
+            {
+              Gv = downlinkGraphs[u1Id];
+              Gv->AddGraphNode(v.operator *());         //Add Node v
+              Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+            }
+          else
+            {
+              Gv = downlinkGraphs[u2Id];
+              Gv->AddGraphNode(v.operator *());         //Add Node v
+              Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+            }
+          downlinkGraphs[vId] = Gv;
+        }
+      else if(edgeU1toU2)
+        {
+          Gv = downlinkGraphs[u1Id];
+          Gv->AddNode(u2->m_head);                                    //Add node u1 to Gv
+          Gv->AddGraphNode(v.operator *());                           //Add Node v
+          Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+          Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+          Gv->AddEdge(u1Id, u2Id);                  //Add edge u1 ---> u2
+          downlinkGraphs[vId] = Gv;
+        }
+      else
+        {
+          Gv = downlinkGraphs[u2Id];
+          Gv->AddNode(u1->m_head);                                    //Add node u1 to Gv
+          Gv->AddGraphNode(v.operator *());                           //Add Node v
+          Gv->AddEdge(u1Id, vId);                   //Add edge u1 ---> v
+          Gv->AddEdge(u2Id, vId);                   //Add edge u2 ---> v
+          Gv->AddEdge(u2Id, u1Id);                  //Add edge u2 ---> u1
+          downlinkGraphs[vId] = Gv;
+        }
+    }
   return downlinkGraphs;
 }
 
-DownlinkEdgesForSelection IsaGraph::ThreeConditions (Ptr<IsaGraph> G, map <uint32_t,
-                                                     Ptr<IsaGraph>> downlinkGraphs, vector<Ptr<GraphNode>> tempParents)
+//*- C1 v has at least two parents u1, u2, and they form a cycle.
+bool IsaGraph::C1Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2)
 {
-  DownlinkEdgesForSelection Edges;  ///< structure for selected edges of downlink graph of v
-  Edges.m_Sr = false;
-  Edges.m_avgHopCount = 0;
+  NS_LOG_FUNCTION (this);
 
-  bool C1;                          ///< C1 v has at least two parents u1, u2, and they form a cycle.
-  bool C2;                          ///< u1 is u2’s parent in u2’s local downlink graph. (u1 and u2 form a directed cycle)
-  bool C3;                          ///< u2 (u1) has at least one parent from the cycle in Gu1 (Gu2)
+  uint32_t u1Id = u1->m_head->GetId();        ///< node Id of the first parent of the respective node v
+  uint32_t u2Id = u2->m_head->GetId();        ///< node Id of the second parent of the respective node v
 
-  vector<Ptr<GraphNode>> tempNew = tempParents;   ///< copy of temParents vector
-  pair <Ptr<GraphNode>, Ptr<GraphNode>> tempU;        ///< tempU temporary selection for u1 and u2 (immid1ate parents of v)
-  uint32_t u1 = 0;                            ///< id of u1 node
-  uint32_t u2 = 0;                            ///< id of u2 node
-
-  double pairWiseHopCount = 0;
-  double tempPairWiseHopCount = 0;
-
-  while(!tempNew.empty())
+  // check u1 and u2 not representing the same node
+  if (u1Id != u2Id)
     {
-
-      //initially all conditions are zero
-      C1 = false;
-      C2 = false;
-      C3 = false;
-
-      tempU.first = tempNew.back();
-      u1 = (tempU.first)->m_head->GetId();
-      tempNew.pop_back();
-
-      for (vector<Ptr<GraphNode>>::const_iterator it = tempNew.begin ();
-           it != tempNew.end (); ++it)
+      /*  check (u2 is a neighbor of u1) and (u2 is a parent of u1)
+       *
+       *           u2<---->(u1)
+       *
+       */
+      if (count(u1->m_neighbors.begin(),u1->m_neighbors.end(),u2->m_head) >= 1)
         {
-          tempU.second = it;
-          u2 = (tempU.second)->m_head->GetId();
-          if (u1 != u2)
+          if (count(u1->m_parents.begin(),u1->m_parents.end(),u2->m_head) >= 1)
             {
-              C1 = true;
+              return true;
             }
+        }
+  }
 
-          if ((count(tempU.first->m_neighbors.begin(),tempU.first->m_neighbors.end(),tempU.second) >= 1) &&
-                        (count(tempU.first->m_parents.begin(),tempU.first->m_parents.end(),tempU.second) >= 1))
-                      {
-                        C2 = true;
-                      }
+  return false;
+}
 
-          if ((((downlinkGraphs[u1])->m_graphNodeMap.count(u2)) >= 1) ||
-                        (((downlinkGraphs[u2])->m_graphNodeMap.count(u1)) >= 1))
-                      {
-                        C3 = true;
-                      }
+//*- C2 u1 is u2’s parent in u2’s "local" Downlink graph (Node and it's immediate parents)
+bool IsaGraph::C2Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2, Ptr<IsaGraph> G)
+{
+  NS_LOG_FUNCTION (this);
 
-          if (C1 && C2 && C3)
+  uint32_t u1Id = u1->m_head->GetId();        ///< node Id of the first parent of the respective node v
+  uint32_t u2Id = u2->m_head->GetId();        ///< node Id of the second parent of the respective node v
+
+  // check u1 and u2 not representing the same node
+  if (u1Id != u2Id)
+    {
+      /*  check u1 is a parent of u2's local Downlink graph in G
+       *
+       *           x1<---->x2 (check if x1 of x2 is u1)
+       *            |      |
+       *             > u2 <
+       */
+      vector<Ptr<Node>> u2Parents = G->GetGraphNode(u2Id).m_parents;
+
+      if (count(u2Parents.begin(),u2Parents.end(),u1->m_head) >= 1)
+        {
+          return true;
+        }
+    }
+
+  return false;
+}
+
+//*- C3 u2 (u1) has at least one parent from the cycle in Gu1 (Gu2)
+bool IsaGraph::C3Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs)
+{
+  NS_LOG_FUNCTION (this);
+
+  uint32_t u1Id = u1->m_head->GetId();       ///< node Id of the first parent of the respective node v
+  uint32_t u2Id = u2->m_head->GetId();       ///< node Id of the second parent of the respective node v
+
+  // check u1 and u2 not representing the same node
+  if (u1Id != u2Id)
+    {
+      /*  u1 has at least one parent from the cycle in Gu2
+       *
+       *           x1  <--->x2 (check if x1 is parent of u1)
+       *          |  |      |
+       *          |   > u2 <
+       *          |
+       *           > u1
+       */
+      vector<Ptr<GraphNode>> u2Parents = downlinkGraphs[u2Id]->GetGraphNode(u2Id).m_parents;
+
+      for (vector<Ptr<GraphNode>>::const_iterator it = u2Parents.begin ();
+                it != u2Parents.end (); ++it)
+        {
+          if (count(u1->m_parents.begin(),u1->m_parents.end(),it->operator ->()) >= 1)
             {
-              Edges.m_Sr = true;
+              return true;
             }
+        }
 
-          tempPairWiseHopCount = ((this)->m_graphNodeMap[u1].m_avgHopCount +
-              (this)->m_graphNodeMap[u1].m_avgHopCount)/2;
+      /*  u2 has at least one parent from the cycle in Gu1
+       *
+       *           x1  <--->x2 (check if x1 is parent of u2)
+       *          |  |      |
+       *          |   > u1 <
+       *          |
+       *           > u2
+       */
+      vector<Ptr<GraphNode>> u1Parents = downlinkGraphs[u1Id]->GetGraphNode(u1Id).m_parents;
 
-          if ((pairWiseHopCount==0) || (pairWiseHopCount > tempPairWiseHopCount))
+      for (vector<Ptr<GraphNode>>::const_iterator it = u1Parents.begin ();
+                it != u1Parents.end (); ++it)
+        {
+          if (count(u2->m_parents.begin(),u2->m_parents.end(),it->operator ->()) >= 1)
             {
-              pairWiseHopCount = tempPairWiseHopCount;
-              Edges.m_u1 = tempU.first;
-              Edges.m_u2 = tempU.second;
-              Edges.m_avgHopCount = pairWiseHopCount + 1;
+              return true;
             }
         }
     }
 
-  return Edges;
+  return false;
 }
 
 } // namespace ns3
