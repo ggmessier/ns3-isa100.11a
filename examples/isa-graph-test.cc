@@ -21,6 +21,7 @@
 #include "ns3/core-module.h"
 #include <iomanip>
 #include <iostream>
+//#include "ns3/isa-graph.h"
 
 #include "ns3/isa100-11a-module.h"
 
@@ -52,6 +53,7 @@ int main (int argc, char *argv[])
 
 	G->AddEdge(0,1);
 	G->AddEdge(0,2);
+	G->AddEdge(1,2);
 	G->AddEdge(1,3);
 	G->AddEdge(1,4);
 	G->AddEdge(2,3);
@@ -73,6 +75,7 @@ int main (int argc, char *argv[])
 	// for biderectional connectivity
   G->AddEdge(1,0);
   G->AddEdge(2,0);
+  G->AddEdge(2,1);
   G->AddEdge(3,1);
   G->AddEdge(4,1);
   G->AddEdge(3,2);
@@ -137,24 +140,36 @@ int main (int argc, char *argv[])
 	bool reliableGraphB = G_B->ReliableBroadcastGraph(G);
 	NS_LOG_UNCOND("**********************************");
 	bool reliableGraphU = G_U->ReliableUplinkGraph(G);
+	NS_LOG_UNCOND("**********************************");
 
-	NS_LOG_UNCOND("Reliable Broadcast Graph");
+	map <uint32_t, Ptr<IsaGraph>> downlinkGraphs = G->ReliableDownlinkGraphs(G);
+
+	NS_LOG_UNCOND("****************** Reliable Broadcast Graph ******************");
 	if(reliableGraphB)
 	  {
 	    G_B->PrintGraph();
 	  }
 	else
 	  {
-	    NS_LOG_UNCOND("Reliable Broadcast Graph cannot be created. Grpah is disconnected.");
+	    NS_LOG_UNCOND("Reliable Broadcast Graph cannot be created. Graph is disconnected.");
 	  }
-  NS_LOG_UNCOND("Reliable Uplink Graph");
+  NS_LOG_UNCOND("****************** Reliable Uplink Graph ******************");
   if(reliableGraphU)
     {
       G_U->PrintGraph();
     }
   else
     {
-      NS_LOG_UNCOND("Reliable Uplink Graph cannot be created. Grpah is disconnected.");
+      NS_LOG_UNCOND("Reliable Uplink Graph cannot be created. Graph is disconnected.");
+    }
+
+  NS_LOG_UNCOND("**********************************===================*************************************");
+
+  for (map<uint32_t, Ptr<IsaGraph>>::const_iterator it = downlinkGraphs.begin ();
+         it != downlinkGraphs.end (); ++it)
+    {
+      NS_LOG_UNCOND(" >>>>>>>>>>>>>>>>>>>>>>>>>> Reliable Downlink Graph of Node " <<it->first);
+      it->second->PrintGraph();
     }
 
 	return 0;
