@@ -39,22 +39,23 @@ namespace ns3 {
 /** Defining Node information structure for graph routing.
  *
  */
-typedef struct GraphNodeT
+typedef struct
 {
-  Ptr<Node> m_head;                   ///< Pointer for the node.
-  double m_avgHopCount;               ///< Average hop count from the Gateway, Calculated by Average of parents +1.
-  vector <Ptr<GraphNodeT> > m_neighbors;    ///< Neighbors of the head node.
-  vector <Ptr<GraphNodeT> > m_parents;      ///< Parents of the head node.
-  bool m_reliability;                 ///< Reliability status of the head node in the graph.
+  Ptr<Node> m_head;                         ///< Pointer for the node.
+  double m_avgHopCount;                     ///< Average hop count from the Gateway, Calculated by Average of parents +1.
+  vector <Ptr<Node> > m_neighbors;    ///< Neighbors of the head node.
+  vector <Ptr<Node> > m_parents;      ///< Parents of the head node.
+  bool m_reliability;                       ///< Reliability status of the head node in the graph.
+  int8_t m_powerOfrate;                     ///< power of the sample rate (n of 2^n): range is -2 to 9
 } GraphNode;
 
-/** Defining structure for selected edges of downlink graph of v
+/** Defining structure for selected edges of Downlink graph of v
  *
  */
 typedef struct
 {
-  Ptr<GraphNode> m_u1;                     ///< Pointer for the selected node first parent.
-  Ptr<GraphNode> m_u2;                     ///< Pointer for the selected node second parent.
+  Ptr<Node> m_u1;                     ///< Pointer for the selected node first parent.
+  Ptr<Node> m_u2;                     ///< Pointer for the selected node second parent.
   double m_avgHopCount;               ///< Average hop count from the Gateway, Calculated by pair vlaue of parents +1.
   bool m_Sr;                          ///< Whether to include in reliable selection
 } DownlinkEdgesForSelection;
@@ -62,15 +63,12 @@ typedef struct
 /** Comparator to support graph Nodes sorting based on average hop count
  *
  */
-bool Compare_Average_Hop (const GraphNode & e1, const GraphNode & e2)
-{
-  if (e1.m_avgHopCount != e2.m_avgHopCount)
-    {
-      return (e1.m_avgHopCount < e2.m_avgHopCount);
-    }
-  return ((e1.m_head < e2.m_head) && (e1.m_neighbors < e2.m_neighbors)
-      && (e1.m_parents < e2.m_parents) && (e1.m_reliability < e2.m_reliability));
-}
+extern bool CompareAverageHop (const GraphNode & e1, const GraphNode & e2);
+
+/** Comparator to support graph Nodes sorting based on average hop count
+ *
+ */
+extern bool CompareFrameRate (const GraphNode & e1, const GraphNode & e2);
 
 class IsaGraph;
 
@@ -95,11 +93,12 @@ public:
    * @param dest Edge ending node pointer
    */
   void AddEdge (uint32_t src, uint32_t dest);
-  vector<Ptr<GraphNode> > GetEdges (uint32_t src);
+  vector<Ptr<Node> > GetEdges (uint32_t src);
 
   /** Add/ Get/ Remove node of the graph
    * GetGraphSrcNode return the pointer for the Node with ID = id
    * GetGraphNode return the graph Node struct data for the Node with ID = id
+   * GetGraphNode map retruns m_graphNodeMap map
    *
    * @param src Pointer for the node/ Edge initiating node pointer
    * @param dest Edge ending node pointer
@@ -107,8 +106,8 @@ public:
    */
   void AddGraphNode (GraphNode graphNode);
   void AddNode(Ptr<Node> src);
-  Ptr<Node> GetGraphNodeHead (uint32_t id);
   GraphNode GetGraphNode (uint32_t id);
+  map <uint32_t, GraphNode> GetGraphNodeMap (void);
   void RemoveGraphNode(uint32_t id);
 
   /** Set/ Get gateway of the graph
@@ -117,7 +116,7 @@ public:
    * @param id ID of the Node
    */
   void AddGateway(uint32_t id);
-  Ptr<GraphNode> GetGetway (void);
+  Ptr<Node> GetGetway (void);
 
   /** Set/ Get Access point nodes of the graph
    *- return vector of access point graph nodes
@@ -125,7 +124,7 @@ public:
    * @param id ID of the Node
    */
   void AddAccessPoint(uint32_t id);
-  vector<Ptr<GraphNode>> GetAccessPoints (void);
+  vector<uint32_t> GetAccessPoints (void);
 
   /** Get number of nodes in graph
    *
@@ -168,7 +167,6 @@ public:
    * @param edgesForS map of node with
    */
   bool ReliableBroadcastGraph (Ptr<IsaGraph> G);
-  bool BroadcastGraph (Ptr<IsaGraph> G, map <uint32_t, GraphNode> edgesForS);
 
   /** Update the selection vector for reliable graph creation
    *
@@ -192,28 +190,27 @@ public:
    * @param v node that required to construct the downlink graph
    */
   map <uint32_t, Ptr<IsaGraph>> ReliableDownlinkGraphs (Ptr<IsaGraph> G);
-  map <uint32_t, Ptr<IsaGraph>> ConstructDownlinkGraphs (Ptr<IsaGraph> G, Ptr<GraphNode> v, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
+  map <uint32_t, Ptr<IsaGraph>> ConstructDownlinkGraphs (Ptr<IsaGraph> G, GraphNode v, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
 
   /** return selected edges for respective downlink graph if all three conditions are satisfied
    *- C1 v has at least two parents u1, u2, and they form a cycle.
    *- C2 u1 is u2’s parent in u2’s "local" downlink graph (Node and it's immediate parents).
    *- C3 u2 (u1) has at least one parent from the cycle in Gu1 (Gu2)
    *
-   * @param G graph to create the reliable downlink graphs
    * @param downlinkGraphs List of reliable downlink graphs
    * @param tempParents temporary vector to store the parents of a selected node of EdgesOfS
    */
-  bool C1Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2);
-  bool C2Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2, Ptr<IsaGraph> G);
-  bool C3Condition (Ptr<GraphNode> u1, Ptr<GraphNode> u2, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
+  bool C1Condition (Ptr<Node> u1, Ptr<Node> u2);
+  bool C2Condition (Ptr<Node> u1, Ptr<Node> u2);
+  bool C3Condition (Ptr<Node> u1, Ptr<Node> u2, map <uint32_t, Ptr<IsaGraph>> downlinkGraphs);
 
 private:
   map <uint32_t, GraphNode> m_graphNodeMap;       ///< Map of graph nodes with their node IDs.
-  vector<Ptr<GraphNode>> m_accessPoints;          ///< Access point nodes of the graph
-  Ptr<GraphNode> m_gateway;                       ///< gateway of the graph
+  vector<uint32_t> m_accessPoints;          ///< Access point nodes of the graph
+  uint32_t m_gateway;                       ///< gateway of the graph
 
 };
 
 } // namespace ns3
 
-#endif /* ISA100_11A_HELPER_H */
+#endif /* ISA100_11A_GRAPH_H */
