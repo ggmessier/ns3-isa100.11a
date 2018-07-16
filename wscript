@@ -11,12 +11,12 @@ def configure(conf):
     "-fexceptions", 
     "-DNDEBUG", 
     "-DIL_STD", 
-    "-I/opt/CPLEX_Studio1271/concert/include",
-    "-I/opt/CPLEX_Studio1271/cplex/include"])
+    "-I/opt/ibm/ILOG/CPLEX_Studio128/concert/include",
+    "-I/opt/ibm/ILOG/CPLEX_Studio128/cplex/include"])
 
     conf.env.append_value("LINKFLAGS", [
-    "-L/opt/CPLEX_Studio1271/cplex/lib/x86-64_osx/static_pic",
-    "-L/opt/CPLEX_Studio1271/concert/lib/x86-64_osx/static_pic",
+    "-L/opt/ibm/ILOG/CPLEX_Studio128/cplex/lib/x86-64_linux/static_pic",
+    "-L/opt/ibm/ILOG/CPLEX_Studio128/concert/lib/x86-64_linux/static_pic",
     "-lconcert",
     "-lilocplex",
     "-lcplex", 
@@ -56,9 +56,14 @@ def build(bld):
 	'model/goldsmith-tdma-optimizer.cc',
 	'model/minhop-tdma-optimizer.cc',
     	'model/convex-integer-tdma-optimizer.cc',
+    	'model/isa100-graph-scheduling.cc',
+     	'model/isa100-broadcast-graph.cc', 
+     	'model/isa100-downlink-graph.cc', 
+     	'model/isa100-uplink-graph.cc', 
+        'helper/isa-graph.cc',       
 	'helper/isa100-helper.cc',
 	'helper/isa100-helper-locations.cc',
-	'helper/isa100-helper-scheduling.cc',
+	'helper/isa100-helper-scheduling.cc'
         ]
 
 #    obj_test = bld.create_ns3_module_test_library('isa100-11a')
@@ -91,7 +96,12 @@ def build(bld):
 	'model/goldsmith-tdma-optimizer.h',
 	'model/minhop-tdma-optimizer.h',
 	'model/convex-integer-tdma-optimizer.h',
-        'helper/isa100-helper.h',
+    	'model/isa100-graph-scheduling.h',
+     	'model/isa100-broadcast-graph.h', 
+     	'model/isa100-downlink-graph.h', 
+     	'model/isa100-uplink-graph.h', 
+        'helper/isa-graph.h', 
+        'helper/isa100-helper.h'
         ]
 
     obj.use.append("CONCERT")
