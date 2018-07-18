@@ -112,9 +112,6 @@ bool Isa100GraphScheduling::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGrap
 
   Slot slot;
 
-//  multimap<pair<Ptr<Node>, Slot>, TimeScheduleStruct> m_nodeSchedule;    ///< schedule for each node of the network
-//  multimap<Slot, pair<Ptr<Node>,TimeScheduleStruct>> m_schedule;     ///< Total schedule of the network
-
   //  for all node i ∈ Successor(u) do
   for (vector<Ptr<Node>>::const_iterator it = successorsOfU.begin ();
         it != successorsOfU (); ++it)
@@ -130,8 +127,8 @@ bool Isa100GraphScheduling::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGrap
       scheduleStructForU.m_nextNode = next;
       scheduleStructForU.m_repLength = superframe;
 
-      pair<Ptr<Node>, Slot> tempNodeAndSlot;
-      map<Slot,TimeScheduleStruct> tempNodeSchedule;
+//      pair<Ptr<Node>, Slot> tempNodeAndSlot;
+      pair<Slot,TimeScheduleStruct> tempNodeSchedule;
 
       // update the schedule of node Next
       scheduleStructForNext = scheduleStructForU;
@@ -145,14 +142,14 @@ bool Isa100GraphScheduling::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGrap
           (this)->m_schedule[slot] = timeSchedulePair;
 
           // update the schedule of node u
-          tempNodeAndSlot.first = u;
-          tempNodeAndSlot.second = slot;
-          (this)->m_nodeSchedule[tempNodeAndSlot] = scheduleStructForU;
+          tempNodeSchedule.first = slot;
+          tempNodeSchedule.second = scheduleStructForU;
+          (this)->m_nodeSchedule[u].push_back(tempNodeSchedule);
 
           // update the schedule of node Next
-          tempNodeAndSlot.first = next;
-          tempNodeAndSlot.second = slot;
-          (this)->m_nodeSchedule[tempNodeAndSlot] = scheduleStructForNext;
+          tempNodeSchedule.first = slot;
+          tempNodeSchedule.second = scheduleStructForNext;
+          (this)->m_nodeSchedule[next].push_back(tempNodeSchedule);
 
           if (next != v)
             {
@@ -169,19 +166,19 @@ bool Isa100GraphScheduling::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGrap
               (this)->m_schedule[slot] = timeSchedulePair;
 
               // update the schedule of node u
-              tempNodeAndSlot.first = u;
-              tempNodeAndSlot.second = slot;
-              (this)->m_nodeSchedule[tempNodeAndSlot] = scheduleStructForU;
+              tempNodeSchedule.first = slot;
+              tempNodeSchedule.second = scheduleStructForU;
+              (this)->m_nodeSchedule[u].push_back(tempNodeSchedule);
 
               // update the schedule of node Next
-              tempNodeAndSlot.first = next;
-              tempNodeAndSlot.second = slot;
               scheduleStructForNext.m_repLength = superframeF_1;
-              (this)->m_nodeSchedule[tempNodeAndSlot] = scheduleStructForNext;
+              tempNodeSchedule.first = slot;
+              tempNodeSchedule.second = scheduleStructForNext;
+              (this)->m_nodeSchedule[next].push_back(tempNodeSchedule);
             }
           else
             {
-              slot.m_timeSlot = tempEarliestTime + superframe;
+              slot = (this)->GetNextAvailableSlot(tempEarliestTime + superframe, option);
 
               // update the total schedule
               scheduleStructForU.m_repLength = superframeF_1;
@@ -189,15 +186,15 @@ bool Isa100GraphScheduling::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGrap
               (this)->m_schedule[slot] = timeSchedulePair;
 
               // update the schedule of node u
-              tempNodeAndSlot.first = u;
-              tempNodeAndSlot.second = slot;
-              (this)->m_nodeSchedule[tempNodeAndSlot] = scheduleStructForU;
+              tempNodeSchedule.first = slot;
+              tempNodeSchedule.second = scheduleStructForU;
+              (this)->m_nodeSchedule[u].push_back(tempNodeSchedule);
 
               // update the schedule of node Next
-              tempNodeAndSlot.first = next;
-              tempNodeAndSlot.second = slot;
               scheduleStructForNext.m_repLength = superframeF_1;
-              (this)->m_nodeSchedule[tempNodeAndSlot] = scheduleStructForNext;
+              tempNodeSchedule.first = slot;
+              tempNodeSchedule.second = scheduleStructForNext;
+              (this)->m_nodeSchedule[next].push_back(tempNodeSchedule);
             }
 
           if (next != v)
@@ -217,6 +214,7 @@ uint16_t Isa100GraphScheduling::GetTimeSlots (int8_t PowerOfrate)
   return 2^PowerOfrate*100;
 }
 
+// Identify the earliest slot from t with a channel c to:
 Slot Isa100GraphScheduling::GetNextAvailableSlot(uint16_t timeSlot, LinkOption option)
 {
   NS_LOG_FUNCTION (this);
@@ -265,6 +263,33 @@ Slot Isa100GraphScheduling::GetNextAvailableSlot(uint16_t timeSlot, LinkOption o
   }
 
   return slot;
+}
+
+void Isa100GraphScheduling::PrintSchedule()
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_UNCOND("************ Schedule ************");
+  for (multimap<Slot, pair<Ptr<Node>,TimeScheduleStruct>>::const_iterator it = (this)->m_schedule.begin ();
+        it != (this)->m_schedule.end (); ++it)
+    {
+      NS_LOG_UNCOND("Slot: t-"<<it->first.m_timeSlot<<" c-"<<it->first.m_channelOffset);
+      NS_LOG_UNCOND("node-"<<it->second.first->GetId()<<" next-"<<it->second.second.m_nextNode<<
+                    "gID-"<<it->second.second.m_graphID<<" o-"<<it->second.second.m_option<<" lt-"<<it->second.second.m_linkType);
+    }
+
+}
+
+void Isa100GraphScheduling::PrintNodeSchedule(Ptr<Node> node)
+{
+  NS_LOG_FUNCTION (this);
+  NS_LOG_UNCOND("************ Node Schedule ************ -"<<node->GetId());
+  for (vector<pair<Slot, TimeScheduleStruct>>::const_iterator it = (this)->m_nodeSchedule[node].begin ();
+        it != (this)->m_nodeSchedule[node].end (); ++it)
+    {
+      NS_LOG_UNCOND("Slot: t-"<<it->first.m_timeSlot<<" c-"<<it->first.m_channelOffset);
+      NS_LOG_UNCOND(" next-"<<it->second.m_nextNode<<
+                    "gID-"<<it->second.m_graphID<<" o-"<<it->second.m_option<<" lt-"<<it->second.m_linkType);
+    }
 }
 
 } // namespace ns3

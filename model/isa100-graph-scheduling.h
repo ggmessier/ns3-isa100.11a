@@ -69,7 +69,7 @@ typedef enum
  */
 typedef struct
 {
-  uint16_t m_nextNode;              ///< Transmit node of the packet.
+  uint16_t m_nextNode;              ///< Transmit node ID of the packet.
   LinkType m_linkType;              ///< whether packet is transmitting or receiving
 //  Slot m_slot;                    ///< Schedule slot information including time slot and the channel offset
   uint16_t m_repLength;             //< packet scheduled repetition length (depends on superframe size)
@@ -126,9 +126,16 @@ public:
    */
   Slot GetNextAvailableSlot(uint16_t timeSlot, LinkOption option);
 
+  /** print full schedule of the network and each node schedules
+   *
+   * @param node return the schedule of this node
+   */
+  void PrintSchedule();
+  void PrintNodeSchedule(Ptr<Node> node);
+
 private:
   int8_t m_maximumChannelOffsets;                               ///< maximum available channel offsets for the network. ***this need to be set in helper class***
-  multimap<pair<Ptr<Node>, Slot>, TimeScheduleStruct> m_nodeSchedule;    ///< schedule for each node of the network
+  map<Ptr<Node>, vector<pair<Slot, TimeScheduleStruct>>> m_nodeSchedule;    ///< schedule for each node of the network
   multimap<Slot, pair<Ptr<Node>,TimeScheduleStruct>> m_schedule;     ///< Total schedule of the network
   map<int8_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
 
