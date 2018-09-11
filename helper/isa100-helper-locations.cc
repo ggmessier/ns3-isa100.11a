@@ -66,8 +66,10 @@ Isa100Helper::SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionA
 }
 
 
-void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, Vector sinkLocation)
-{
+//void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, Vector sinkLocation)
+//{   //Rajith removed
+void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, std::vector<Vector> coreNodeLocations)
+{ //Rajith
   std::vector<Vector> nodeLocations;
 
   Ptr<UniformRandomVariable> randX = CreateObject<UniformRandomVariable> ();
@@ -78,19 +80,28 @@ void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> pos
   randY->SetAttribute("Min", DoubleValue(0));
   randY->SetAttribute("Max", DoubleValue(yLength));
 
-  // Sink node
-  positionAlloc->Add(sinkLocation);
-  m_locationTrace(0,sinkLocation.x, sinkLocation.y, sinkLocation.z);
+  std::vector<Vector3D> checkDist;      //vector to keep the locations of the node to check the adherence to minimum distance spacing // Rajith
 
+  // Sink node
+  for (int i = 0; i < coreNodeLocations.size(); i++)  //Rajith
+    { //Rajith
+      positionAlloc->Add(coreNodeLocations[i]); //Rajith
+      m_locationTrace(i,coreNodeLocations[i].x, coreNodeLocations[i].y, coreNodeLocations[i].z);  //Rajith
+
+      checkDist.push_back(coreNodeLocations[i]);  //Rajith
+    } //Rajith
+
+//  positionAlloc->Add(sinkLocation);  //Rajith removed
+//  m_locationTrace(0,sinkLocation.x, sinkLocation.y, sinkLocation.z);  //Rajith removed
 
   // Sensor (Tx) nodes
   double x, y;
-  std::vector<Vector3D> checkDist;
-  checkDist.push_back(Vector(0,0,0));
+//  std::vector<Vector3D> checkDist;  //Rajith removed
+//  checkDist.push_back(Vector(0,0,0)); //Rajith removed
   bool conflict;
   uint16_t count;
 
-  for (int i = 1; i < numNodes; i++)
+  for (int i = 3; i < numNodes; i++)  //Rajith changed initial condition to 3 from 1
   {
     // Generate x-coordinate
     count = 0;

@@ -198,8 +198,8 @@ public:
    * @param minNodeSpacing Nodes must be separated by at least this much (m).
    * @param sinkLocation Location of the sink node.
    */
-  void GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, Vector sinkLocation);
-
+  void GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, std::vector<Vector> coreNodeLocations);
+  //Rajith Changed
 
 
   // ------ Scheduling -----------
