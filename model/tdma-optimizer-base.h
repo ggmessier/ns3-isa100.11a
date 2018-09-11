@@ -24,6 +24,7 @@
 
 #include "ns3/nstime.h"
 #include "ns3/node-container.h"
+//#include "ns3/isa-graph.h"
 
 typedef std::vector<double> row_t;
 typedef std::vector<row_t> matrix_t;
@@ -31,6 +32,7 @@ typedef std::vector<row_t> matrix_t;
 
 namespace ns3 {
 class PropagationLossModel;
+//class IsaGraph;
 
 struct NetworkLink {
   uint8_t txNode;
@@ -45,6 +47,7 @@ typedef enum
   TDMA_GOLDSMITH = 1,
   TDMA_CONVEX_INT = 2,
   TDMA_CONVEX_SLOT_C = 3,
+  TDMA_GRAPH = 4  //Rajith
 } OptimizerSelect;
 
 typedef std::vector<std::vector<NetworkLink> > tdmaSchedule;
@@ -71,6 +74,8 @@ public:
    * @return flowMatrix A matrix of packet flows between nodes.
    */
   virtual std::vector< std::vector<int> > SolveTdma (void) ;
+
+//  virtual std::map <uint32_t, Ptr<IsaGraph>> SolveTdmaGraph (NodeContainer c); // Rajith
 
 
 protected:

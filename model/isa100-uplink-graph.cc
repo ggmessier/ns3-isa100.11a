@@ -18,7 +18,7 @@
  * Author: Rajith Madduma Bandarage <rajith.maddumabandar@ucalgary.ca>
  */
 
-#include "isa100-uplink-graph.h"
+#include "isa-graph.h"
 #include "ns3/log.h"
 #include "ns3/type-id.h"
 #include <algorithm>
@@ -29,23 +29,30 @@ using namespace std;
 
 namespace ns3 {
 
-TypeId Isa100UplinkGraph::GetTypeId (void)
-{
-  static TypeId tid = TypeId ("ns3::Isa100UplinkGraph")
-    .SetParent<Object> ()
-    .AddConstructor<Isa100UplinkGraph> ()
-  ;
-  return tid;
-}
-
-Isa100UplinkGraph::Isa100UplinkGraph ()
+bool IsaGraph::ReliableUplinkGraph (Ptr<IsaGraph> G)
 {
   NS_LOG_FUNCTION (this);
-}
+  // Initial graph with gateway and APs edges reversed.
+  (this)->FlipEdge();
 
-Isa100UplinkGraph::~Isa100UplinkGraph ()
-{
-  NS_LOG_FUNCTION (this);
+  // G graph reversed.
+  Ptr<IsaGraph> G_reverse = G->FlipEdge();
+
+  // Generate reliable broadcast graph from uplink flipped graph
+  (this)->ReliableBroadcastGraph(G_reverse);
+
+  if(G->GetNumofNodes()==(this)->GetNumofNodes())
+    {
+      // Flip edges of created reliable broadcast graph
+      (this)->FlipEdge();
+    }
+  else
+    {
+      // Uplink graph is disconnected.
+      return false;
+    }
+  // Reliable uplink graph creation succeeded.
+  return true;
 }
 
 } // namespace ns3
