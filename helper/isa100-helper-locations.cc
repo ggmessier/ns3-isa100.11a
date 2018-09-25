@@ -83,7 +83,7 @@ void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> pos
   std::vector<Vector3D> checkDist;      //vector to keep the locations of the node to check the adherence to minimum distance spacing // Rajith
 
   // Sink node
-  for (int i = 0; i < coreNodeLocations.size(); i++)  //Rajith
+  for (unsigned int i = 0; i < coreNodeLocations.size(); i++)  //Rajith
     { //Rajith
       positionAlloc->Add(coreNodeLocations[i]); //Rajith
       m_locationTrace(i,coreNodeLocations[i].x, coreNodeLocations[i].y, coreNodeLocations[i].z);  //Rajith

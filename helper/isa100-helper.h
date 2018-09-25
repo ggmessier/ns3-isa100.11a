@@ -36,6 +36,7 @@ namespace ns3 {
 class Isa100NetDevice;
 class SingleModelSpectrumChannel;
 class ListPositionAllocator;
+class IsaGraph;
 
 /** Used by the breadth first search that designs a minimum hop network.
  *
@@ -240,7 +241,34 @@ public:
       uint8_t *hopPattern, uint32_t numHop, OptimizerSelect optSelect,
       Ptr<OutputStreamWrapper> stream = NULL);
 
+  //Rajith code addition for graph scheduling
+  /** Construct the data communication schedule of the graph network
+     *
+     * @param G Pointer for the graph network that need to create the schedule
+     */
+    bool ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> mapOfG);
 
+    /** Schedule link for specific graph type
+     *
+     * @param u and v are the source and destination of the communication
+     * @param Graph Pointer for the graph network that need to create the schedule
+     * @param superframe superframe size considering the sample rate
+     * @param timeSlot time slot that required to consider to find the next available slot
+     * @param option link option whether exclusive or shared
+     */
+    bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint16_t timeSlot, DlLinkType option);
+
+    /** Get next available channel offset and the time slot
+     *
+     * @param timeSlot time slot that required to consider to find the next available slot
+     */
+    uint16_t GetNextAvailableSlot(uint16_t timeSlot, DlLinkType option);
+
+//    void SetGroupSampleRate(uint32_t node, vector<Ptr<Node>> groups);
+//    vector<Ptr<Node>> GetGroupSampleRate(uint32_t);
+
+    void ResizeSchedule(uint32_t superframe);
+  //end of Rajith code addition
   /**}@*/
 
 private:
@@ -362,6 +390,17 @@ private:
 
   double **m_txPwrDbm; /// Holds transmit powers between nodes.
   int m_numTimeslots; ///< Number of timeslots in a superframe.
+
+  // Additional private variables used by Rajith
+  bool m_graphType;  ///< Rajith - use to identify the graph
+  vector<vector<int>> m_mainSchedule;  ///< main schedule information (slot, TX if 0 and TX if 1)
+  map<uint16_t, map<uint16_t, DlLinkType>> m_nodeScheduleN;    ///< schedule for each node of the network (map of slot to LinkType)
+  map<uint16_t, map<uint16_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
+  map<uint16_t, map<uint16_t, vector<uint16_t>>> m_avgHopCount;  ///< average hop count of each node
+  vector<int> m_repLength;   ///<repetition length of the slot (slot // ***channel offset need to be considered***)
+
+  map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
+  // end of additional private variables used by Rajith
 
   HelperLocationTracedCallback m_locationTrace;
 

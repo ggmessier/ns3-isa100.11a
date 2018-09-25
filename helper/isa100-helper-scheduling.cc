@@ -43,6 +43,8 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/packet.h"
 
+#include "ns3/graph-tdma-optimizer.h"  //Rajith
+
 
 NS_LOG_COMPONENT_DEFINE ("Isa100HelperScheduling");
 
@@ -127,7 +129,12 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
   		tdmaOptimizer = CreateObject<ConvexIntTdmaOptimizer> ();
   		break;
   	}
-
+  	case TDMA_GRAPH:  //Rajith
+    {  //Rajith
+      tdmaOptimizer = CreateObject<GraphTdmaOptimzer> ();  //Rajith
+      m_graphType = true;
+      break;  //Rajith
+    }  //Rajith
   	default:
   		NS_FATAL_ERROR("Invalid selection of optimizer!");
   }
@@ -258,8 +265,6 @@ void Isa100Helper::CalculateTxPowers(NodeContainer c, Ptr<PropagationLossModel> 
   		}
   	}
   }
-
-
 
 }
 
