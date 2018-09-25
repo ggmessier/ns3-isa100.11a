@@ -26,6 +26,7 @@
 
 #include "ns3/object.h"
 #include "ns3/mac16-address.h"
+#include <map>
 
 namespace ns3 {
 class NodeContainer;
@@ -116,6 +117,49 @@ private:
 
 };
 
+// Added by Rajith
+class Isa100GraphRoutingAlgorithm : public Isa100RoutingAlgorithm
+{
+public:
+
+  static TypeId GetTypeId (void);
+
+  Isa100GraphRoutingAlgorithm();
+
+  /** Constructor.
+   *
+   * @param initNumDests The number of destinations the node can reach using source routing.
+   * @param initTable Array of strings containing the multi-hop paths to reach each destination.  Each address is a string in XX:XX format.
+   */
+  Isa100GraphRoutingAlgorithm(uint32_t initNumDests,  std::map<uint32_t, std::vector<Mac16Address>> initTable);
+
+  ~Isa100GraphRoutingAlgorithm();
+
+  /** Populate header at source with any information required by routing algorithm.
+   * - Only works if the header contains a valid destination address.
+   *
+   * @param header The header object to be worked on.
+   */
+  void PrepTxPacketHeader(Isa100DlHeader &header);
+
+  /** Process a received packet to determine if it needs to be forwarded.
+   * - If it does need to be forwarded on, this function will also make the
+   *   necessary modifications to the packet header.
+   *
+   * @param packet Pointer to the received packet.
+   * @param forwardPacketOn Reference to boolean that is true if the packet must be sent onward.
+   */
+  void ProcessRxPacket(Ptr<Packet> packet, bool &forwardPacketOn);
+
+  void DeleteTableEntry(Mac16Address nodeAddress); // Rajith
+
+private:
+
+  std::map<uint32_t, std::vector<Mac16Address>> m_table;
+  uint32_t m_numDests;
+  uint32_t *m_numHops;
+
+};
 
 }
 
