@@ -32,7 +32,7 @@
 #include "ns3/isa100-net-device.h"
 #include "ns3/isa100-dl.h"
 #include "ns3/isa100-battery.h"
-//#include "ns3/isa-graph.h"
+#include "ns3/isa-graph.h"
 
 #include <ilcplex/ilocplex.h>
 #include <algorithm>
@@ -79,6 +79,7 @@ void GraphTdmaOptimzer::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
 
   // Setup the common base properties
   TdmaOptimizerBase::SetupOptimization(c, propModel);
+  GraphCreation(c);
 
 }
 
@@ -86,13 +87,20 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
 {
   NS_LOG_FUNCTION (this);
 
-  Ptr<IsaGraph> G = CreateObject<IsaGraph>(c);
+//  Ptr<IsaGraph> G = CreateObject<IsaGraph>(c);
+  m_graph = CreateObject<IsaGraph>(c);
 
-  G->AddGateway(0);
+//  G->AddGateway(0);
+//
+//  // Rajith:: code required to modify to support any number of access points
+//  G->AddAccessPoint(1);
+//  G->AddAccessPoint(2);
+
+  m_graph->AddGateway(0);
 
   // Rajith:: code required to modify to support any number of access points
-  G->AddAccessPoint(1);
-  G->AddAccessPoint(2);
+  m_graph->AddAccessPoint(1);
+  m_graph->AddAccessPoint(2);
 
   uint16_t numNodes = c.GetN();
   TimeValue slotDurationV;
@@ -109,18 +117,18 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
       devPtr->GetDl()->GetAttribute("SuperFramePeriod", tempNumSlotsV);
       numSlotsV = tempNumSlotsV.Get();
 
-      G->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
+//      G->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
+      m_graph->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
 
       for (uint16_t nNode = 0; nNode < numNodes; nNode++)
         {
           if(parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
             {
-              G->AddEdge(parent, nNode);
+//              G->AddEdge(parent, nNode);
+              m_graph->AddEdge(parent, nNode);
             }
         }
     }
-
-  m_graph = G;
 
   Ptr<Node> gateWay = c.Get(0);
   Ptr<Node> acessPoint_1 = c.Get(1);
@@ -148,16 +156,25 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
 
   G_U.operator *() = G_B.operator *();
 
+////  bool reliableGraphB =
+//  G_B->ReliableBroadcastGraph(G);
+////  bool reliableGraphU =
+//  G_U->ReliableUplinkGraph(G);
+
 //  bool reliableGraphB =
-  G_B->ReliableBroadcastGraph(G);
+  G_B->ReliableBroadcastGraph(m_graph);
 //  bool reliableGraphU =
-  G_U->ReliableUplinkGraph(G);
+  G_U->ReliableUplinkGraph(m_graph);
 
-  map <uint32_t, Ptr<IsaGraph>> downlinkGraphs = G->ReliableDownlinkGraphs(G);
-  downlinkGraphs[65535] = G_B;
-  downlinkGraphs[0] = G_U;
+//  map <uint32_t, Ptr<IsaGraph>> downlinkGraphs = G->ReliableDownlinkGraphs(G);
+//  downlinkGraphs[65535] = G_B;
+//  downlinkGraphs[0] = G_U;
 
-  m_graphMap = downlinkGraphs;
+  m_graphMap = m_graph->ReliableDownlinkGraphs(m_graph);
+  m_graphMap[65535] = G_B;
+  m_graphMap[0] = G_U;
+
+//  m_graphMap = downlinkGraphs;
 }
 
 vector< vector<int> > GraphTdmaOptimzer::SolveTdma (void)

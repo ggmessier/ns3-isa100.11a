@@ -31,6 +31,8 @@
 #include "ns3/log.h"
 #include "ns3/boolean.h"
 
+#include "ns3/isa-graph.h"
+
 NS_LOG_COMPONENT_DEFINE ("TdmaOptimizerBase");
 
 namespace ns3 {
@@ -94,6 +96,7 @@ TdmaOptimizerBase::TdmaOptimizerBase ()
   m_numTimeslots = 0;
   m_currMultiFrame = 0;
   m_frameInitEnergiesJ.clear();
+  m_graph = 0;   // Rajith
 }
 
 TdmaOptimizerBase::~TdmaOptimizerBase ()

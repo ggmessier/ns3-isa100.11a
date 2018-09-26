@@ -23,14 +23,14 @@
 #define GRAPH_TDMA_OPTIMIZER
 
 #include "ns3/tdma-optimizer-base.h"
-#include "ns3/isa-graph.h"
+//#include "ns3/isa-graph.h"
 #include "ns3/ptr.h"
 
 using namespace std;
 
 namespace ns3{
 
-class IsaGraph;
+//class IsaGraph;
 
 /**
  * \class GraphTdmaOptimzer
@@ -62,6 +62,9 @@ public:
    */
   virtual std::vector< std::vector< int > > SolveTdma (void);
 
+//  virtual std::map <uint32_t, Ptr<IsaGraph>> GetGraphMap(void);
+//  virtual Ptr<IsaGraph> GetGraph(void);
+
 
 private:
 
@@ -71,8 +74,8 @@ private:
      */
   void GraphCreation(NodeContainer c); // Rajith
 
-  std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;
-  Ptr<IsaGraph> m_graph;
+//  std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;
+//  Ptr<IsaGraph> m_graph;
 
 };
 

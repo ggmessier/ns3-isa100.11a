@@ -25,8 +25,6 @@
 #include "ns3/core-module.h"
 #include "ns3/isa100-11a-module.h"
 #include <algorithm>
-//#include "ns3/isa100-graph-scheduling.h"
-//#include "ns3/graph-tdma-optimizer.h"
 
 using namespace std;
 namespace ns3{
@@ -225,7 +223,7 @@ private:
   map <uint32_t, GraphNode> m_graphNodeMap;       ///< Map of graph nodes with their node IDs.
   vector<uint32_t> m_accessPoints;          ///< Access point nodes of the graph
   uint32_t m_gateway;                       ///< gateway of the graph
-  uint16_t m_graphID;                       ///< graphID vaies from 0 - 65535 (0- broadcast, 65535 - Uplink & others - downlink)
+  uint16_t m_graphID;                       ///< graphID varies from 0 - 65535 (65535- broadcast, 0 - Uplink & others - downlink)
 
 };
 

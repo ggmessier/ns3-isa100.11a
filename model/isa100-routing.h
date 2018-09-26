@@ -156,6 +156,7 @@ public:
 private:
 
   std::map<uint32_t, std::vector<Mac16Address>> m_table;
+//  Mac16Address **m_table;
   uint32_t m_numDests;
   uint32_t *m_numHops;
 
