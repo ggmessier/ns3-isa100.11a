@@ -145,17 +145,26 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
   // Pass network information to setup the optimizer
   tdmaOptimizer->SetupOptimization(c, propModel);
 
-  // Solve the optimization to create flow matrix
-  vector< vector<int> > slotFlows;
-  slotFlows = tdmaOptimizer->SolveTdma();
-
   // Configure the TDMA schedule and source routes.
   CalculateTxPowers(c,propModel);
 
-  IntegerValue intV;
-  tdmaOptimizer->GetAttribute("PacketsPerSlot", intV);
+  if (m_graphType)
+    {
+//      ConstructDataCommunicationSchedule (tdmaOptimizer->m_graph, tdmaOptimizer->m_graphMap);
 
-  return ScheduleAndRouteTdma(slotFlows,intV.Get());
+      return ScheduleAndRouteTDMAgraph(tdmaOptimizer);
+    }
+  else
+    {
+      // Solve the optimization to create flow matrix
+      vector< vector<int> > slotFlows;
+      slotFlows = tdmaOptimizer->SolveTdma();
+
+      IntegerValue intV;
+      tdmaOptimizer->GetAttribute("PacketsPerSlot", intV);
+
+      return ScheduleAndRouteTdma(slotFlows,intV.Get());
+    }
 
 }
 
@@ -434,8 +443,6 @@ bool Isa100Helper::NoParentInQ(int node, vector<int> q, vector< vector<int> > &p
 	return true;
 }
 
-
-
 // ... Source Routing List Generation ...
 
 SchedulingResult Isa100Helper::CalculateSourceRouteStrings(vector<std::string> &routingStrings, vector< vector<int> > schedule)
@@ -501,11 +508,61 @@ SchedulingResult Isa100Helper::CalculateSourceRouteStrings(vector<std::string> &
 
 }
 
+SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph(Ptr<TdmaOptimizerBase> optimizer)
+{
+  int numNodes = m_devices.GetN();
+  SchedulingResult schedulingResult = SCHEDULE_FOUND;
 
+//  ConstructDataCommunicationSchedule (optimizer->m_graph, optimizer->m_graphMap);
 
+  NodeSchedule nodeSchedule;
+  vector< vector<int> > scheduleSummary = m_mainSchedule;
 
+  for(int nNode=0; nNode < numNodes; nNode++)
+  {
 
+    for (map<uint16_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
+           it != m_nodeScheduleN[nNode].end (); ++it)
+        {
+          nodeSchedule.slotSched.push_back(it->first);
+          nodeSchedule.slotType.push_back(it->second);
+        }
+    // Assign schedule to DL
+    Ptr<NetDevice> baseDevice = m_devices.Get(nNode);
+    Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
+    if(!baseDevice || !netDevice)
+      NS_FATAL_ERROR("Installing TDMA schedule on non-existent ISA100 net device.");
+
+    // Create routing object only for field nodes
+    // NOTE: This current implementation only allows for a single path from a field node to the sink.
+//    if(nNode > 0)
+//    {
+    unsigned int numNodes = m_tableList[nNode].size();
+
+//    Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(numNodes,m_tableList[nNode]);
+//    netDevice->GetDl()->SetRoutingAlgorithm(routingAlgorithm);
+
+    Mac16AddressValue address;
+    netDevice->GetDl()->GetAttribute("Address",address);
+    netDevice->GetDl()->GetRoutingAlgorithm()->SetAttribute("Address",address);
+//    }
+
+    // Set the tx power levels in DL
+    netDevice->GetDl()->SetTxPowersDbm(m_txPwrDbm[nNode], numNodes);
+
+    // Set the sfSchedule
+    vector<uint8_t> hoppingPattern(1,11);  // Stay on channel 11.
+
+    Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
+
+    schedulePtr->SetSchedule(hoppingPattern,nodeSchedule.slotSched,nodeSchedule.slotType);
+
+    netDevice->GetDl()->SetDlSfSchedule(schedulePtr);
+  }
+
+  return schedulingResult;
+}
 
 
 }
