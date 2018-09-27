@@ -31,12 +31,14 @@
 #include "ns3/isa100-application.h"
 #include "ns3/vector.h"
 
+#include "ns3/isa-graph.h"
+
 namespace ns3 {
 
 class Isa100NetDevice;
 class SingleModelSpectrumChannel;
 class ListPositionAllocator;
-class IsaGraph;
+//class IsaGraph;
 
 /** Used by the breadth first search that designs a minimum hop network.
  *
@@ -266,6 +268,7 @@ public:
 
 //    void SetGroupSampleRate(uint32_t node, vector<Ptr<Node>> groups);
 //    vector<Ptr<Node>> GetGroupSampleRate(uint32_t);
+    SchedulingResult ScheduleAndRouteTDMAgraph();
 
     void ResizeSchedule(uint32_t superframe);
   //end of Rajith code addition

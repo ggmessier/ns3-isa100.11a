@@ -150,9 +150,9 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
 
   if (m_graphType)
     {
-//      ConstructDataCommunicationSchedule (tdmaOptimizer->m_graph, tdmaOptimizer->m_graphMap);
+      ConstructDataCommunicationSchedule (tdmaOptimizer->m_graph, tdmaOptimizer->m_graphMap);
 
-      return ScheduleAndRouteTDMAgraph(tdmaOptimizer);
+      return ScheduleAndRouteTDMAgraph();
     }
   else
     {
@@ -508,7 +508,7 @@ SchedulingResult Isa100Helper::CalculateSourceRouteStrings(vector<std::string> &
 
 }
 
-SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph(Ptr<TdmaOptimizerBase> optimizer)
+SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 {
   int numNodes = m_devices.GetN();
   SchedulingResult schedulingResult = SCHEDULE_FOUND;
@@ -518,7 +518,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph(Ptr<TdmaOptimizerBase> 
   NodeSchedule nodeSchedule;
   vector< vector<int> > scheduleSummary = m_mainSchedule;
 
-  for(int nNode=0; nNode < numNodes; nNode++)
+  for(uint16_t nNode=0; nNode < numNodes; nNode++)
   {
 
     for (map<uint16_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
@@ -538,10 +538,13 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph(Ptr<TdmaOptimizerBase> 
     // NOTE: This current implementation only allows for a single path from a field node to the sink.
 //    if(nNode > 0)
 //    {
-    unsigned int numNodes = m_tableList[nNode].size();
+//    uint32_t numNodes = m_tableList[nNode].size();
+//    uint32_t numNodes = 20;
 
 //    Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(numNodes,m_tableList[nNode]);
-//    netDevice->GetDl()->SetRoutingAlgorithm(routingAlgorithm);
+    Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(m_tableList[nNode]);
+//    routingAlgorithm->RoutingTableConfiguration(m_tableList[nNode]);
+    netDevice->GetDl()->SetRoutingAlgorithm(routingAlgorithm);
 
     Mac16AddressValue address;
     netDevice->GetDl()->GetAttribute("Address",address);
