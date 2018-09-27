@@ -48,7 +48,8 @@
 #define SENSOR_SAMPLE_POWER_W     0.027    // Power required for performing a sensor sample (W)
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
-#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
+//#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
+#define SENSOR_SAMPLE_PERIOD 0.25 // Sample period (s) //Rajith Changed (250ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
@@ -142,7 +143,7 @@ static void LogReportRx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
 static void LogHops(Ptr<OutputStreamWrapper> stream, vector<int> hops)
 {
 	double avgHops = 0;
-	for(int iHop=0; iHop < hops.size(); iHop++)
+	for(unsigned int iHop=0; iHop < hops.size(); iHop++) //Rajith int to unsigned int
 		avgHops += hops[iHop];
 
 	*stream->GetStream() << "AvgHops," << avgHops/hops.size() << std::endl;
@@ -150,7 +151,8 @@ static void LogHops(Ptr<OutputStreamWrapper> stream, vector<int> hops)
 
 static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, double y, double z)
 {
-	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y);
+//	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y); //Rajith removed
+	float distToSink = sqrt(x*x + y*y); //Rajith
 	*stream->GetStream() << "Node " << node << ": (" << x << "," << y << ") " << distToSink << "m from sink." << std::endl;
 }
 
@@ -180,6 +182,7 @@ int main (int argc, char *argv[])
   uint32_t seed = 1002;
   std::string optString;
   unsigned int numSensorNodes=0;
+//  uint8_t numAccessPoints=2;    //Rajith
 
   int iter = -1;
 
@@ -187,8 +190,9 @@ int main (int argc, char *argv[])
   cmd.AddValue("rndSeed", "Seed for random number generation.", seed);
   cmd.AddValue("iter", "Iteration number.", iter);
   cmd.AddValue("nnodes", "Number of sensor nodes.",numSensorNodes);
-//  cmd.AddValue("optType", "0 = min hop, 1 = Goldsmith, 2 = Convex Int", optimizerType);
-  cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, ConvInt10ms, ConvIntPckt",optString);
+//  cmd.AddValue("APs", "Number of access points.",numAccessPoints); // Rajith
+  cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, "
+      "ConvInt10ms, ConvIntPckt, Graph",optString); //Rajith changed
 
   cmd.Parse (argc, argv);
 
@@ -222,10 +226,16 @@ int main (int argc, char *argv[])
   	optimizerType = TDMA_CONVEX_INT;
   	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
   }
+  else if(optString == "Graph")       //Rajith
+    {               //Rajith
+      optimizerType = TDMA_GRAPH;   //Rajith
+      slotDuration = MilliSeconds(10);  //Rajith
+    }           //Rajith
   else
   	NS_FATAL_ERROR("Command line optimization string incorrect.");
 
-  numSlotsPerFrame = ceil(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds());
+//  numSlotsPerFrame = ceil(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds()); // Rajith removed
+  numSlotsPerFrame = floor(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds()); // Rajith Changed
 
   NS_LOG_UNCOND("Optimization: " << optString << ", Iter: " << iter);
   NS_LOG_UNCOND("Slot Duration: " << slotDuration.GetSeconds() << "s, Slots Per Superframe: " << numSlotsPerFrame);
@@ -244,7 +254,7 @@ int main (int argc, char *argv[])
   std::string filename;
   std::stringstream ss;
 
-  std::string filePath = "/Users/gmessier/prj/net/sim/ns3/ns-3.27/";
+  std::string filePath = "/home/rajith/NS30712/Results/";
 	ss.str( std::string() );
 	ss.clear();
 	ss << filePath << "N" << numSensorNodes << "_" << optString << "_";
@@ -253,10 +263,8 @@ int main (int argc, char *argv[])
   uint16_t numNodes = 1 + numSensorNodes;
   double fieldSizeY = ( (double)numSensorNodes / SENSOR_DENSITY ) / FIELD_SIZE_X;
 
-
   // routing debug
 //  numNodes = 6;
-
 
   reportTxNum.assign(numNodes,0);
   reportRxNum.assign(numNodes,0);
@@ -339,8 +347,8 @@ int main (int argc, char *argv[])
   CREATE_STREAM_FILENAME("reports.txt");
   Ptr<OutputStreamWrapper> reportStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
 
-//  CREATE_STREAM_FILENAME("locations.txt");
-//  Ptr<OutputStreamWrapper> locationStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+  CREATE_STREAM_FILENAME("locations.txt");
+  Ptr<OutputStreamWrapper> locationStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
 
 /*  CREATE_STREAM_FILENAME("schedule.txt");
   Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
@@ -349,7 +357,7 @@ int main (int argc, char *argv[])
 	*(energyStream->GetStream()) << "Iter," << iter << ",--------------\n";
 	*(packetDropStream->GetStream()) << "Iter," << iter << ",--------------\n";
 	*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";
-//	*(locationStream->GetStream()) << "#" << iter << "#\n";
+	*(locationStream->GetStream()) << "#" << iter << "#\n";
 //	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
 
 
@@ -361,14 +369,23 @@ int main (int argc, char *argv[])
 	// ********************************************** NODE LOCATIONS **********************************************
 	NS_LOG_UNCOND(" Creating network...");
 
-//  isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
+  isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
 
 
 	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
 
-	ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0);
+	ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
+	ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
+	ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
 
-	isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);
+	std::vector<Vector> coreNodeLocations;  //Rajith
+	coreNodeLocations.push_back(gateWayLoc);  //Rajith
+	coreNodeLocations.push_back(accessPoint1Loc); //Rajith
+	coreNodeLocations.push_back(accessPoint2Loc); //Rajith
+//	ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith removed
+
+//	isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);   //Rajith removed
+	isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations);   //Rajith
 
 	*(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";
 	*(reportStream->GetStream()) << "FieldRatio," << fieldSizeY/FIELD_SIZE_Y << "\n";
@@ -427,19 +444,17 @@ int main (int argc, char *argv[])
 		isaHelper->InstallBattery(i,battery);
 	}
 
-	// Sink application
+	// Sink application (Broadcast)
 	Ptr<Isa100BackboneNodeApplication> sinkNodeApp = CreateObject<Isa100BackboneNodeApplication>();
 
 	sinkNodeApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
 	sinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
   sinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
 
-
-
 	// Install application
 	isaHelper->InstallApplication(nc,0,sinkNodeApp);
 
-	// Create the sensor node applications
+	// Create the sensor node applications (Uplink)
 	Mac16AddressValue address;
 	Ptr<Isa100NetDevice> netDevice;
 	for (int16_t i = 1; i < numNodes; i++)
@@ -463,6 +478,31 @@ int main (int argc, char *argv[])
 		// Install application
 		isaHelper->InstallApplication(nc,i,sensorNodeApp);
 	}
+
+	// Create the Downlink applications //Rajith Added - begin
+//  for (int16_t i = 1; i < numNodes; i++)
+//  {
+//    Ptr<Isa100FieldNodeApplication> downlinkNodeApp = CreateObject<Isa100FieldNodeApplication>();
+//
+//    // Sensor application attributes
+//    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+//    netDevice->GetDl()->GetAttribute("Address",address);
+//    downlinkNodeApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
+//    downlinkNodeApp->SetAttribute("DestAddress",address);
+//    downlinkNodeApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
+//    downlinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+//    downlinkNodeApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+//
+//    // Hook the application and sensor toegether
+//    downlinkNodeApp->SetSensor(netDevice->GetSensor());
+//    downlinkNodeApp->SetProcessor(netDevice->GetProcessor());
+//    netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, downlinkNodeApp));
+//
+//    // Install application
+//    isaHelper->InstallApplication(nc,i,downlinkNodeApp);
+//  }
+  //Rajith Added - end
+
 
 	// Traces
   Ptr<NetDevice> baseDevice;
@@ -505,7 +545,6 @@ int main (int argc, char *argv[])
   NS_LOG_UNCOND("  Optimization Time: " << optTime << " s");
   *(reportStream->GetStream()) << "Optimization," << optTime << "\n";
 
-
   // ********************************************** RUN SIMULATION **********************************************
   Simulator::Stop (Seconds (SIM_DURATION_S));
   NS_LOG_UNCOND (" Simulation is running ....");
@@ -533,7 +572,6 @@ int main (int argc, char *argv[])
   		NS_LOG_UNCOND("*Starved Node*: " << i);
   	}
 
-
  // 	NS_LOG_UNCOND(" Node " << i << ", Tx: " << reportTxNum[i] << " Rx: " << reportRxNum[i]);
 
   }
@@ -553,7 +591,7 @@ int main (int argc, char *argv[])
   packetDropStream->GetStream()->flush();
   scheduleStream->GetStream()->flush();
   reportStream->GetStream()->flush();
- // locationStream->GetStream()->flush();
+  locationStream->GetStream()->flush();
 
 	return 0;
 }
