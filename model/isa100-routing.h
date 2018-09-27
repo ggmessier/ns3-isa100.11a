@@ -69,7 +69,6 @@ public:
    */
   virtual Mac16Address AttemptAnotherLink(uint8_t destInd, std::vector<Mac16Address> attemptedLinks);
 
-
 protected:
 
 	Mac16Address m_address; ///< Address of this node.
@@ -131,7 +130,7 @@ public:
    * @param initNumDests The number of destinations the node can reach using source routing.
    * @param initTable Array of strings containing the multi-hop paths to reach each destination.  Each address is a string in XX:XX format.
    */
-  Isa100GraphRoutingAlgorithm(uint32_t initNumDests,  std::map<uint32_t, std::vector<Mac16Address>> initTable);
+  Isa100GraphRoutingAlgorithm(std::map<uint16_t, std::vector<Mac16Address>> initTable);
 
   ~Isa100GraphRoutingAlgorithm();
 
@@ -151,14 +150,16 @@ public:
    */
   void ProcessRxPacket(Ptr<Packet> packet, bool &forwardPacketOn);
 
+//  void RoutingTableConfiguration(std::map<uint16_t, std::vector<Mac16Address>> initTable);
+
   void DeleteTableEntry(Mac16Address nodeAddress); // Rajith
 
 private:
 
-  std::map<uint32_t, std::vector<Mac16Address>> m_table;
+  std::map<uint16_t, std::vector<Mac16Address>> m_table;
 //  Mac16Address **m_table;
-  uint32_t m_numDests;
-  uint32_t *m_numHops;
+//  uint32_t m_numDests;
+//  uint32_t *m_numHops;
 
 };
 

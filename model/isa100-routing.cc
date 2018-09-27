@@ -78,6 +78,7 @@ Isa100RoutingAlgorithm::AttemptAnotherLink(uint8_t destInd, std::vector<Mac16Add
   return Mac16Address("ff:ff");
 }
 
+
 NS_OBJECT_ENSURE_REGISTERED (Isa100SourceRoutingAlgorithm);
 
 // --- Isa100SourceRoutingAlgorithm ---
@@ -211,101 +212,89 @@ void Isa100SourceRoutingAlgorithm::ProcessRxPacket(Ptr<Packet> packet, bool &for
 
 }
 
-//// --- Isa100GraphRoutingAlgorithm ---
-//TypeId Isa100GraphRoutingAlgorithm::GetTypeId (void)
-//{
-//  static TypeId tid = TypeId ("ns3::Isa100GraphRoutingAlgorithm")
-//    .SetParent<Isa100RoutingAlgorithm> ()
-//    .AddConstructor<Isa100GraphRoutingAlgorithm> ()
-//
-//    ;
-//
-//  return tid;
-//}
+// --- Isa100GraphRoutingAlgorithm ---
+TypeId Isa100GraphRoutingAlgorithm::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::Isa100GraphRoutingAlgorithm")
+    .SetParent<Isa100RoutingAlgorithm> ()
+    .AddConstructor<Isa100GraphRoutingAlgorithm> ()
 
-//Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm(uint32_t numDests,  std::map<uint32_t, std::vector<Mac16Address>> initTable)
-//:Isa100RoutingAlgorithm(),m_numDests(numDests)
-//{
-//  NS_LOG_FUNCTION(this);
-//
-//  m_numHops = new uint32_t[m_numDests];
-////  m_table = new Mac16Address*[m_numDests];
-////
-////
-////  initTable[iDest]
-////  m_table[iDest] = new Mac16Address[numEntries];
-//
-//  m_table = initTable;
-//
-//}
-//
-//Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm()
-//:Isa100RoutingAlgorithm()
-//{
-//  m_numDests = 0;
-//  m_numHops = 0;
-//}
-//
-//Isa100GraphRoutingAlgorithm::~Isa100GraphRoutingAlgorithm()
-//{
-////  for(uint32_t iDel=0; iDel < m_numDests; iDel++)
-////    delete[] m_table[iDel];
-////  delete[] m_table;
-//  delete[] m_numHops;
-//}
+    ;
 
+  return tid;
+}
 
-//void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader(Isa100DlHeader &header)
-//{
-//  NS_LOG_FUNCTION(this);
-//
-//  uint8_t buffer[4];
-//  Mac16Address addr = header.GetDaddrDestAddress();
-//  addr.CopyTo(buffer);
-//
-//  // Populate DROUT sub-header.
-//  uint8_t destNodeInd = buffer[1];
-//  NS_LOG_DEBUG(" Sending to node " << static_cast<uint16_t>(destNodeInd));
-//
-////  for(uint32_t iHop=0; iHop < m_numHops[destNodeInd]; iHop++)
-////    header.SetSourceRouteHop(iHop,m_table[destNodeInd][iHop]);
-//  header.SetSourceRouteHop(0,m_table[destNodeInd][0]);      // Set only the primary address for routing
-//
-//  // Set header for first hop.
-//  header.SetSrcAddrFields(0,m_address);
-//  header.SetDstAddrFields(0,m_table[destNodeInd][0]);
-//
-//}
-//
-//void Isa100GraphRoutingAlgorithm::ProcessRxPacket(Ptr<Packet> packet, bool &forwardPacketOn)
-//{
-//  NS_LOG_FUNCTION(this << m_address);
-//
-//  NS_LOG_DEBUG(" Input packet " << *packet);
-//
-//  // Remove the header so that it can be modified.
-//  Isa100DlHeader header;
-//  packet->RemoveHeader(header);
-//
-//  Mac16Address finalDestAddr = header.GetDaddrDestAddress();
-//  Mac16Address nextHopAddr = header.PopNextSourceRoutingHop();
-//
-//  NS_LOG_DEBUG(" Final Dest Addr: " << finalDestAddr << ", Next Hop Addr: " << nextHopAddr);
-//
-//  forwardPacketOn = (m_address != finalDestAddr);
-//
-//  // Set MHR source and destination addresses for next hop.
-//  if(forwardPacketOn){
-//    header.SetSrcAddrFields(0,m_address);
-//    header.SetDstAddrFields(0,nextHopAddr);
-//  }
-//
-//  // Return the modified header to the packet.
-//  packet->AddHeader(header);
-//
-//  NS_LOG_DEBUG(" Output packet " << *packet);
-//
-//}
+Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm(std::map<uint16_t, std::vector<Mac16Address>> initTable)
+:Isa100RoutingAlgorithm()
+{
+  NS_LOG_FUNCTION(this);
+
+  m_table = initTable;
+
+}
+
+Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm()
+:Isa100RoutingAlgorithm()
+{
+  ;
+}
+
+Isa100GraphRoutingAlgorithm::~Isa100GraphRoutingAlgorithm()
+{
+  ;
+}
+
+void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader(Isa100DlHeader &header)
+{
+  NS_LOG_FUNCTION(this);
+
+  uint8_t buffer[4];
+  Mac16Address addr = header.GetDaddrDestAddress();
+  addr.CopyTo(buffer);
+
+  // Populate DROUT sub-header.
+  uint8_t destNodeInd = buffer[1];
+  NS_LOG_DEBUG(" Sending to node " << static_cast<uint16_t>(destNodeInd));
+
+//  for(uint32_t iHop=0; iHop < m_numHops[destNodeInd]; iHop++)
+//    header.SetSourceRouteHop(iHop,m_table[destNodeInd][iHop]);
+  header.SetSourceRouteHop(0,m_table[destNodeInd][0]);      // Set only the primary address for routing
+
+  // Set header for first hop.
+  header.SetSrcAddrFields(0,m_address);
+  header.SetDstAddrFields(0,m_table[destNodeInd][0]);
+
+}
+
+void Isa100GraphRoutingAlgorithm::ProcessRxPacket(Ptr<Packet> packet, bool &forwardPacketOn)
+{
+  NS_LOG_FUNCTION(this << m_address);
+
+  NS_LOG_DEBUG(" Input packet " << *packet);
+
+  // Remove the header so that it can be modified.
+  Isa100DlHeader header;
+  packet->RemoveHeader(header);
+
+  Mac16Address finalDestAddr = header.GetDaddrDestAddress();
+  Mac16Address nextHopAddr = header.PopNextSourceRoutingHop();
+
+  NS_LOG_DEBUG(" Final Dest Addr: " << finalDestAddr << ", Next Hop Addr: " << nextHopAddr);
+
+  forwardPacketOn = (m_address != finalDestAddr);
+
+  // Set MHR source and destination addresses for next hop.
+  if(forwardPacketOn){
+    header.SetSrcAddrFields(0,m_address);
+    header.SetDstAddrFields(0,nextHopAddr);
+  }
+
+  // Return the modified header to the packet.
+  packet->AddHeader(header);
+
+  NS_LOG_DEBUG(" Output packet " << *packet);
+
+}
 
 
 
