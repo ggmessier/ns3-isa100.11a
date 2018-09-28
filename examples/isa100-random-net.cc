@@ -152,7 +152,7 @@ static void LogHops(Ptr<OutputStreamWrapper> stream, vector<int> hops)
 static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, double y, double z)
 {
 //	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y); //Rajith removed
-	float distToSink = sqrt(x*x + y*y); //Rajith
+	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y); //Rajith
 	*stream->GetStream() << "Node " << node << ": (" << x << "," << y << ") " << distToSink << "m from sink." << std::endl;
 }
 
@@ -350,9 +350,9 @@ int main (int argc, char *argv[])
   CREATE_STREAM_FILENAME("locations.txt");
   Ptr<OutputStreamWrapper> locationStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
 
-/*  CREATE_STREAM_FILENAME("schedule.txt");
-  Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
-*/
+//  CREATE_STREAM_FILENAME("schedule.txt");
+//  Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+
 
 	*(energyStream->GetStream()) << "Iter," << iter << ",--------------\n";
 	*(packetDropStream->GetStream()) << "Iter," << iter << ",--------------\n";
