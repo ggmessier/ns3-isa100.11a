@@ -90,26 +90,32 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
 //  Ptr<IsaGraph> G = CreateObject<IsaGraph>(c);
   m_graph = CreateObject<IsaGraph>(c);
 
-//  G->AddGateway(0);
-//
-//  // Rajith:: code required to modify to support any number of access points
-//  G->AddAccessPoint(1);
-//  G->AddAccessPoint(2);
-
   m_graph->AddGateway(0);
 
   // Rajith:: code required to modify to support any number of access points
   m_graph->AddAccessPoint(1);
   m_graph->AddAccessPoint(2);
 
-  uint16_t numNodes = c.GetN();
+  uint32_t numNodes = c.GetN();
   TimeValue slotDurationV;
   UintegerValue tempNumSlotsV;
-  int numSlotsV;
+  uint32_t numSlotsV;
 
-  for (uint16_t parent = 0; parent < numNodes; parent++)
+  for (uint32_t nNode = 0; nNode < numNodes; nNode++)
     {
+      m_graph->AddNode(c.Get(nNode));
+    }
 
+  m_graph->AddEdge(0, 1);
+  m_graph->AddEdge(0, 2);
+  m_graph->AddEdge(1, 2);
+
+  m_graph->AddEdge(1, 0);
+  m_graph->AddEdge(2, 0);
+  m_graph->AddEdge(2, 1);
+
+  for (uint32_t parent = 1; parent < numNodes; parent++)
+    {
       Ptr<Isa100NetDevice> devPtr = c.Get(parent)->GetDevice(0)->GetObject<Isa100NetDevice>();
       devPtr->GetDl()->GetAttribute("SuperFrameSlotDuration", slotDurationV);
       m_slotDuration = slotDurationV.Get();
@@ -120,7 +126,7 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
 //      G->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
       m_graph->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
 
-      for (uint16_t nNode = 0; nNode < numNodes; nNode++)
+      for (uint32_t nNode = 1; nNode < numNodes; nNode++)
         {
           if(parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
             {
@@ -154,21 +160,19 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
 
   Ptr<IsaGraph> G_U = CreateObject<IsaGraph>(nc);      ///< Uplink graph creation
 
-  G_U.operator *() = G_B.operator *();
+  G_U->AddGateway(gateWay->GetId());
+  G_U->AddAccessPoint(acessPoint_1->GetId());
+  G_U->AddAccessPoint(acessPoint_2->GetId());
 
-////  bool reliableGraphB =
-//  G_B->ReliableBroadcastGraph(G);
-////  bool reliableGraphU =
-//  G_U->ReliableUplinkGraph(G);
+  G_U->AddEdge(acessPoint_1->GetId(), gateWay->GetId());
+  G_U->AddEdge(acessPoint_2->GetId(), gateWay->GetId());
+  G_U->SetHopCount(gateWay->GetId(),0);
+  G_U->SetHopCount(acessPoint_1->GetId(),1);
+  G_U->SetHopCount(acessPoint_2->GetId(),1);
 
-//  bool reliableGraphB =
   G_B->ReliableBroadcastGraph(m_graph);
 //  bool reliableGraphU =
   G_U->ReliableUplinkGraph(m_graph);
-
-//  map <uint32_t, Ptr<IsaGraph>> downlinkGraphs = G->ReliableDownlinkGraphs(G);
-//  downlinkGraphs[65535] = G_B;
-//  downlinkGraphs[0] = G_U;
 
   m_graphMap = m_graph->ReliableDownlinkGraphs(m_graph);
   m_graphMap[65535] = G_B;

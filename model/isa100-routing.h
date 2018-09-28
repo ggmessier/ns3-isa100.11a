@@ -130,7 +130,7 @@ public:
    * @param initNumDests The number of destinations the node can reach using source routing.
    * @param initTable Array of strings containing the multi-hop paths to reach each destination.  Each address is a string in XX:XX format.
    */
-  Isa100GraphRoutingAlgorithm(std::map<uint16_t, std::vector<Mac16Address>> initTable);
+  Isa100GraphRoutingAlgorithm(std::map<uint32_t, std::vector<Mac16Address>> initTable);
 
   ~Isa100GraphRoutingAlgorithm();
 
@@ -156,7 +156,7 @@ public:
 
 private:
 
-  std::map<uint16_t, std::vector<Mac16Address>> m_table;
+  std::map<uint32_t, std::vector<Mac16Address>> m_table;
 //  Mac16Address **m_table;
 //  uint32_t m_numDests;
 //  uint32_t *m_numHops;

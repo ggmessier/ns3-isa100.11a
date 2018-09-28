@@ -224,7 +224,7 @@ TypeId Isa100GraphRoutingAlgorithm::GetTypeId (void)
   return tid;
 }
 
-Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm(std::map<uint16_t, std::vector<Mac16Address>> initTable)
+Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm(std::map<uint32_t, std::vector<Mac16Address>> initTable)
 :Isa100RoutingAlgorithm()
 {
   NS_LOG_FUNCTION(this);
@@ -254,7 +254,7 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader(Isa100DlHeader &header)
 
   // Populate DROUT sub-header.
   uint8_t destNodeInd = buffer[1];
-  NS_LOG_DEBUG(" Sending to node " << static_cast<uint16_t>(destNodeInd));
+  NS_LOG_DEBUG(" Sending to node " << static_cast<uint32_t>(destNodeInd));
 
 //  for(uint32_t iHop=0; iHop < m_numHops[destNodeInd]; iHop++)
 //    header.SetSourceRouteHop(iHop,m_table[destNodeInd][iHop]);

@@ -147,7 +147,6 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
   double procActiveCurr = devPtr->GetProcessor()->GetActiveCurrent();
   double procIdleCurr = devPtr->GetProcessor()->GetActiveCurrent();
 
-
   // Get a reference to the phy layer (all based on node 1)
   devPtr = c.Get(1)->GetDevice(0)->GetObject<Isa100NetDevice>();
   Ptr<ZigbeePhy> zigbeePhy = devPtr->GetPhy();
@@ -243,6 +242,5 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
   m_initialEnergy = devPtr->GetBattery()->GetInitialEnergy();
 
 }
-
 
 } // namespace ns3

@@ -120,8 +120,9 @@ map <uint32_t, Ptr<IsaGraph>> IsaGraph::ReliableDownlinkGraphs (Ptr<IsaGraph> G)
                             u2.m_head = tempU2->m_head;
                             uint32_t u2Id = u2.m_head->GetId();
                             tempNode.m_parents.push_back(u2.m_head);
+
                             tempNode.m_avgHopCount = (downlinkGraphs_G[u1Id]->GetHopCount(u1Id) +
-                                downlinkGraphs_G[u2Id]->GetHopCount(u2Id))/2;
+                                                                downlinkGraphs_G[u2Id]->GetHopCount(u2Id))/2;
 
                             if(G->C1Condition(u1.m_head, u2.m_head) && (G->C2Condition(u1.m_head, u2.m_head)
                                 || G->C3Condition(u1.m_head, u2.m_head, downlinkGraphs_G)))

@@ -89,8 +89,8 @@ public:
    *
    * @param id graphID vaies from 0 - 65535 (0- broadcast, 65535 - Uplink & others - downlink)
    */
-  void SetGraphId (uint16_t id);
-  uint16_t GetGraphId ();
+  void SetGraphId (uint32_t id);
+  uint32_t GetGraphId ();
 
   /** Add/Get edges of the graph
    * GetEdges return all the neighbors of src Node
@@ -223,7 +223,7 @@ private:
   map <uint32_t, GraphNode> m_graphNodeMap;       ///< Map of graph nodes with their node IDs.
   vector<uint32_t> m_accessPoints;          ///< Access point nodes of the graph
   uint32_t m_gateway;                       ///< gateway of the graph
-  uint16_t m_graphID;                       ///< graphID varies from 0 - 65535 (65535- broadcast, 0 - Uplink & others - downlink)
+  uint32_t m_graphID;                       ///< graphID varies from 0 - 65535 (65535- broadcast, 0 - Uplink & others - downlink)
 
 };
 

@@ -72,13 +72,13 @@ IsaGraph::~IsaGraph ()
   NS_LOG_FUNCTION (this);
 }
 
-void IsaGraph::SetGraphId (uint16_t id)
+void IsaGraph::SetGraphId (uint32_t id)
 {
   NS_LOG_FUNCTION (this);
   (this)->m_graphID = id;
 }
 
-uint16_t IsaGraph::GetGraphId ()
+uint32_t IsaGraph::GetGraphId ()
 {
   NS_LOG_FUNCTION (this);
   return (this)->m_graphID;

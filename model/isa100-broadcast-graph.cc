@@ -40,6 +40,7 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
   GraphNode nodeMaxoutgoingEdges;       ///< Graph Node with maximum outgoing edges
   uint32_t maxOutgoingEdges;            ///< Number of outgoing edges of the maximum outgoing edges node
 
+  (this)->SetGraphId(65535);
   /*
    *          S
    *       ------
