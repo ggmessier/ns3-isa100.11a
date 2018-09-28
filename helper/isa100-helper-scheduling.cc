@@ -107,6 +107,7 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
   devPtr->GetDl()->GetAttribute("SuperFramePeriod", numSlotsV);
   m_numTimeslots = numSlotsV.Get();
 
+  m_graphType = false;
 
   // Create the optimization solver
   Ptr<TdmaOptimizerBase> tdmaOptimizer;
@@ -516,12 +517,12 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 //  ConstructDataCommunicationSchedule (optimizer->m_graph, optimizer->m_graphMap);
 
   NodeSchedule nodeSchedule;
-  vector< vector<int> > scheduleSummary = m_mainSchedule;
+//  vector< vector<int> > scheduleSummary = m_mainSchedule;
 
-  for(uint16_t nNode=0; nNode < numNodes; nNode++)
+  for(uint32_t nNode=0; nNode < numNodes; nNode++)
   {
 
-    for (map<uint16_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
+    for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
           nodeSchedule.slotSched.push_back(it->first);

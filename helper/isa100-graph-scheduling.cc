@@ -37,8 +37,8 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
   map <uint32_t, GraphNode> graphNodeMap = G->GetGraphNodeMap();
   Ptr<Node> gateway = G->GetGateway();        ///< g node of the algorithm
 
-  Ptr<IsaGraph> GB = mapOfG[0];
-  Ptr<IsaGraph> GUL = mapOfG[G->GetNumofNodes()];
+  Ptr<IsaGraph> GB = mapOfG[65535];
+  Ptr<IsaGraph> GUL = mapOfG[0];
   map <uint32_t, Ptr<IsaGraph>> GDL = mapOfG;
 
   for (map<uint32_t, GraphNode>::const_iterator it = graphNodeMap.begin ();
@@ -59,6 +59,11 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
       GroupwithSampleRate = it->second;
       // Generate the data Superframe F i
       uint32_t superframe = it->first;
+
+      if (superframe>(this)->m_mainSchedule.size())
+        {
+          (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, -1));
+        }
 
       // for all node v ∈ N i do
       while(!GroupwithSampleRate.empty())
@@ -82,15 +87,21 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
 
 // ScheduleLinks(u, v, G, F , t, o) - additionally channel offset has included.
 bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe,
-                                           uint16_t timeSlot, DlLinkType option)
+                                           uint32_t timeSlot, DlLinkType option)
 {
   NS_LOG_FUNCTION (this);
   //Identify data superframe F ′ with l F ′ = 2l F
   uint32_t superframeF_1 = superframe*2;
+
   vector <Ptr<Node>> successorsOfU = Graph->GetGraphNode(u->GetId()).m_neighbors;
 
+  for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
+    {
+      NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
+      NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+    }
 //  Slot slot;
-  uint16_t slot;
+  uint32_t slot;
   slot = (this)->GetNextAvailableSlot(timeSlot, option);
 
   Ptr<Node> next;
@@ -158,10 +169,10 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 }
 
 // Identify the earliest slot from t with a channel c to:
-uint16_t Isa100Helper::GetNextAvailableSlot(uint16_t timeSlot, DlLinkType option)
+uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option)
 {
   NS_LOG_FUNCTION (this);
-  int nSlot = timeSlot;
+  uint32_t nSlot = timeSlot;
 
   switch (option)
   {
@@ -180,7 +191,7 @@ uint16_t Isa100Helper::GetNextAvailableSlot(uint16_t timeSlot, DlLinkType option
 
 void Isa100Helper::ResizeSchedule(uint32_t superframe)
 {
-  (this)->m_mainSchedule.resize(superframe, vector <int> (2, -1));
+  (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, -1));
 
   for(unsigned int nSlot = 0; nSlot < (this)->m_repLength.size(); nSlot++)
     {

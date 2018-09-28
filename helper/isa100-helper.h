@@ -258,13 +258,13 @@ public:
      * @param timeSlot time slot that required to consider to find the next available slot
      * @param option link option whether exclusive or shared
      */
-    bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint16_t timeSlot, DlLinkType option);
+    bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option);
 
     /** Get next available channel offset and the time slot
      *
      * @param timeSlot time slot that required to consider to find the next available slot
      */
-    uint16_t GetNextAvailableSlot(uint16_t timeSlot, DlLinkType option);
+    uint32_t GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option);
 
 //    void SetGroupSampleRate(uint32_t node, vector<Ptr<Node>> groups);
 //    vector<Ptr<Node>> GetGroupSampleRate(uint32_t);
@@ -396,10 +396,10 @@ private:
 
   // Additional private variables used by Rajith
   bool m_graphType;  ///< Rajith - use to identify the graph
-  vector<vector<int>> m_mainSchedule;  ///< main schedule information (slot, TX if 0 and TX if 1)
-  map<uint16_t, map<uint16_t, DlLinkType>> m_nodeScheduleN;    ///< schedule for each node of the network (map of slot to LinkType)
-  map<uint16_t, map<uint16_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
-  map<uint16_t, map<uint16_t, vector<uint16_t>>> m_avgHopCount;  ///< average hop count of each node
+  vector<vector<uint32_t>> m_mainSchedule;  ///< main schedule information (slot, TX if 0 and TX if 1)
+  map<uint32_t, map<uint32_t, DlLinkType>> m_nodeScheduleN;    ///< schedule for each node of the network (map of slot to LinkType)
+  map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
+  map<uint32_t, map<uint32_t, vector<uint32_t>>> m_avgHopCount;  ///< average hop count of each node
   vector<int> m_repLength;   ///<repetition length of the slot (slot // ***channel offset need to be considered***)
 
   map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate

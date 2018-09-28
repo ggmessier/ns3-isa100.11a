@@ -76,12 +76,13 @@ Isa100Helper::Isa100Helper(void)
   NS_LOG_FUNCTION (this);
 
   m_txPwrDbm = 0;
+  m_graphType = false;
 }
 
 Isa100Helper::~Isa100Helper(void)
 {
 	if(m_txPwrDbm){
-		for(int i=0; i < m_devices.GetN(); i++)
+		for(unsigned int i=0; i < m_devices.GetN(); i++)    //Rajith Changed
   			delete[] m_txPwrDbm[i];
 		delete[] m_txPwrDbm;
 	}
