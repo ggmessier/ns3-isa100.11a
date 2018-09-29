@@ -400,7 +400,7 @@ private:
   map<uint32_t, map<uint32_t, DlLinkType>> m_nodeScheduleN;    ///< schedule for each node of the network (map of slot to LinkType)
   map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
   map<uint32_t, map<uint32_t, vector<uint32_t>>> m_avgHopCount;  ///< average hop count of each node
-  vector<int> m_repLength;   ///<repetition length of the slot (slot // ***channel offset need to be considered***)
+  vector<uint32_t> m_repLength;   ///<repetition length of the slot (slot // ***channel offset need to be considered***)
 
   map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
   // end of additional private variables used by Rajith

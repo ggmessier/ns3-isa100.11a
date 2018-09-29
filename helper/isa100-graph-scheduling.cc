@@ -60,11 +60,6 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
       // Generate the data Superframe F i
       uint32_t superframe = it->first;
 
-      if (superframe>(this)->m_mainSchedule.size())
-        {
-          (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, -1));
-        }
-
       // for all node v ∈ N i do
       while(!GroupwithSampleRate.empty())
         {
@@ -90,6 +85,15 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
                                            uint32_t timeSlot, DlLinkType option)
 {
   NS_LOG_FUNCTION (this);
+
+//  if (superframe > (this)->m_mainSchedule.size())
+//    {
+//      (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, 65535));
+//      (this)->m_repLength.resize(superframe,0);
+//    }
+
+  (this)->ResizeSchedule(superframe);
+
   //Identify data superframe F ′ with l F ′ = 2l F
   uint32_t superframeF_1 = superframe*2;
 
@@ -97,8 +101,11 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 
   for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
     {
-      NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
-      NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+      if ((this)->m_mainSchedule[j][0] != 65535)
+        {
+          NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
+          NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+        }
     }
 //  Slot slot;
   uint32_t slot;
@@ -178,11 +185,11 @@ uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option
   {
     case TRANSMIT:
     case RECEIVE:
-      for(; (this)->m_mainSchedule[nSlot][0] < 0; nSlot++);
+      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
       break;
 
     case SHARED:
-      for(; (this)->m_mainSchedule[nSlot][0] < 0; nSlot++);
+      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
       break;
   }
 
@@ -191,20 +198,28 @@ uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option
 
 void Isa100Helper::ResizeSchedule(uint32_t superframe)
 {
-  (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, -1));
-
-  for(unsigned int nSlot = 0; nSlot < (this)->m_repLength.size(); nSlot++)
+  if (superframe > (this)->m_mainSchedule.size())
     {
-      unsigned int repTime = 1;
-      while(repTime<(this)->m_mainSchedule.size() && (this)->m_repLength[nSlot] > 0)
-        {
-          (this)->m_mainSchedule[nSlot+repTime*(this)->m_repLength[nSlot]] = (this)->m_mainSchedule[nSlot];
-          (this)->m_nodeScheduleN[(this)->m_mainSchedule[nSlot][0]][nSlot+repTime*(this)->m_repLength[nSlot]] = TRANSMIT;
-          (this)->m_nodeScheduleN[(this)->m_mainSchedule[nSlot][1]][nSlot+repTime*(this)->m_repLength[nSlot]] = RECEIVE;
-          repTime++;
-        }
+      (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, 65535));
+
+      for(uint32_t nSlot = 0; nSlot < (this)->m_repLength.size(); nSlot++)
+          {
+            if((this)->m_repLength[nSlot] > 0)
+              {
+                uint32_t repTime = 1;
+                uint32_t nextSlot = nSlot+repTime*(this)->m_repLength[nSlot];
+                while(nextSlot<(this)->m_mainSchedule.size())
+                  {
+                    (this)->m_mainSchedule[nextSlot] = (this)->m_mainSchedule[nSlot];
+                    (this)->m_nodeScheduleN[(this)->m_mainSchedule[nSlot][0]][nextSlot] = TRANSMIT;
+                    (this)->m_nodeScheduleN[(this)->m_mainSchedule[nSlot][1]][nextSlot] = RECEIVE;
+                    repTime++;
+                    nextSlot = nSlot+repTime*(this)->m_repLength[nSlot];
+                  }
+              }
+          }
+      (this)->m_repLength.resize(superframe,0);
     }
-  (this)->m_repLength.resize(superframe, -1);
 
 }
 
