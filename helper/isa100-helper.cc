@@ -77,6 +77,7 @@ Isa100Helper::Isa100Helper(void)
 
   m_txPwrDbm = 0;
   m_graphType = false;
+  m_minFrameSize = 0;
 }
 
 Isa100Helper::~Isa100Helper(void)

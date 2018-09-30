@@ -52,10 +52,19 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
 
   vector<Ptr<Node>> GroupwithSampleRate;
 
+  bool firstEntry = true;
+//  minFrameSize = m_groupSameSampleRate[
+
   // for all r i from r 1 to r k do
   for (map<uint32_t, vector<Ptr<Node>>>::const_iterator it = m_groupSameSampleRate.begin ();
         it != (this)->m_groupSameSampleRate.end (); ++it)
     {
+      if(firstEntry)
+        {
+          m_minFrameSize = it->first;
+          NS_LOG_UNCOND("m_minFrameSize: "<<m_minFrameSize);
+          firstEntry = false;
+        }
       GroupwithSampleRate = it->second;
       // Generate the data Superframe F i
       uint32_t superframe = it->first;
@@ -64,6 +73,7 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
       while(!GroupwithSampleRate.empty())
         {
           Ptr<Node> v = GroupwithSampleRate.back();
+          NS_LOG_UNCOND("v: "<<v->GetId());
           if(v != gateway)
             {
               // Schedule primary and retry links for publishing data
@@ -86,27 +96,44 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 {
   NS_LOG_FUNCTION (this);
 
-//  if (superframe > (this)->m_mainSchedule.size())
-//    {
-//      (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, 65535));
-//      (this)->m_repLength.resize(superframe,0);
-//    }
-
   (this)->ResizeSchedule(superframe);
+
+  NS_LOG_UNCOND("Graph ID: "<<Graph->GetGraphId());
 
   //Identify data superframe F ′ with l F ′ = 2l F
   uint32_t superframeF_1 = superframe*2;
 
-  vector <Ptr<Node>> successorsOfU = Graph->GetGraphNode(u->GetId()).m_neighbors;
+  vector <Ptr<Node>> successorsOfU;
 
+  vector <Ptr<Node>> tempSuccessorsOfU = Graph->GetGraphNode(u->GetId()).m_neighbors;
+  GraphNode u_graphNode = Graph->GetGraphNode(u->GetId());
+
+  for (uint32_t nNode = 0; nNode < tempSuccessorsOfU.size(); nNode++)
+    {
+      GraphNode temp_graphNode = Graph->GetGraphNode(tempSuccessorsOfU[nNode]->GetId());
+//      NS_LOG_UNCOND("tempSuccessorsOfU[nNode]->GetId(): "<<tempSuccessorsOfU[nNode]->GetId());
+//      NS_LOG_UNCOND("u_graphNode.m_avgHopCount "<<u_graphNode.m_avgHopCount);
+//      NS_LOG_UNCOND("temp_graphNode.m_avgHopCount "<<temp_graphNode.m_avgHopCount);
+
+      if(Graph->GetGraphId() == 0 && u_graphNode.m_avgHopCount > temp_graphNode.m_avgHopCount)
+        {
+          successorsOfU.push_back(temp_graphNode.m_head);
+        }
+      else if(u_graphNode.m_avgHopCount < temp_graphNode.m_avgHopCount)
+        {
+          successorsOfU.push_back(temp_graphNode.m_head);
+        }
+    }
+
+  NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
   for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
     {
       if ((this)->m_mainSchedule[j][0] != 65535)
         {
-          NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
           NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
         }
     }
+
 //  Slot slot;
   uint32_t slot;
   slot = (this)->GetNextAvailableSlot(timeSlot, option);
@@ -118,10 +145,9 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
   Mac16AddressValue address_next;
 
   //  for all node i ∈ Successor(u) do
-  for (vector<Ptr<Node>>::const_iterator it = successorsOfU.begin();
-        it != successorsOfU.end(); ++it)
+  for (uint32_t nNode = 0; nNode < successorsOfU.size(); nNode++)
     {
-      next = successorsOfU.back();    // node next
+      next = successorsOfU[nNode];    // node next
       baseDevice_next = m_devices.Get(next->GetId());
       netDevice_next = baseDevice_next->GetObject<Isa100NetDevice>();
 
@@ -144,7 +170,7 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
         }
       else
         {
-          if(it==successorsOfU.begin ())
+          if(nNode == 0)
             {
               (this)->m_mainSchedule[slot][0] = u->GetId();
               (this)->m_mainSchedule[slot][1] = next->GetId();
@@ -180,16 +206,49 @@ uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option
 {
   NS_LOG_FUNCTION (this);
   uint32_t nSlot = timeSlot;
+  uint32_t slotIndex = 0;
+  uint32_t frameSize = (this)->m_mainSchedule.size();
+  NS_LOG_UNCOND("frameSize: "<<frameSize);
 
   switch (option)
   {
     case TRANSMIT:
     case RECEIVE:
-      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
+//      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
+      NS_LOG_UNCOND("nSlot: "<<nSlot);
+      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
+      while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
+        {
+          if(slotIndex < m_minFrameSize/4)
+            {
+              slotIndex++;
+            }
+          else
+            {
+              (this)->ResizeSchedule(frameSize*2);
+              slotIndex = nSlot + frameSize;
+            }
+        }
+      nSlot += slotIndex;
       break;
 
     case SHARED:
-      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
+//      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
+      NS_LOG_UNCOND("nSlot: "<<nSlot);
+      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
+      while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
+        {
+          if(slotIndex < frameSize/4)
+            {
+              slotIndex++;
+            }
+          else
+            {
+              (this)->ResizeSchedule(frameSize);
+              slotIndex = nSlot + frameSize;
+            }
+        }
+      nSlot += slotIndex;
       break;
   }
 
