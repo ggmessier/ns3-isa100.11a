@@ -147,6 +147,8 @@ public:
    */
   void SetReliability (uint32_t id);
 
+  void SetTimeSlots (uint32_t id, uint32_t timeSlots);
+
   /** ~~~~~~~~~~~[Temporary]~~~~~~~~~~~ Print the graph
    *
    */

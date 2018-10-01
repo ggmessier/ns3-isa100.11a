@@ -250,6 +250,12 @@ void IsaGraph::SetReliability (uint32_t id)
   (this)->m_graphNodeMap[id].m_reliability = true;
 }
 
+void IsaGraph::SetTimeSlots (uint32_t id, uint32_t timeSlots)
+{
+  NS_LOG_FUNCTION (this);
+  (this)->m_graphNodeMap[id].m_numTimeSlots = timeSlots;
+}
+
 void IsaGraph::PrintGraph ()
 {
   NS_LOG_FUNCTION (this);

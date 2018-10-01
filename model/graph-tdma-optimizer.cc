@@ -114,7 +114,7 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
   m_graph->AddEdge(2, 0);
   m_graph->AddEdge(2, 1);
 
-  for (uint32_t parent = 1; parent < numNodes; parent++)
+  for (uint32_t parent = 0; parent < numNodes; parent++)
     {
       Ptr<Isa100NetDevice> devPtr = c.Get(parent)->GetDevice(0)->GetObject<Isa100NetDevice>();
       devPtr->GetDl()->GetAttribute("SuperFrameSlotDuration", slotDurationV);
@@ -124,11 +124,11 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
       numSlotsV = tempNumSlotsV.Get();
 
 //      G->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
-      m_graph->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
+      m_graph->SetTimeSlots(parent, numSlotsV);
 
       for (uint32_t nNode = 1; nNode < numNodes; nNode++)
         {
-          if(parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
+          if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
             {
 //              G->AddEdge(parent, nNode);
               m_graph->AddEdge(parent, nNode);
@@ -177,6 +177,18 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
   m_graphMap = m_graph->ReliableDownlinkGraphs(m_graph);
   m_graphMap[65535] = G_B;
   m_graphMap[0] = G_U;
+
+//  NS_LOG_UNCOND("**** GB ****");
+//  G_B->PrintGraph();
+//
+//  NS_LOG_UNCOND("**** GUL ****");
+//  G_U->PrintGraph();
+//
+//  NS_LOG_UNCOND("**** G1 ****");
+//  m_graphMap[1]->PrintGraph();
+//
+//  NS_LOG_UNCOND("**** G3 ****");
+//  m_graphMap[3]->PrintGraph();
 
 //  m_graphMap = downlinkGraphs;
 }
