@@ -401,7 +401,6 @@ private:
   map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
   map<uint32_t, map<uint32_t, vector<uint32_t>>> m_avgHopCount;  ///< average hop count of each node
   vector<uint32_t> m_repLength;   ///<repetition length of the slot (slot // ***channel offset need to be considered***)
-  uint32_t m_minFrameSize;      ///< shortest frame size used in the network
 
   map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
   // end of additional private variables used by Rajith

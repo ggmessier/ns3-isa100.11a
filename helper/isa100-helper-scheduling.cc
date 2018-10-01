@@ -513,24 +513,28 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 {
   int numNodes = m_devices.GetN();
   SchedulingResult schedulingResult = SCHEDULE_FOUND;
+//  m_numTimeslots = m_mainSchedule.size();
 
 //  ConstructDataCommunicationSchedule (optimizer->m_graph, optimizer->m_graphMap);
 
-  NodeSchedule nodeSchedule;
 //  vector< vector<int> > scheduleSummary = m_mainSchedule;
 
   for(uint32_t nNode=0; nNode < numNodes; nNode++)
   {
-
+    NodeSchedule nodeSchedule;
+//    NS_LOG_UNCOND("nNode for Node schedule: "<<nNode);
     for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
           nodeSchedule.slotSched.push_back(it->first);
           nodeSchedule.slotType.push_back(it->second);
+//          NS_LOG_UNCOND("slot schedule: "<<it->first<<" "<<it->second);
         }
     // Assign schedule to DL
     Ptr<NetDevice> baseDevice = m_devices.Get(nNode);
     Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
+
+    netDevice->GetDl()->SetAttribute("SuperFramePeriod", UintegerValue(m_mainSchedule.size()));
 
     if(!baseDevice || !netDevice)
       NS_FATAL_ERROR("Installing TDMA schedule on non-existent ISA100 net device.");

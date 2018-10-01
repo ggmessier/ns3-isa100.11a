@@ -46,25 +46,17 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
     {
       // Identify the set of nodes with each sample rate: N 1 , N 2 , . . . , N k .
       uint32_t tempTimeSlots = it->second.m_numTimeSlots;
+//      NS_LOG_UNCOND("tempTimeSlots "<<tempTimeSlots);
       // Sort device sample rates in ascending order: r 1 < r 2 < . . . < r k . (Here Map is storing data in sorted manner.)
       m_groupSameSampleRate[tempTimeSlots].push_back(it->second.m_head);
     }
 
   vector<Ptr<Node>> GroupwithSampleRate;
 
-  bool firstEntry = true;
-//  minFrameSize = m_groupSameSampleRate[
-
   // for all r i from r 1 to r k do
   for (map<uint32_t, vector<Ptr<Node>>>::const_iterator it = m_groupSameSampleRate.begin ();
         it != (this)->m_groupSameSampleRate.end (); ++it)
     {
-      if(firstEntry)
-        {
-          m_minFrameSize = it->first;
-          NS_LOG_UNCOND("m_minFrameSize: "<<m_minFrameSize);
-          firstEntry = false;
-        }
       GroupwithSampleRate = it->second;
       // Generate the data Superframe F i
       uint32_t superframe = it->first;
@@ -73,7 +65,7 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
       while(!GroupwithSampleRate.empty())
         {
           Ptr<Node> v = GroupwithSampleRate.back();
-          NS_LOG_UNCOND("v: "<<v->GetId());
+//          NS_LOG_UNCOND("v: "<<v->GetId());
           if(v != gateway)
             {
               // Schedule primary and retry links for publishing data
@@ -98,7 +90,7 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 
   (this)->ResizeSchedule(superframe);
 
-  NS_LOG_UNCOND("Graph ID: "<<Graph->GetGraphId());
+//  NS_LOG_UNCOND("Graph ID: "<<Graph->GetGraphId());
 
   //Identify data superframe F ′ with l F ′ = 2l F
   uint32_t superframeF_1 = superframe*2;
@@ -125,14 +117,14 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
         }
     }
 
-  NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
-  for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
-    {
-      if ((this)->m_mainSchedule[j][0] != 65535)
-        {
-          NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
-        }
-    }
+//  NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
+//  for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
+//    {
+//      if ((this)->m_mainSchedule[j][0] != 65535)
+//        {
+//          NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+//        }
+//    }
 
 //  Slot slot;
   uint32_t slot;
@@ -208,25 +200,22 @@ uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option
   uint32_t nSlot = timeSlot;
   uint32_t slotIndex = 0;
   uint32_t frameSize = (this)->m_mainSchedule.size();
-  NS_LOG_UNCOND("frameSize: "<<frameSize);
+//  NS_LOG_UNCOND("frameSize: "<<frameSize);
 
   switch (option)
   {
     case TRANSMIT:
     case RECEIVE:
 //      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
-      NS_LOG_UNCOND("nSlot: "<<nSlot);
-      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
+//      NS_LOG_UNCOND("nSlot: "<<nSlot);
+//      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
       while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
         {
-          if(slotIndex < m_minFrameSize/4)
+          slotIndex++;
+          if(slotIndex > frameSize)
             {
-              slotIndex++;
-            }
-          else
-            {
-              (this)->ResizeSchedule(frameSize*2);
-              slotIndex = nSlot + frameSize;
+              frameSize = frameSize*2;
+              (this)->ResizeSchedule(frameSize);
             }
         }
       nSlot += slotIndex;
@@ -234,18 +223,15 @@ uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option
 
     case SHARED:
 //      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
-      NS_LOG_UNCOND("nSlot: "<<nSlot);
-      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
+//      NS_LOG_UNCOND("nSlot: "<<nSlot);
+//      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
       while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
         {
-          if(slotIndex < frameSize/4)
+          slotIndex++;
+          if(slotIndex > frameSize)
             {
-              slotIndex++;
-            }
-          else
-            {
+              frameSize = frameSize*2;
               (this)->ResizeSchedule(frameSize);
-              slotIndex = nSlot + frameSize;
             }
         }
       nSlot += slotIndex;
