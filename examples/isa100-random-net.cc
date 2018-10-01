@@ -49,7 +49,7 @@
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
 //#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
-#define SENSOR_SAMPLE_PERIOD 0.25 // Sample period (s) //Rajith Changed (250ms)
+#define SENSOR_SAMPLE_PERIOD 4.0 // Sample period (s) //Rajith Changed (4000ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
@@ -161,7 +161,7 @@ static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, 
 int main (int argc, char *argv[])
 {
 //	  LogComponentEnable("FishPropagationLossModel",LOG_LEVEL_LOGIC);
-//		LogComponentEnable("Isa100Dl",LOG_LEVEL_LOGIC);
+		LogComponentEnable("Isa100Dl",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("Isa100HelperScheduling",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("MinHopTdmaOptimizer",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("ConvexIntTdmaOptimizer",LOG_LEVEL_LOGIC);
@@ -417,7 +417,8 @@ int main (int argc, char *argv[])
 	isaHelper->SetDeviceConstantPosition(devContainer,positionAlloc);
 
 
-	for (int16_t i = 1; i < numNodes; i++)
+//	for (int16_t i = 1; i < numNodes; i++) // Rajith Changed
+	for (int16_t i = 0; i < numNodes; i++)  //Rajith included the gateway to the node creation list
 	{
 		Ptr<Isa100Processor> processor = CreateObject<Isa100Processor>();
 
@@ -438,26 +439,35 @@ int main (int argc, char *argv[])
 
 		Ptr<Isa100Battery> battery = CreateObject<Isa100Battery>();
 
-		battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
+		//Rajith Changed - begin
+		if(i < 3)
+		  {
+		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e300);
+		  }
+		else
+		  {
+		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
+		  }
+    //Rajith Changed - end
 		battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
 
 		isaHelper->InstallBattery(i,battery);
 	}
 
-	// Sink application (Broadcast)
-	Ptr<Isa100BackboneNodeApplication> sinkNodeApp = CreateObject<Isa100BackboneNodeApplication>();
+//	// Sink application (Broadcast)
+//	Ptr<Isa100BackboneNodeApplication> sinkNodeApp = CreateObject<Isa100BackboneNodeApplication>();
+//
+//	sinkNodeApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
+//	sinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+//  sinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
 
-	sinkNodeApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
-	sinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-  sinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
-
-	// Install application
-	isaHelper->InstallApplication(nc,0,sinkNodeApp);
+//	// Install application
+//	isaHelper->InstallApplication(nc,0,sinkNodeApp);
 
 	// Create the sensor node applications (Uplink)
 	Mac16AddressValue address;
 	Ptr<Isa100NetDevice> netDevice;
-	for (int16_t i = 1; i < numNodes; i++)
+	for (int16_t i = 3; i < numNodes; i++)
 	{
 		Ptr<Isa100FieldNodeApplication> sensorNodeApp = CreateObject<Isa100FieldNodeApplication>();
 
