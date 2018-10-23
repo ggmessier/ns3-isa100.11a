@@ -30,6 +30,7 @@
 // ************************************************** DEFINES *************************************************
 // Defines for simulation
 #define SIM_DURATION_S 1e9                  // Duration of simulation in (s) (really long so energy runs out)
+//#define SIM_DURATION_S 20         //Rajith Changed
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
@@ -49,7 +50,7 @@
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
 //#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
-#define SENSOR_SAMPLE_PERIOD 4.0 // Sample period (s) //Rajith Changed (4000ms)
+#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (4000ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
@@ -161,7 +162,7 @@ static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, 
 int main (int argc, char *argv[])
 {
 //	  LogComponentEnable("FishPropagationLossModel",LOG_LEVEL_LOGIC);
-		LogComponentEnable("Isa100Dl",LOG_LEVEL_LOGIC);
+//		LogComponentEnable("Isa100Dl",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("Isa100HelperScheduling",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("MinHopTdmaOptimizer",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("ConvexIntTdmaOptimizer",LOG_LEVEL_LOGIC);
@@ -176,7 +177,6 @@ int main (int argc, char *argv[])
 	/*  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
 	  LogComponentEnable("Isa100Processor",LOG_LEVEL_LOGIC);
 	*/
-
 
 	// Command Line Arguments
   uint32_t seed = 1002;
@@ -479,6 +479,7 @@ int main (int argc, char *argv[])
 		sensorNodeApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
 		sensorNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
 	  sensorNodeApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+	  sensorNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
 
 		// Hook the application and sensor toegether
 		sensorNodeApp->SetSensor(netDevice->GetSensor());
@@ -502,6 +503,7 @@ int main (int argc, char *argv[])
 //    downlinkNodeApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
 //    downlinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
 //    downlinkNodeApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+//    downlinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
 //
 //    // Hook the application and sensor toegether
 //    downlinkNodeApp->SetSensor(netDevice->GetSensor());
@@ -523,7 +525,6 @@ int main (int argc, char *argv[])
     netDevice->GetPhy()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
     netDevice->GetDl()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
   }
-
 
   // ******************************************** TDMA OPTIMIZATION *********************************************
   NS_LOG_UNCOND(" Beginning TDMA lifetime optimization...");
