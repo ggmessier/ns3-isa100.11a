@@ -744,25 +744,51 @@ void Isa100Dl::PlmeSetTrxStateConfirm(ZigbeePhyEnumeration status)
     // This is a retransmission attempt of a data packet
     else if (m_ackEnabled && !IsAckPacket(txQElement->m_packet))
     {
-    	NS_LOG_DEBUG(" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
+      //Rajith changed begin
+//        if(m_routingAlgorithm)
+//          {
+//            Ptr<Packet> packetData = txQElement->m_packet->Copy();
+//            Isa100DlTrailer trailer;
+//            // Need to remove the trailer to obtain just the packet data
+//            packetData->RemoveTrailer(trailer);
+//
+////            m_routingAlgorithm->DeleteTableEntry();
+//            // GGM: Can we use this instead of programming the transmit power list into the node when we create its schedule?
+//            // This received power thing is just for the distributed FA routing but there's no reason why we couldn't use it for everything.
+//
+////            // Update the tx power for this neighbour
+////            double chLossDb = trailer.GetDistrRoutingTxPower() - rxPowDbm;
+////            SetTxPowerDbm(chLossDb - 101, srcNodeInd);
+//
+//            // Process the rx packet
+//            m_routingAlgorithm->ProcessRxPacket(packetData,forwardPacketOn);
+//
+//          }
+//        else
+//          {
+            NS_LOG_UNCOND(" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining."); // changed uncond from debug
 
-    	// Indicate a retransmission is happening
-    	m_retrxTrace(m_address);
+            // Indicate a retransmission is happening
+            m_retrxTrace(m_address);
 
-    	// Decrement transmit attempts remaining for the packet
-    	txQElement->m_txAttemptsRem--;
+            // Decrement transmit attempts remaining for the packet
+            txQElement->m_txAttemptsRem--;
 
-    	// Increase the number of retransmissions
-    	m_numRetrx++;
+            // Increase the number of retransmissions
+            m_numRetrx++;
 
-    	// Set the arq backoff counter
-    	m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue(0,pow(2,m_arqBackoffExponent-1)));
+            // Set the arq backoff counter
+            m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue(0,pow(2,m_arqBackoffExponent-1)));
+//          }
+
+      //Rajith changed end
+
     }
 
     // This is the first attempt of an ACK packet
     else if ( IsAckPacket(txQElement->m_packet) )
     {
-    	NS_LOG_DEBUG(" ACK packet sent. " << txQElement->m_txAttemptsRem << " attempts remaining.");
+    	NS_LOG_UNCOND(" ACK packet sent. " << txQElement->m_txAttemptsRem << " attempts remaining.");// changed uncond from debug
 
     	// Decrement transmit attempts remaining for the packet
 
@@ -1020,7 +1046,6 @@ void Isa100Dl::ProcessPdDataIndication(uint32_t size, Ptr<Packet> p, uint32_t lq
   	rxDlHdr.GetShortSrcAddr().CopyTo(shortSrcBuffer.byte);
   	uint8_t srcNodeInd = shortSrcBuffer.byte[1];
   	bool forwardPacketOn = false;
-
 
   	// Else check for an address match
   	if( rxDlHdr.GetShortDstAddr() == m_address)
