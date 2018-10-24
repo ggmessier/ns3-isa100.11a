@@ -391,7 +391,7 @@ void Isa100BackboneNodeApplication::DlDataIndication (DlDataIndicationParams par
 void Isa100BackboneNodeApplication::DlDataConfirm (DlDataConfirmParams params)
 {
   // The sink never transmits any packets
-  NS_FATAL_ERROR("Sink Application: In TDMA the sink does not transmit.");
+//  NS_FATAL_ERROR("Sink Application: In TDMA the sink does not transmit.");
 }
 
 
