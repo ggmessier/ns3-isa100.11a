@@ -34,8 +34,8 @@
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
-//#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
-#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
+#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
+//#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
 
 // Topology
 #define SENSOR_DENSITY 0.0093  // Nodes/m^2
@@ -49,8 +49,8 @@
 #define SENSOR_SAMPLE_POWER_W     0.027    // Power required for performing a sensor sample (W)
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
-//#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
-#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (4000ms)
+#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
+//#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (4000ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
@@ -234,8 +234,8 @@ int main (int argc, char *argv[])
   else
   	NS_FATAL_ERROR("Command line optimization string incorrect.");
 
-//  numSlotsPerFrame = ceil(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds()); // Rajith removed
-  numSlotsPerFrame = floor(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds()); // Rajith Changed
+  numSlotsPerFrame = ceil(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds()); // Rajith removed
+//  numSlotsPerFrame = floor(SENSOR_SAMPLE_PERIOD / slotDuration.GetSeconds()); // Rajith Changed
 
   NS_LOG_UNCOND("Optimization: " << optString << ", Iter: " << iter);
   NS_LOG_UNCOND("Slot Duration: " << slotDuration.GetSeconds() << "s, Slots Per Superframe: " << numSlotsPerFrame);
@@ -433,88 +433,112 @@ int main (int argc, char *argv[])
 		sensor->SetAttribute("ActiveCurrent", DoubleValue(SENSOR_SAMPLE_POWER_W/3.0));
 		sensor->SetAttribute("IdleCurrent", DoubleValue(0.0));
 		sensor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
-		sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
+		if(i >= 3)
+      {
+		    sensor->SetAttribute("SensingTime", TimeValue( Seconds(0.0) ) );
+      }
+		else
+		  {
+		    sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
+		  }
 
 		isaHelper->InstallSensor(i,sensor);
 
 		Ptr<Isa100Battery> battery = CreateObject<Isa100Battery>();
 
 		//Rajith Changed - begin
-		if(i < 3)
+		battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
+		if(i >= 3)
 		  {
-		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e300);
+//		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e300);
+		    battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
 		  }
-		else
-		  {
-		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
-		  }
+//		else
+//		  {
+//		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
+//		  }
     //Rajith Changed - end
-		battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
+
 
 		isaHelper->InstallBattery(i,battery);
 	}
 
-//	// Sink application (Broadcast)
-//	Ptr<Isa100BackboneNodeApplication> sinkNodeApp = CreateObject<Isa100BackboneNodeApplication>();
-//
-//	sinkNodeApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
-//	sinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-//  sinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
+  // ******************************************** APPLICATIONS SETUP *********************************************
+	// ******************* UPLINK *******************
+	// Sink application
+	Ptr<Isa100BackboneNodeApplication> sinkNodeULApp = CreateObject<Isa100BackboneNodeApplication>();
 
-//	// Install application
-//	isaHelper->InstallApplication(nc,0,sinkNodeApp);
+	sinkNodeULApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
+	sinkNodeULApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+	sinkNodeULApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
 
-	// Create the sensor node applications (Uplink)
+	// Install application
+	isaHelper->InstallApplication(nc,0,sinkNodeULApp);
+
+	// Create the sensor node applications
 	Mac16AddressValue address;
 	Ptr<Isa100NetDevice> netDevice;
-	for (int16_t i = 3; i < numNodes; i++)
+	for (int16_t i = 1; i < numNodes; i++)
 	{
-		Ptr<Isa100FieldNodeApplication> sensorNodeApp = CreateObject<Isa100FieldNodeApplication>();
+		Ptr<Isa100FieldNodeApplication> sensorNodeULApp = CreateObject<Isa100FieldNodeApplication>();
 
 		// Sensor application attributes
 		netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
 		netDevice->GetDl()->GetAttribute("Address",address);
-		sensorNodeApp->SetAttribute("SrcAddress",address);
-		sensorNodeApp->SetAttribute("DestAddress",Mac16AddressValue(SINK_ADDR));
-		sensorNodeApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
-		sensorNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-	  sensorNodeApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
-	  sensorNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
+		sensorNodeULApp->SetAttribute("SrcAddress",address);
+		sensorNodeULApp->SetAttribute("DestAddress",Mac16AddressValue(SINK_ADDR));
+		sensorNodeULApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
+		sensorNodeULApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+		sensorNodeULApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
 
-		// Hook the application and sensor toegether
-		sensorNodeApp->SetSensor(netDevice->GetSensor());
-		sensorNodeApp->SetProcessor(netDevice->GetProcessor());
-		netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sensorNodeApp));
+		// Hook the application and sensor together
+		sensorNodeULApp->SetSensor(netDevice->GetSensor());
+		sensorNodeULApp->SetProcessor(netDevice->GetProcessor());
+		netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sensorNodeULApp));
 
 		// Install application
-		isaHelper->InstallApplication(nc,i,sensorNodeApp);
+		isaHelper->InstallApplication(nc,i,sensorNodeULApp);
 	}
 
-	// Create the Downlink applications //Rajith Added - begin
-//  for (int16_t i = 1; i < numNodes; i++)
-//  {
-//    Ptr<Isa100FieldNodeApplication> downlinkNodeApp = CreateObject<Isa100FieldNodeApplication>();
-//
-//    // Sensor application attributes
-//    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
-//    netDevice->GetDl()->GetAttribute("Address",address);
-//    downlinkNodeApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
-//    downlinkNodeApp->SetAttribute("DestAddress",address);
-//    downlinkNodeApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
-//    downlinkNodeApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-//    downlinkNodeApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
-//    downlinkNodeApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
-//
-//    // Hook the application and sensor toegether
-//    downlinkNodeApp->SetSensor(netDevice->GetSensor());
-//    downlinkNodeApp->SetProcessor(netDevice->GetProcessor());
-//    netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, downlinkNodeApp));
-//
-//    // Install application
-//    isaHelper->InstallApplication(nc,i,downlinkNodeApp);
-//  }
-  //Rajith Added - end
+	// ******************* DOWNLINK *******************
+  // Sink application
+	Ptr<Isa100NetDevice> sinkNode = devContainer.Get(0)->GetObject<Isa100NetDevice>();
+  for (int16_t i = 1; i < numNodes; i++)
+  {
+    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+    netDevice->GetDl()->GetAttribute("Address",address);
+//    Ptr<Isa100FieldNodeApplication> sinkNodeDLApp = CreateObject<Isa100FieldNodeApplication>();
+    Ptr<Isa100PacketGeneratorApplication> sinkNodeDLApp = CreateObject<Isa100PacketGeneratorApplication>();
 
+    sinkNodeDLApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
+    sinkNodeDLApp->SetAttribute("DestAddress",address);
+    sinkNodeDLApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
+    sinkNodeDLApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+    sinkNodeDLApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+
+//    // Hook the application and sensor together
+//    sinkNodeDLApp->SetSensor(sinkNode->GetSensor());
+//    sinkNodeDLApp->SetProcessor(sinkNode->GetProcessor());
+//    sinkNode->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sinkNodeDLApp));
+
+    // Install application
+    isaHelper->InstallApplication(nc,0,sinkNodeDLApp);
+  }
+
+  // Create the sensor node applications
+  for (int16_t i = 1; i < numNodes; i++)
+  {
+    Ptr<Isa100BackboneNodeApplication> sensorNodeDLApp = CreateObject<Isa100BackboneNodeApplication>();
+    // Sensor application attributes
+    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+    netDevice->GetDl()->GetAttribute("Address",address);
+    sensorNodeDLApp->SetAttribute("SrcAddress",address);
+    sensorNodeDLApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+    sensorNodeDLApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
+
+    // Install application
+    isaHelper->InstallApplication(nc,i,sensorNodeDLApp);
+  }
 
 	// Traces
   Ptr<NetDevice> baseDevice;
