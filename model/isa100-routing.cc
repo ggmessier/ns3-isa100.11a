@@ -193,7 +193,7 @@ void Isa100SourceRoutingAlgorithm::ProcessRxPacket (Ptr<Packet> packet, bool &fo
 {
   NS_LOG_FUNCTION (this << m_address);
 
-  NS_LOG_UNCOND (" Input packet " << *packet);
+  NS_LOG_DEBUG (" Input packet " << *packet);
 
   // Remove the header so that it can be modified.
   Isa100DlHeader header;
@@ -261,20 +261,10 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader (Isa100DlHeader &header)
   // Populate DROUT sub-header.
   uint8_t destNodeInd = buffer[1];
   NS_LOG_DEBUG (" Sending to node " << static_cast<uint32_t> (destNodeInd));
-  NS_LOG_UNCOND ("TX Sending to node " << static_cast<uint32_t> (destNodeInd));
 
   for(uint32_t iHop=0; iHop < m_table[destNodeInd].size(); iHop++)
-    header.SetSourceRouteHop(iHop,m_table[destNodeInd][iHop]);
+    header.SetGraphRouteHop(iHop,m_table[destNodeInd][iHop]);
 
-//  uint8_t buffer2[4];
-//  Mac16Address addr2 = m_table[destNodeInd][0];
-//  addr2.CopyTo (buffer2);
-//
-//  // Populate DROUT sub-header.
-//  uint8_t destNodeInd2 = buffer2[1];
-//  NS_LOG_UNCOND ("TX SetSourceRouteHop to node " << static_cast<uint32_t> (destNodeInd2));
-
-//  header.SetSourceRouteHop (0,m_table[destNodeInd][0]);      // Set only the primary address for routing
   // Set header for first hop.
   header.SetSrcAddrFields (0,m_address);
   header.SetDstAddrFields (0,m_table[destNodeInd][0]);
@@ -283,7 +273,7 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader (Isa100DlHeader &header)
 
 void Isa100GraphRoutingAlgorithm::ProcessRxPacket (Ptr<Packet> packet, bool &forwardPacketOn)
 {
-  NS_LOG_UNCOND (this << m_address);
+  NS_LOG_FUNCTION (this << m_address);
 
   NS_LOG_DEBUG (" Input packet " << *packet);
 
@@ -292,26 +282,24 @@ void Isa100GraphRoutingAlgorithm::ProcessRxPacket (Ptr<Packet> packet, bool &for
   packet->RemoveHeader (header);
 
   Mac16Address finalDestAddr = header.GetDaddrDestAddress ();
-  Mac16Address nextHopAddr = header.PopNextSourceRoutingHop ();  // need to remove
 
-  NS_LOG_UNCOND ("RX First Source Address: " << header.GetDaddrSrcAddress ());
-
-//  NS_LOG_DEBUG(" Final Dest Addr: " << finalDestAddr << ", Next Hop Addr: " << nextHopAddr);
-  NS_LOG_UNCOND (" RX Final Dest Addr: " << finalDestAddr << ", Next Hop Addr: " << nextHopAddr);   // need to remove
+  NS_LOG_DEBUG ("RX First Source Address: " << header.GetDaddrSrcAddress ());
 
   forwardPacketOn = (m_address != finalDestAddr);
 
   // Set MHR source and destination addresses for next hop.
   if (forwardPacketOn)
     {
-      NS_LOG_UNCOND ("RX forwardPacketOn: YES");
+      NS_LOG_DEBUG ("RX forwardPacketOn: YES");
       uint8_t buffer[4];
       finalDestAddr.CopyTo (buffer);
 
       uint8_t destNodeInd = buffer[1];
-      NS_LOG_UNCOND ("RX -> TX SetSourceRouteHop to node " << static_cast<uint32_t> (destNodeInd));
+      NS_LOG_DEBUG ("RX -> TX SetSourceRouteHop to node " << static_cast<uint32_t> (destNodeInd));
 
-      header.SetSourceRouteHop (0,m_table[destNodeInd][0]);      // Set only the primary address for routing
+      for(uint32_t iHop=0; iHop < m_table[destNodeInd].size(); iHop++)
+        header.SetGraphRouteHop(iHop,m_table[destNodeInd][iHop]);
+
       header.SetSrcAddrFields (0,m_address);
       header.SetDstAddrFields (0,m_table[destNodeInd][0]);
     }

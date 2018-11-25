@@ -384,7 +384,6 @@ void Isa100BackboneNodeApplication::DlDataIndication (DlDataIndicationParams par
   // There shouldn't be broadcasts happening in TDMA
   Mac16Address broadcastAddr ("ff:ff");
   NS_ASSERT_MSG(params.m_destAddr != broadcastAddr, "Sink App:TDMA does not support broadcasts!");
-  NS_LOG_UNCOND("Params m_srcAddr: "<<params.m_srcAddr);
   m_reportRxTrace(params.m_srcAddr);
 }
 

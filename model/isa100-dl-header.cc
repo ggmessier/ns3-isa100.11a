@@ -120,17 +120,41 @@ void Isa100DlHeader::SetSourceRouteHop(uint8_t hopNum, Mac16Address addr)
 
 Mac16Address Isa100DlHeader::PopNextSourceRoutingHop()
 {
+  Mac16Address nextAddr = m_routeAddresses[0];
+
+  if(m_numRouteAddresses > 1){
+
+    nextAddr = m_routeAddresses[1];
+
+    for(int iAddr=1; iAddr < m_numRouteAddresses; iAddr++)
+      m_routeAddresses[iAddr-1] = m_routeAddresses[iAddr];
+
+    m_numRouteAddresses--;
+
+  }
+  return nextAddr;
+
+}
+
+//Rajith Added
+void Isa100DlHeader::SetGraphRouteHop(uint8_t hopNum, Mac16Address addr)
+{
+  if( hopNum > ISA100_ROUTE_MAX_HOPS)
+    NS_FATAL_ERROR("hopNum cannot exceed ISA100_ROUTE_MAX_HOPS");
+
+  m_routeAddresses[hopNum] = addr;
+
+  if(m_numRouteAddresses == 0 || hopNum > (m_numRouteAddresses-1))
+    m_numRouteAddresses = hopNum+1;
+
+}
+
+Mac16Address Isa100DlHeader::GetGraphRouteHop(uint8_t hopNum)
+{
 	Mac16Address nextAddr = m_routeAddresses[0];
 
 	if(m_numRouteAddresses > 1){
-
-		nextAddr = m_routeAddresses[1];
-
-		for(int iAddr=1; iAddr < m_numRouteAddresses; iAddr++)
-			m_routeAddresses[iAddr-1] = m_routeAddresses[iAddr];
-
-		m_numRouteAddresses--;
-
+	    nextAddr = m_routeAddresses[1];
 	}
 
 	return nextAddr;

@@ -256,7 +256,21 @@ public:
 
 
 
+  //Rajith Added
 
+  /** Set network hop.
+   *
+   * @param hopNum  Index indicating the hop position in the path.
+   * @param addr Destination node for the hop.
+   */
+  void SetGraphRouteHop(uint8_t hopNum, Mac16Address addr);
+
+  /** Set network hop.
+   *
+   * @param hopNum  Index indicating the hop position in the path.
+   * @param addr Destination node for the hop.
+   */
+  Mac16Address GetGraphRouteHop(uint8_t hopNum);
 
   /** Set network hop.
    *

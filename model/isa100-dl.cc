@@ -509,7 +509,7 @@ void Isa100Dl::ProcessLink ()
   uint16_t nextSlot = m_sfSchedule->m_dlLinkScheduleSlots[m_dlLinkIndex % scheduleSize];
   uint16_t slotJump;
 
-  NS_LOG_UNCOND (" Current Slot Index: " << currentSlot << " Next Slot Index: " << nextSlot);
+  NS_LOG_DEBUG (" Current Slot Index: " << currentSlot << " Next Slot Index: " << nextSlot);
 
   if (nextSlot <= currentSlot)
     {
@@ -519,25 +519,6 @@ void Isa100Dl::ProcessLink ()
     {
       slotJump = nextSlot - currentSlot;
     }
-
-  // To be removed following
-//  //  uint16_t nextSlot = m_sfSchedule->m_dlLinkScheduleSlots[m_dlLinkIndex % scheduleSize];  //Rajith Temporary change
-//    uint16_t nextSlot = currentSlot + m_sfPeriod; //Rajith Temporary change
-//  //  uint16_t slotJump;  //Rajith Temporary change
-//    uint16_t slotJump = nextSlot - currentSlot;
-//
-//    NS_LOG_UNCOND (" Current Slot Index: " << currentSlot << " Next Slot Index: " << nextSlot);
-//
-//    //Rajith Temporary change - begin
-//  //  if (nextSlot <= currentSlot)
-//  //    {
-//  //      slotJump = (nextSlot + m_sfPeriod) - currentSlot;
-//  //    }
-//  //  else
-//  //    {
-//  //      slotJump = nextSlot - currentSlot;
-//  //    }
-//    //Rajith Temporary change - end
 
   NS_LOG_LOGIC (" Process link scheduled " << slotJump << " slots into the future ("
                                            << Time (m_sfSlotDuration * slotJump).GetSeconds () << "s in the future)");
@@ -1114,9 +1095,8 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       uint8_t srcNodeInd = shortSrcBuffer.byte[1];
       bool forwardPacketOn = false;
 
-      NS_LOG_UNCOND ("ProcessPdDataIndication-srcNodeInd: " << srcNodeInd);
       // Else check for an address match
-      if( rxDlHdr.GetShortDstAddr() == m_address)
+      if( rxDlHdr.GetShortDstAddr() == m_address || rxDlHdr.GetGraphRouteHop(0) == m_address || rxDlHdr.GetGraphRouteHop(1) == m_address)
         {
           // Check if an ACK needs to be sent
           if (m_ackEnabled && rxDlHdr.GetDhdrFrameControl ().ackReq == 1)
@@ -1246,8 +1226,7 @@ void Isa100Dl::DlDataRequest (DlDataRequestParams params, Ptr<Packet> p)
   std::string msg = ss.str ();
   m_dlTaskTrace (m_address, msg);
 
-//  NS_LOG_LOGIC(" Sending packet from " << params.m_srcAddr << " to " << params.m_destAddr);
-  NS_LOG_UNCOND (" Sending packet from " << params.m_srcAddr << " to " << params.m_destAddr); //Rajith
+  NS_LOG_LOGIC(" Sending packet from " << params.m_srcAddr << " to " << params.m_destAddr);
 
   Isa100DlHeader dlHdr;
   TxQueueElement *txQElement = new TxQueueElement;
