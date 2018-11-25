@@ -222,6 +222,14 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTdma(vector< vector<int> > flows,
 
     Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
 
+//    //Rajith
+//    NS_LOG_UNCOND("Node: "<<nNode);
+//    for (int i = 0; i<nodeSchedules[nNode].slotSched.size();i++)
+//        {
+//          NS_LOG_UNCOND("slot schedule: "<<nodeSchedules[nNode].slotSched[i]);
+//        }
+//    //Rajith
+
     schedulePtr->SetSchedule(hoppingPattern,nodeSchedules[nNode].slotSched,nodeSchedules[nNode].slotType);
 
     netDevice->GetDl()->SetDlSfSchedule(schedulePtr);
@@ -518,23 +526,40 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 //  ConstructDataCommunicationSchedule (optimizer->m_graph, optimizer->m_graphMap);
 
 //  vector< vector<int> > scheduleSummary = m_mainSchedule;
+  NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
+  for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
+    {
+      if ((this)->m_mainSchedule[j][0] != 65535)
+        {
+          NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+        }
+    }
+
+//  (this)->SetDlAttribute("SuperFramePeriod",UintegerValue(m_mainSchedule.size()));
 
   for(uint32_t nNode=0; nNode < numNodes; nNode++)
   {
     NodeSchedule nodeSchedule;
-//    NS_LOG_UNCOND("nNode for Node schedule: "<<nNode);
-    for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
-           it != m_nodeScheduleN[nNode].end (); ++it)
-        {
-          nodeSchedule.slotSched.push_back(it->first);
-          nodeSchedule.slotType.push_back(it->second);
-//          NS_LOG_UNCOND("slot schedule: "<<it->first<<" "<<it->second);
-        }
+
     // Assign schedule to DL
     Ptr<NetDevice> baseDevice = m_devices.Get(nNode);
     Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
-    netDevice->GetDl()->SetAttribute("SuperFramePeriod", UintegerValue(m_mainSchedule.size()));
+    UintegerValue super_frame;
+    netDevice->GetDl()->GetAttribute("SuperFramePeriod", super_frame);
+
+    NS_LOG_UNCOND("nNode for Node schedule: "<<nNode);
+    for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
+           it != m_nodeScheduleN[nNode].end (); ++it)
+        {
+          if(it->first >= super_frame.Get()) break;
+          nodeSchedule.slotSched.push_back(it->first);
+          nodeSchedule.slotType.push_back(it->second);
+          NS_LOG_UNCOND("slot schedule: "<<it->first<<" "<<it->second);
+        }
+
+//    netDevice->GetDl()->SetAttribute("SuperFramePeriod", UintegerValue(m_mainSchedule.size()));
+//    netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
 
     if(!baseDevice || !netDevice)
       NS_FATAL_ERROR("Installing TDMA schedule on non-existent ISA100 net device.");

@@ -70,10 +70,10 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
             {
               // Schedule primary and retry links for publishing data
               (this)->ScheduleLinks(v, gateway, GUL , superframe, 0, TRANSMIT);
-              (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED);
+//              (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED);
               // Schedule primary and retry links for control data
-              (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, TRANSMIT);
-              (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/4*3, SHARED);
+//              (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, TRANSMIT);
+//              (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/4*3, SHARED);
             }
           GroupwithSampleRate.pop_back();
         }
@@ -209,11 +209,18 @@ uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option
 //      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
 //      NS_LOG_UNCOND("nSlot: "<<nSlot);
 //      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
+//      if(nSlot+slotIndex > frameSize)
+//        {
+//          NS_LOG_UNCOND("INSUFFICIENT FRAME");
+//          frameSize = frameSize*2;
+//          (this)->ResizeSchedule(frameSize);
+//        }
       while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
         {
           slotIndex++;
           if(slotIndex > frameSize)
             {
+              NS_LOG_UNCOND("INSUFFICIENT SLOTS");
               frameSize = frameSize*2;
               (this)->ResizeSchedule(frameSize);
             }
@@ -225,11 +232,16 @@ uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option
 //      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
 //      NS_LOG_UNCOND("nSlot: "<<nSlot);
 //      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
+//      if(nSlot+slotIndex > frameSize)
+//        {
+//          NS_LOG_UNCOND("INSUFFICIENT FRAME");
+//        }
       while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
         {
           slotIndex++;
           if(slotIndex > frameSize)
             {
+              NS_LOG_UNCOND("INSUFFICIENT SLOTS");
               frameSize = frameSize*2;
               (this)->ResizeSchedule(frameSize);
             }
