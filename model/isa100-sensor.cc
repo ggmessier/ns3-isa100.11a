@@ -64,9 +64,6 @@ Isa100Sensor::GetTypeId (void)
 				MakeDoubleAccessor (&Isa100Sensor::m_supplyVoltage),
 				MakeDoubleChecker<double> (0))
 
-
-
-
   ;
   return tid;
 }
