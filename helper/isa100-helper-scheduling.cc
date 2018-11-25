@@ -521,21 +521,17 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 {
   int numNodes = m_devices.GetN();
   SchedulingResult schedulingResult = SCHEDULE_FOUND;
-//  m_numTimeslots = m_mainSchedule.size();
 
-//  ConstructDataCommunicationSchedule (optimizer->m_graph, optimizer->m_graphMap);
-
-//  vector< vector<int> > scheduleSummary = m_mainSchedule;
-  NS_LOG_UNCOND("size: "<<(this)->m_mainSchedule.size());
+  NS_LOG_DEBUG("size: "<<(this)->m_mainSchedule.size());
   for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
     {
       if ((this)->m_mainSchedule[j][0] != 65535)
         {
-          NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+          NS_LOG_DEBUG("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
         }
     }
 
-//  (this)->SetDlAttribute("SuperFramePeriod",UintegerValue(m_mainSchedule.size()));
+  (this)->SetDlAttribute("SuperFramePeriod",UintegerValue(m_mainSchedule.size()));
 
   for(uint32_t nNode=0; nNode < numNodes; nNode++)
   {
@@ -545,41 +541,30 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     Ptr<NetDevice> baseDevice = m_devices.Get(nNode);
     Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
-    UintegerValue super_frame;
-    netDevice->GetDl()->GetAttribute("SuperFramePeriod", super_frame);
+//    UintegerValue super_frame;
+//    netDevice->GetDl()->GetAttribute("SuperFramePeriod", super_frame);
 
-    NS_LOG_UNCOND("nNode for Node schedule: "<<nNode);
+    NS_LOG_DEBUG("nNode for Node schedule: "<<nNode);
     for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
-          if(it->first >= super_frame.Get()) break;
           nodeSchedule.slotSched.push_back(it->first);
           nodeSchedule.slotType.push_back(it->second);
-          NS_LOG_UNCOND("slot schedule: "<<it->first<<" "<<it->second);
+          NS_LOG_DEBUG("slot schedule: "<<it->first<<" "<<it->second);
         }
 
-//    netDevice->GetDl()->SetAttribute("SuperFramePeriod", UintegerValue(m_mainSchedule.size()));
+    netDevice->GetDl()->SetAttribute("SuperFramePeriod", UintegerValue(m_mainSchedule.size()));
 //    netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
 
     if(!baseDevice || !netDevice)
       NS_FATAL_ERROR("Installing TDMA schedule on non-existent ISA100 net device.");
 
-    // Create routing object only for field nodes
-    // NOTE: This current implementation only allows for a single path from a field node to the sink.
-//    if(nNode > 0)
-//    {
-//    uint32_t numNodes = m_tableList[nNode].size();
-//    uint32_t numNodes = 20;
-
-//    Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(numNodes,m_tableList[nNode]);
     Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(m_tableList[nNode]);
-//    routingAlgorithm->RoutingTableConfiguration(m_tableList[nNode]);
     netDevice->GetDl()->SetRoutingAlgorithm(routingAlgorithm);
 
     Mac16AddressValue address;
     netDevice->GetDl()->GetAttribute("Address",address);
     netDevice->GetDl()->GetRoutingAlgorithm()->SetAttribute("Address",address);
-//    }
 
     // Set the tx power levels in DL
     netDevice->GetDl()->SetTxPowersDbm(m_txPwrDbm[nNode], numNodes);
