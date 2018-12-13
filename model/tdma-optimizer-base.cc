@@ -243,4 +243,10 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
 
 }
 
+void TdmaOptimizerBase::SetEdgeWeights (std::vector<std::pair<uint32_t,uint32_t>> edgeWeight)
+{
+  (this)->m_edgeWeightTDMA = edgeWeight;
+}
+
+
 } // namespace ns3

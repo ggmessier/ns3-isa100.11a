@@ -312,7 +312,7 @@ FishLogDistanceLossModel::DoCalcRxPower (double txPowerDbm,
   }
 
 
-  double rxc = -m_referenceLoss - pathLossDb + shadowingDb;
+  double rxc = -m_referenceLoss - pathLossDb - shadowingDb;     // Rajith changed shadowing + -> -
   NS_LOG_DEBUG ("distance="<<distance<<"m, reference-attenuation="<< -m_referenceLoss<<"dB, "<<
                 "attenuation coefficient="<<rxc<<"db, txPower: " << txPowerDbm << "dBm, rxPower: " << txPowerDbm+rxc << "dBm");
 

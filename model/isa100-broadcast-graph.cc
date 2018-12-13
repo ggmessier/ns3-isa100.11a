@@ -50,7 +50,9 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
    *        V -S
    *
    */
-  map <uint32_t, GraphNode> edgesForS = (this)->m_graphNodeMap;
+  map <uint32_t, GraphNode> edgesForS  = (this)->m_graphNodeMap;
+
+  vector<GraphNode> tempParents;
 
   while ((this)->GetNumofNodes () < G->GetNumofNodes ())         // S != V
     {
@@ -66,8 +68,7 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
           if ((this)->m_graphNodeMap.count (it->first) != 1)
             { //considering only the V - VB nodes
               double hop_count;
-              vector<GraphNode> tempParents;
-
+              tempParents.clear();
               for (uint32_t i = 0; i < (it->second).m_parents.size (); ++i)
                 {
                   uint32_t nextNode = (it->second).m_parents[i].operator -> ()->GetId ();
@@ -80,6 +81,16 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
               if (tempParents.size () >= 2)
                 {
                   sort (tempParents.begin (), tempParents.end (),CompareAverageHop);
+//                  if(tempParents.size () > 2)
+//                    {
+//                      NS_LOG_UNCOND("tempParents.size () "<<tempParents.size ());
+//                      for(int k = 0; k <tempParents.size (); k++)
+//                        {
+//                          NS_LOG_UNCOND("tempParents info: id: "<<tempParents[k].m_head->GetId());
+//                          NS_LOG_UNCOND("tempParents info: hop count: "<<tempParents[k].m_avgHopCount);
+//                          NS_LOG_UNCOND("tempParents info: weight: "<<tempParents[k].m_weight);
+//                        }
+//                    }
                   hop_count = 0.5 * ((this)->m_graphNodeMap[tempParents[0].m_head->GetId ()].m_avgHopCount
                                      + (this)->m_graphNodeMap[tempParents[1].m_head->GetId ()].m_avgHopCount) + 1;
                   edgesForS[(it->first)].m_parents[0] = tempParents[0].m_head;
@@ -88,6 +99,7 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
                   if (!S_2 || (nodeMinHop.m_avgHopCount > hop_count))
                     {
                       nodeMinHop = G->m_graphNodeMap[it->first];
+                      nodeMinHop.m_weight = G->m_graphNodeMap[it->first].m_weight;  //Rajith Added
                       S_2 = true;
                     }
                 }
@@ -115,6 +127,7 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
                         {
                           maxOutgoingEdges = outgoingEdges;
                           nodeMaxoutgoingEdges = G->m_graphNodeMap[it->first];
+                          nodeMaxoutgoingEdges.m_weight = G->m_graphNodeMap[it->first].m_weight;  //Rajith Added
                         }
                     }
                   S_1 = true;
@@ -126,17 +139,31 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
         {
           (this)->AddNode (nodeMinHop.m_head);
           (this)->SetHopCount (nodeMinHop.m_head->GetId (), nodeMinHop.m_avgHopCount);
+          (this)->SetWeight(nodeMinHop.m_head->GetId (), nodeMinHop.m_weight);
           GraphNode tempNode = edgesForS[nodeMinHop.m_head->GetId ()];
           (this)->AddEdge (tempNode.m_parents[0]->GetId (), nodeMinHop.m_head->GetId ());
           (this)->AddEdge (tempNode.m_parents[1]->GetId (), nodeMinHop.m_head->GetId ());
           (this)->SetReliability(nodeMinHop.m_head->GetId ());
+          if((this)->GetWeight(tempNode.m_parents[0]->GetId ())>0)
+            {
+              (this)->m_graphNodeMap[tempNode.m_parents[0]->GetId ()].m_weight--;
+            }
+          if((this)->GetWeight(tempNode.m_parents[1]->GetId ())>0)
+            {
+              (this)->m_graphNodeMap[tempNode.m_parents[1]->GetId ()].m_weight--;
+            }
         }
       else if (S_1)
         {
           (this)->AddNode (nodeMaxoutgoingEdges.m_head);
           (this)->SetHopCount (nodeMaxoutgoingEdges.m_head->GetId (), nodeMaxoutgoingEdges.m_avgHopCount);
+          (this)->SetWeight(nodeMaxoutgoingEdges.m_head->GetId (), nodeMaxoutgoingEdges.m_weight);
           GraphNode tempNode = edgesForS[nodeMaxoutgoingEdges.m_head->GetId ()];
           (this)->AddEdge (tempNode.m_parents[0]->GetId (), nodeMaxoutgoingEdges.m_head->GetId ());
+          if((this)->GetWeight(tempNode.m_parents[0]->GetId ())>0)
+            {
+              (this)->m_graphNodeMap[tempNode.m_parents[0]->GetId ()].m_weight--;
+            }
         }
     }
 
