@@ -145,7 +145,10 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 
       netDevice_next->GetDl()->GetAttribute("Address",address_next);
 
-      m_tableList[u->GetId()][v->GetId()].push_back(address_next.Get());   //update the routing tables
+      if(count(m_tableList[u->GetId()][v->GetId()].begin(),m_tableList[u->GetId()][v->GetId()].end(),address_next.Get()) == 0)
+        {
+          m_tableList[u->GetId()][v->GetId()].push_back(address_next.Get());   //update the routing tables
+        }
 
       if (successorsOfU.size()==1)              // if next is the only successor of u then
         {

@@ -143,6 +143,11 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
   // Set the attributes
   SetTdmaOptimizerAttributes(tdmaOptimizer);
 
+  if(!(this)->m_edgeWeight.empty())
+    {
+      tdmaOptimizer->SetEdgeWeights((this)->m_edgeWeight);
+    }
+
   // Pass network information to setup the optimizer
   tdmaOptimizer->SetupOptimization(c, propModel);
 
@@ -281,6 +286,8 @@ void Isa100Helper::CalculateTxPowers(NodeContainer c, Ptr<PropagationLossModel> 
   			m_txPwrDbm[iNode][jNode] = -(propModel->CalcRxPower (0, positions[iNode], positions[jNode])) + rxSensitivityDbm;
   			m_txPwrDbm[jNode][iNode] = m_txPwrDbm[iNode][jNode];
   		}
+  		m_txPowerTrace(iNode, jNode, m_txPwrDbm[iNode][jNode]);
+  		m_txPowerTrace(jNode, iNode, m_txPwrDbm[jNode][iNode]);
   	}
   }
 
@@ -527,7 +534,8 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     {
       if ((this)->m_mainSchedule[j][0] != 65535)
         {
-          NS_LOG_DEBUG("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+          NS_LOG_UNCOND("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+          m_scheduleTrace(j,(this)->m_mainSchedule[j][0],(this)->m_mainSchedule[j][1]);
         }
     }
 

@@ -80,7 +80,9 @@ typedef enum{
  */
 typedef TracedCallback<int, double, double, double> HelperLocationTracedCallback;
 
+typedef TracedCallback<int, int, int> HelperScheduleTracedCallback;
 
+typedef TracedCallback<int, int, double> HelperTxPowerTracedCallback;
 
 
 /**
@@ -271,6 +273,10 @@ public:
     SchedulingResult ScheduleAndRouteTDMAgraph();
 
     void ResizeSchedule(uint32_t superframe);
+
+    void AddEdgeWeights (pair<uint32_t,uint32_t> edge);
+
+//    vector<pair<uint32_t,uint32_t>> GetEdgeWeights ();
   //end of Rajith code addition
   /**}@*/
 
@@ -378,7 +384,6 @@ private:
    */
   void SetPhyAttributes (Ptr<ZigbeePhy> device);
 
-
   /** Trace source for number of hops in scheduled network.
    */
   TracedCallback< vector<int>  > m_hopTrace;
@@ -406,7 +411,10 @@ private:
   // end of additional private variables used by Rajith
 
   HelperLocationTracedCallback m_locationTrace;
+  HelperScheduleTracedCallback m_scheduleTrace;
+  HelperTxPowerTracedCallback m_txPowerTrace;
 
+  vector<pair<uint32_t,uint32_t>> m_edgeWeight;
 
 };
 
