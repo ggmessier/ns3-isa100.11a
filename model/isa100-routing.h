@@ -69,6 +69,8 @@ public:
    */
   virtual Mac16Address AttemptAnotherLink(uint8_t destInd, std::vector<Mac16Address> attemptedLinks);
 
+  virtual void DeleteTableEntry(Mac16Address nodeAddress) = 0; // Rajith
+
 protected:
 
 	Mac16Address m_address; ///< Address of this node.
@@ -107,6 +109,8 @@ public:
    * @param forwardPacketOn Reference to boolean that is true if the packet must be sent onward.
    */
   void ProcessRxPacket(Ptr<Packet> packet, bool &forwardPacketOn);
+
+  void DeleteTableEntry(Mac16Address nodeAddress); // Rajith
 
 private:
 

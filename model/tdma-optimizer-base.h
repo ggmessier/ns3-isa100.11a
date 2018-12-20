@@ -76,6 +76,8 @@ public:
    */
   virtual std::vector< std::vector<int> > SolveTdma (void) ;
 
+  void SetEdgeWeights (std::vector<std::pair<uint32_t,uint32_t>> edgeWeight);
+
 //  virtual std::map <uint32_t, Ptr<IsaGraph>> GetGraphMap(void);
 //  virtual Ptr<IsaGraph> GetGraph(void);
 
@@ -83,6 +85,7 @@ public:
   //Rajith added parameters
   std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;
   Ptr<IsaGraph> m_graph;
+  std::vector<std::pair<uint32_t,uint32_t>> m_edgeWeightTDMA;
 
 protected:
 

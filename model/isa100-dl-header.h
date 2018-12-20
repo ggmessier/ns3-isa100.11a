@@ -272,6 +272,8 @@ public:
    */
   Mac16Address GetGraphRouteHop(uint8_t hopNum);
 
+  uint8_t GetNumOfGraphRouteHop();
+
   /** Set network hop.
    *
    * @param hopNum  Index indicating the hop position in the path.

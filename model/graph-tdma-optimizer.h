@@ -64,7 +64,8 @@ public:
 
 //  virtual std::map <uint32_t, Ptr<IsaGraph>> GetGraphMap(void);
 //  virtual Ptr<IsaGraph> GetGraph(void);
-
+  void SetEdgeWeights (vector<pair<uint32_t,uint32_t>> edgeWeight);
+//  vector<pair<uint32_t,uint32_t>> GetEdgeWeights ();
 
 private:
 
@@ -76,6 +77,7 @@ private:
 
 //  std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;
 //  Ptr<IsaGraph> m_graph;
+
 
 };
 

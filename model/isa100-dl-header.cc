@@ -161,6 +161,11 @@ Mac16Address Isa100DlHeader::GetGraphRouteHop(uint8_t hopNum)
 
 }
 
+uint8_t Isa100DlHeader::GetNumOfGraphRouteHop()
+{
+  return sizeof(m_routeAddresses);
+}
+
 
 
 

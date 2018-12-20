@@ -220,6 +220,8 @@ void Isa100SourceRoutingAlgorithm::ProcessRxPacket (Ptr<Packet> packet, bool &fo
 
 }
 
+NS_OBJECT_ENSURE_REGISTERED (Isa100GraphRoutingAlgorithm);
+
 // --- Isa100GraphRoutingAlgorithm ---
 TypeId Isa100GraphRoutingAlgorithm::GetTypeId (void)
 {
@@ -262,8 +264,11 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader (Isa100DlHeader &header)
   uint8_t destNodeInd = buffer[1];
   NS_LOG_DEBUG (" Sending to node " << static_cast<uint32_t> (destNodeInd));
 
-  for(uint32_t iHop=0; iHop < m_table[destNodeInd].size(); iHop++)
-    header.SetGraphRouteHop(iHop,m_table[destNodeInd][iHop]);
+  for(uint32_t iHop=0; iHop < m_table[destNodeInd].size(); iHop++){
+//      NS_LOG_UNCOND("m_table dest size: "<<destNodeInd<<" "<<m_table[destNodeInd].size());
+      header.SetGraphRouteHop(iHop,m_table[destNodeInd][iHop]);
+  }
+
 
   // Set header for first hop.
   header.SetSrcAddrFields (0,m_address);
@@ -326,6 +331,12 @@ void Isa100GraphRoutingAlgorithm::DeleteTableEntry (Mac16Address nodeAddress)
             }
         }
     }
+}
+
+void Isa100SourceRoutingAlgorithm::DeleteTableEntry (Mac16Address nodeAddress)
+{
+  NS_LOG_FUNCTION (this << m_address);
+
 }
 
 

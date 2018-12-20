@@ -33,7 +33,22 @@ NS_OBJECT_ENSURE_REGISTERED (IsaGraph);
 
 bool CompareAverageHop (const GraphNode & e1, const GraphNode & e2)
 {
-  return (e1.m_avgHopCount < e2.m_avgHopCount);
+  if (e1.m_avgHopCount < e2.m_avgHopCount)
+    {
+      return true;
+    }
+  else if(e1.m_avgHopCount > e2.m_avgHopCount)
+    {
+      return false;
+    }
+  else if(e1.m_weight > e2.m_weight)
+    {
+      NS_LOG_UNCOND("e1.m_weight > e2.m_weight");
+      return true;
+    }
+  return false;
+//  return ((e1.m_avgHopCount < e2.m_avgHopCount) || ((e1.m_avgHopCount == e2.m_avgHopCount) && (e1.m_weight >= e2.m_weight)));
+//  return (e1.m_avgHopCount < e2.m_avgHopCount);
 };
 
 TypeId IsaGraph::GetTypeId (void)
@@ -64,6 +79,7 @@ IsaGraph::IsaGraph (NodeContainer c)
       (this)->m_graphNodeMap[nodeId].m_avgHopCount = 0;
       (this)->m_graphNodeMap[nodeId].m_reliability = false;
       (this)->m_graphNodeMap[nodeId].m_numTimeSlots = 25;
+      (this)->m_graphNodeMap[nodeId].m_weight = 0;
     }
 }
 
@@ -116,6 +132,7 @@ void IsaGraph::AddNode (Ptr<Node> src)
   uint32_t nodeId = src->GetId ();
   (this)->m_graphNodeMap[nodeId].m_head = src;
   (this)->m_graphNodeMap[nodeId].m_avgHopCount = 0;
+  (this)->m_graphNodeMap[nodeId].m_weight = 0;
 }
 
 void IsaGraph::AddGraphNode (GraphNode graphNode)
@@ -311,6 +328,18 @@ double IsaGraph::GetHopCount (uint32_t id)
 {
   NS_LOG_FUNCTION (this);
   return (this)->m_graphNodeMap[id].m_avgHopCount;
+}
+
+void IsaGraph::SetWeight (uint32_t id, uint32_t weight)
+{
+  NS_LOG_FUNCTION (this);
+  (this)->m_graphNodeMap[id].m_weight = weight;
+}
+
+uint32_t IsaGraph::GetWeight (uint32_t id)
+{
+  NS_LOG_FUNCTION (this);
+  return (this)->m_graphNodeMap[id].m_weight;
 }
 
 map <uint32_t, GraphNode> IsaGraph::UpdateSVector (Ptr<IsaGraph> G, map <uint32_t, GraphNode> edgesForS)

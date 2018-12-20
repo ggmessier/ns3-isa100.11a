@@ -114,6 +114,13 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
   m_graph->AddEdge(2, 0);
   m_graph->AddEdge(2, 1);
 
+  m_graph->SetHopCount(0,0);
+  m_graph->SetHopCount(1,1);
+  m_graph->SetHopCount(2,1);
+
+//  bool edgeweight_empty = m_edgeWeightTDMA.empty();
+  bool edgeweight_empty = true;
+
   for (uint32_t parent = 0; parent < numNodes; parent++)
     {
       Ptr<Isa100NetDevice> devPtr = c.Get(parent)->GetDevice(0)->GetObject<Isa100NetDevice>();
@@ -126,14 +133,50 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
 //      G->GetGraphNodeMap()[parent].m_numTimeSlots = numSlotsV;
       m_graph->SetTimeSlots(parent, numSlotsV);
 
-      for (uint32_t nNode = 1; nNode < numNodes; nNode++)
+      if(edgeweight_empty)
         {
-          if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
+          for (uint32_t nNode = 1; nNode < numNodes; nNode++)
             {
-//              G->AddEdge(parent, nNode);
-              m_graph->AddEdge(parent, nNode);
+              if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
+                {
+    //              G->AddEdge(parent, nNode);
+                  m_graph->AddEdge(parent, nNode);
+                }
             }
         }
+
+    }
+
+  if(!edgeweight_empty)
+    {
+      NS_LOG_UNCOND("edgeweight is not empty");
+      for (std::vector<std::pair<uint32_t, uint32_t>>::const_iterator it = m_edgeWeightTDMA.begin ();
+                             it != m_edgeWeightTDMA.end (); ++it)
+                          {
+
+                              m_graph->AddEdge(it->first, it->second);
+                              m_graph->AddEdge(it->second, it->first);
+                          }
+    }
+
+  if(!m_edgeWeightTDMA.empty())
+    {
+      for (std::vector<std::pair<uint32_t, uint32_t>>::const_iterator it1 = m_edgeWeightTDMA.begin ();
+                           it1 != m_edgeWeightTDMA.end (); ++it1)
+                    {
+                        NS_LOG_UNCOND("node: "<<it1->second<<" neighbor: "<<it1->first);
+                        std::vector<Ptr<Node>> tempEdges = m_graph->GetEdges (it1->second);
+                        for (std::vector<Ptr<Node>>::const_iterator it2 = tempEdges.begin ();
+                                             it2 != tempEdges.end (); ++it2)
+                                    {
+                                      if(it2->operator ->()->GetId() == it1->first)
+                                        {
+                                          m_graph->SetWeight(it1->first,m_graph->GetWeight(it1->first) +1);
+                                        }
+                                    }
+                        NS_LOG_UNCOND("m_graph->GetWeight(it1->first): "<<m_graph->GetWeight(it1->first));
+
+                    }
     }
 
   Ptr<Node> gateWay = c.Get(0);
@@ -170,12 +213,12 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
   G_U->SetHopCount(acessPoint_1->GetId(),1);
   G_U->SetHopCount(acessPoint_2->GetId(),1);
 
-  G_B->ReliableBroadcastGraph(m_graph);
+//  G_B->ReliableBroadcastGraph(m_graph);
 //  bool reliableGraphU =
   G_U->ReliableUplinkGraph(m_graph);
 
-  m_graphMap = m_graph->ReliableDownlinkGraphs(m_graph);
-  m_graphMap[65535] = G_B;
+//  m_graphMap = m_graph->ReliableDownlinkGraphs(m_graph);
+//  m_graphMap[65535] = G_B;
   m_graphMap[0] = G_U;
 
 //  NS_LOG_UNCOND("**** GB ****");
@@ -191,6 +234,7 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
 //  m_graphMap[3]->PrintGraph();
 
 //  m_graphMap = downlinkGraphs;
+//  NS_LOG_UNCOND("  G_U->m_graphNodeMap[10].m_weight "<<  G_U->m_graphNodeMap[10].m_weight);
 }
 
 vector< vector<int> > GraphTdmaOptimzer::SolveTdma (void)
@@ -202,5 +246,29 @@ vector< vector<int> > GraphTdmaOptimzer::SolveTdma (void)
   return flows;
 
 }
+
+//void GraphTdmaOptimzer::SetEdgeWeights (vector<pair<uint32_t,uint32_t>> edgeWeight)
+//{
+//  m_edgeWeightTDMA = edgeWeight;
+////  for (vector<pair<uint32_t, uint32_t>>::const_iterator it1 = edgeWeight.begin ();
+////                       it1 != edgeWeight.end (); ++it1)
+////                    {
+////                        vector<Ptr<Node>> tempEdges = m_graph->GetEdges (it1->second);
+////                        for (vector<Ptr<Node>>::const_iterator it2 = tempEdges.begin ();
+////                                             it2 != tempEdges.end (); ++it2)
+////                                          {
+////                                            if(it2->operator ->()->GetId() == it1->first)
+////                                              {
+////                                                m_graph->SetWeight(it1->first,m_graph->GetWeight(it1->first) +1);
+////                                              }
+////                                          }
+////
+////                    }
+//}
+
+//vector<pair<uint32_t,uint32_t>> GraphTdmaOptimzer::GetEdgeWeights ()
+//    {
+//      return  m_edgeWeightTDMA;
+//    }
 
 

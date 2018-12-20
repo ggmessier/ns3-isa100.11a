@@ -766,6 +766,11 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
               m_dlDataConfirmCallback (params);
             }
 
+          if(m_routingAlgorithm){
+//              m_routingAlgorithm->
+//              (nextNodeAddr);
+          }
+
           return;
         }
 
@@ -1095,8 +1100,22 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       uint8_t srcNodeInd = shortSrcBuffer.byte[1];
       bool forwardPacketOn = false;
 
+      bool addressMatch = false;
+      // check address match - Rajith
+      if(rxDlHdr.GetShortDstAddr() == m_address)
+        {
+          addressMatch = true;
+        }
+      for (int i = 0; i < rxDlHdr.GetNumOfGraphRouteHop(); i++)
+        {
+          if(rxDlHdr.GetGraphRouteHop(i) == m_address)
+            {
+              addressMatch = true;
+            }
+        }
+      //
       // Else check for an address match
-      if( rxDlHdr.GetShortDstAddr() == m_address || rxDlHdr.GetGraphRouteHop(0) == m_address || rxDlHdr.GetGraphRouteHop(1) == m_address)
+      if(addressMatch)
         {
           // Check if an ACK needs to be sent
           if (m_ackEnabled && rxDlHdr.GetDhdrFrameControl ().ackReq == 1)

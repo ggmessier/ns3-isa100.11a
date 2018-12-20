@@ -46,6 +46,8 @@ typedef struct
   vector <Ptr<Node> > m_parents;      ///< Parents of the head node.
   bool m_reliability;                       ///< Reliability status of the head node in the graph.
   uint32_t m_numTimeSlots;                     ///< power of the sample rate (n of 2^n): range is -2 to 9
+  uint32_t m_weight;                  ///< set weight
+
 } GraphNode;
 
 /** Defining structure for selected edges of Downlink graph of v
@@ -168,6 +170,9 @@ public:
    */
   void SetHopCount (uint32_t id, double hopCount);
   double GetHopCount (uint32_t id);
+
+  void SetWeight (uint32_t id, uint32_t weight);
+  uint32_t GetWeight (uint32_t id);
 
   /** Update the selection vector for reliable graph creation
    *

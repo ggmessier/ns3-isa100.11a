@@ -32,6 +32,7 @@ namespace ns3 {
 bool IsaGraph::ReliableUplinkGraph (Ptr<IsaGraph> G)
 {
   NS_LOG_FUNCTION (this);
+
   // Initial graph with gateway and APs edges reversed.
   (this)->FlipEdge();
 
@@ -40,6 +41,8 @@ bool IsaGraph::ReliableUplinkGraph (Ptr<IsaGraph> G)
 
   // Generate reliable broadcast graph from uplink flipped graph
   (this)->ReliableBroadcastGraph(G_reverse);
+
+  (this)->SetGraphId(0);  // destination is the gateway (node 0)
 
   if(G->GetNumofNodes()==(this)->GetNumofNodes())
     {
