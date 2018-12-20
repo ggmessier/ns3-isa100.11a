@@ -143,6 +143,11 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
   // Set the attributes
   SetTdmaOptimizerAttributes(tdmaOptimizer);
 
+  if(!(this)->m_edgeWeight.empty())
+    {
+      tdmaOptimizer->SetEdgeWeights((this)->m_edgeWeight);
+    }
+
   // Pass network information to setup the optimizer
   tdmaOptimizer->SetupOptimization(c, propModel);
 
@@ -222,14 +227,6 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTdma(vector< vector<int> > flows,
 
     Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
 
-//    //Rajith
-//    NS_LOG_UNCOND("Node: "<<nNode);
-//    for (int i = 0; i<nodeSchedules[nNode].slotSched.size();i++)
-//        {
-//          NS_LOG_UNCOND("slot schedule: "<<nodeSchedules[nNode].slotSched[i]);
-//        }
-//    //Rajith
-
     schedulePtr->SetSchedule(hoppingPattern,nodeSchedules[nNode].slotSched,nodeSchedules[nNode].slotType);
 
     netDevice->GetDl()->SetDlSfSchedule(schedulePtr);
@@ -281,6 +278,8 @@ void Isa100Helper::CalculateTxPowers(NodeContainer c, Ptr<PropagationLossModel> 
   			m_txPwrDbm[iNode][jNode] = -(propModel->CalcRxPower (0, positions[iNode], positions[jNode])) + rxSensitivityDbm;
   			m_txPwrDbm[jNode][iNode] = m_txPwrDbm[iNode][jNode];
   		}
+  		m_txPowerTrace(iNode, jNode, m_txPwrDbm[iNode][jNode]);
+  		m_txPowerTrace(jNode, iNode, m_txPwrDbm[jNode][iNode]);
   	}
   }
 
@@ -527,7 +526,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     {
       if ((this)->m_mainSchedule[j][0] != 65535)
         {
-          NS_LOG_DEBUG("schedule: "<<j<<" "<<(this)->m_mainSchedule[j][0]<<" "<<(this)->m_mainSchedule[j][1]);
+          m_scheduleTrace(j,(this)->m_mainSchedule[j][0],(this)->m_mainSchedule[j][1]);
         }
     }
 
@@ -541,9 +540,6 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     Ptr<NetDevice> baseDevice = m_devices.Get(nNode);
     Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
-//    UintegerValue super_frame;
-//    netDevice->GetDl()->GetAttribute("SuperFramePeriod", super_frame);
-
     NS_LOG_DEBUG("nNode for Node schedule: "<<nNode);
     for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
@@ -554,7 +550,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
         }
 
     netDevice->GetDl()->SetAttribute("SuperFramePeriod", UintegerValue(m_mainSchedule.size()));
-//    netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
+    netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
 
     if(!baseDevice || !netDevice)
       NS_FATAL_ERROR("Installing TDMA schedule on non-existent ISA100 net device.");

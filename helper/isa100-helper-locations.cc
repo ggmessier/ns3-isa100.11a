@@ -44,6 +44,9 @@
 #include "ns3/propagation-loss-model.h"
 #include "ns3/packet.h"
 
+#include <iostream>
+#include <fstream>
+
 
 NS_LOG_COMPONENT_DEFINE ("Isa100HelperLocations");
 

@@ -65,6 +65,16 @@ Isa100Helper::GetTypeId (void)
         MakeTraceSourceAccessor (&Isa100Helper::m_hopTrace),
 				"ns3::TracedCallback::Hops")
 
+    .AddTraceSource("Schedule",
+        "Main schedule for each slot.",
+        MakeTraceSourceAccessor (&Isa100Helper::m_scheduleTrace),
+        "ns3::TracedCallback::Schedule")
+
+    .AddTraceSource("TxPower",
+        "Tx power for each node.",
+        MakeTraceSourceAccessor (&Isa100Helper::m_txPowerTrace),
+        "ns3::TracedCallback::TxPower")
+
   ;
   return tid;
 }
@@ -310,6 +320,16 @@ void Isa100Helper::SetTrxCurrentAttribute(std::string n, const AttributeValue &v
 }
 
 
+void Isa100Helper::AddEdgeWeights (std::pair<uint32_t,uint32_t> edge)
+{
+  NS_LOG_FUNCTION (this);
+  (this)->m_edgeWeight.push_back(edge);
 
+}
+
+//vector<pair<uint32_t,uint32_t>> Isa100Helper::GetEdgeWeights (pair<uint32_t,uint32_t> edge)
+//{
+//  return m_edgeWeight;
+//}
 
 }
