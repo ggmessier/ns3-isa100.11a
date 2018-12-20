@@ -30,12 +30,12 @@
 // ************************************************** DEFINES *************************************************
 // Defines for simulation
 #define SIM_DURATION_S 1e9                  // Duration of simulation in (s) (really long so energy runs out)
-//#define SIM_DURATION_S 20         //Rajith Changed
+//#define SIM_DURATION_S 1e3        //Rajith Changed
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
-#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
-//#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
+//#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
+#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
 
 // Topology
 #define SENSOR_DENSITY 0.0093  // Nodes/m^2
@@ -49,8 +49,8 @@
 #define SENSOR_SAMPLE_POWER_W     0.027    // Power required for performing a sensor sample (W)
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
-#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
-//#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (4000ms)
+//#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
+#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (4000ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
@@ -80,6 +80,10 @@ NS_LOG_COMPONENT_DEFINE ("RandomNetworkTdma");
 double networkLifetime;
 Time terminateCheckPeriod;
 int terminateSim = 0;
+bool initial = true;
+vector<Mac16Address> needToTerminateSensors;
+vector<Mac16Address> terminatedSensors;
+unsigned int numSensorNodes = 0;
 
 // ************************ CALLBACK FUNCTIONS ******************************
 
@@ -88,12 +92,51 @@ void BatteryDepletionCallbackEvent(Mac16Address addr)
 	if(!terminateSim){
 		networkLifetime = (Simulator::Now()).GetSeconds();
 		NS_LOG_UNCOND(" Node " << addr << " out of energy at " << networkLifetime);
-		terminateSim = 1;
+
+		//Rajth added & Changed begin
+		needToTerminateSensors.push_back(addr);
+//
+//    Simulator::Schedule (Simulator::Now(), &Application::StopApplication, sensor->);
+
+//		terminateSim = 1;
+    //Rajith Added & Changed end
 	}
 
 //	Simulator::Stop();
 }
 
+static void StopSensing(NodeContainer nc)
+{
+  while(!needToTerminateSensors.empty()){
+    Mac16Address addr = needToTerminateSensors.back();
+    needToTerminateSensors.pop_back();
+    if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0)
+      {
+    //    terminatedSensors.pop_back();
+        uint8_t buffer[4];
+        addr.CopyTo (buffer);
+
+    //    uint8_t nodeInd = ;
+        uint32_t i = static_cast<uint32_t> (buffer[1]);
+//        Ptr<Isa100NetDevice> netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+//        NS_LOG_UNCOND("Sensing terminated! Node: "<<i);
+//        netDevice->GetSensor()->Dispose();
+
+        Ptr<Node> node = nc.Get(i);
+        Ptr<Application> app = node->GetApplication(0);
+        app->Dispose();
+
+        terminatedSensors.push_back(addr);
+
+    //    Simulator::ScheduleNow(&Isa100FieldNodeApplication::StopApplication,devContainer);
+      }
+  }
+  if(numSensorNodes == terminatedSensors.size() + 2)
+    {
+      terminateSim = 1;
+    }
+  Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
+}
 
 
 static void TerminateSimulation()
@@ -157,6 +200,15 @@ static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, 
 	*stream->GetStream() << "Node " << node << ": (" << x << "," << y << ") " << distToSink << "m from sink." << std::endl;
 }
 
+static void PrintTxPower(Ptr<OutputStreamWrapper> stream, int sNode, int dNode, double power)
+{
+  *stream->GetStream() << "sNode: " << sNode << " dNode: " << dNode << ": " << power << std::endl;
+}
+
+static void PrintSchedule(Ptr<OutputStreamWrapper> stream, int slot, int sNode, int dNode)
+{
+  *stream->GetStream() << "Slot: " << slot <<" sNode: " << sNode << " dNode: " << dNode << std::endl;
+}
 
 // ************************************************ MAIN BEGIN ************************************************
 int main (int argc, char *argv[])
@@ -181,7 +233,7 @@ int main (int argc, char *argv[])
 	// Command Line Arguments
   uint32_t seed = 1002;
   std::string optString;
-  unsigned int numSensorNodes=0;
+//  unsigned int numSensorNodes=0; //Rajith changed
 //  uint8_t numAccessPoints=2;    //Rajith
 
   int iter = -1;
@@ -249,6 +301,7 @@ int main (int argc, char *argv[])
 
   NS_ASSERT(numSensorNodes > 0);
   NS_ASSERT(iter >= 0);
+//  NS_ASSERT(seed >= 0);
 
   AsciiTraceHelper asciiTraceHelper;
   std::string filename;
@@ -336,7 +389,12 @@ int main (int argc, char *argv[])
 
 
   // ********************************************* FILE STREAMS ************************************************
-  Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
+  CREATE_STREAM_FILENAME("schedule.txt");
+  Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+
+  CREATE_STREAM_FILENAME("txPower.txt");
+  Ptr<OutputStreamWrapper> txPowerStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+//  Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream ("/dev/null",std::ios::out);
 
   CREATE_STREAM_FILENAME("energies.txt");
   Ptr<OutputStreamWrapper> energyStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
@@ -358,7 +416,8 @@ int main (int argc, char *argv[])
 	*(packetDropStream->GetStream()) << "Iter," << iter << ",--------------\n";
 	*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";
 	*(locationStream->GetStream()) << "#" << iter << "#\n";
-//	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
+	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
+	*(txPowerStream->GetStream()) << "#" << iter << "#\n";
 
 
 	*(reportStream->GetStream()) << "Seed," << seed << "\n";
@@ -367,25 +426,80 @@ int main (int argc, char *argv[])
 
 
 	// ********************************************** NODE LOCATIONS **********************************************
-	NS_LOG_UNCOND(" Creating network...");
 
-  isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
+  Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+  if(initial)
+    {
+      NS_LOG_UNCOND(" Creating network...");
 
+      isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
 
-	Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
+      ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
+      ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
+      ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
 
-	ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
-	ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
-	ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
+      std::vector<Vector> coreNodeLocations;  //Rajith
+      coreNodeLocations.push_back(gateWayLoc);  //Rajith
+      coreNodeLocations.push_back(accessPoint1Loc); //Rajith
+      coreNodeLocations.push_back(accessPoint2Loc); //Rajith
+    //  ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith removed
+      //  isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);   //Rajith removed
+      isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations);   //Rajith
+    }
+  else
+    {
+      //Rajith Added 2018 12 02
+      // *************** Reading Files for edges weights and Locations ***************
 
-	std::vector<Vector> coreNodeLocations;  //Rajith
-	coreNodeLocations.push_back(gateWayLoc);  //Rajith
-	coreNodeLocations.push_back(accessPoint1Loc); //Rajith
-	coreNodeLocations.push_back(accessPoint2Loc); //Rajith
-//	ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith removed
+       std::string filePath = "/home/rajith/NS30712/Rajith Important/INOUT/";
+       std::string line;
+       std::stringstream ss;
 
-//	isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);   //Rajith removed
-	isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations);   //Rajith
+       //Reading Locations
+       double loc[3];
+       ss.str(std::string());
+       ss.clear();
+       ss << filePath <<"IO_Locations_160_1500.txt";
+       ifstream myfile2 (ss.str());
+       if (myfile2.is_open())
+       {
+        while (getline (myfile2,line))
+        {
+           istringstream buffer(line);
+           buffer >> loc[0];
+           buffer >> loc[1];
+           buffer >> loc[2];
+
+           positionAlloc->Add(Vector(loc[0],loc[1],loc[2]));
+         }
+        myfile2.close();
+       }else NS_LOG_UNCOND("Unable to open the file: "<<ss.str());
+      // end of Reading Locations
+
+       //Reading weights
+         pair<uint32_t, uint32_t> edgeWeight;
+         unsigned int weight[2];
+         ss.str(std::string());
+         ss.clear();
+         ss << filePath <<"IO_edges_160_1500.txt";
+         ifstream myfile1 (ss.str());
+         if (myfile1.is_open())
+         {
+          while (getline (myfile1,line))
+          {
+             istringstream buffer(line);
+             buffer >> weight[0];
+             buffer >> weight[1];
+             edgeWeight.first = weight[0];
+             edgeWeight.second = weight[1];
+
+             isaHelper->AddEdgeWeights(edgeWeight);
+
+           }
+          myfile1.close();
+         }else NS_LOG_UNCOND("Unable to open the file: "<<ss.str());
+            // end of Reading Locations
+    }
 
 	*(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";
 	*(reportStream->GetStream()) << "FieldRatio," << fieldSizeY/FIELD_SIZE_Y << "\n";
@@ -433,31 +547,24 @@ int main (int argc, char *argv[])
 		sensor->SetAttribute("ActiveCurrent", DoubleValue(SENSOR_SAMPLE_POWER_W/3.0));
 		sensor->SetAttribute("IdleCurrent", DoubleValue(0.0));
 		sensor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
-		if(i >= 3)
-      {
-		    sensor->SetAttribute("SensingTime", TimeValue( Seconds(0.0) ) );
-      }
-		else
-		  {
-		    sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
-		  }
+    sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
 
 		isaHelper->InstallSensor(i,sensor);
 
 		Ptr<Isa100Battery> battery = CreateObject<Isa100Battery>();
 
 		//Rajith Changed - begin
-		battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
 		if(i >= 3)
 		  {
-//		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e300);
-		    battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
+		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
+
 		  }
-//		else
-//		  {
-//		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
-//		  }
+		else
+		  {
+		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e300);
+		  }
     //Rajith Changed - end
+		battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
 
 
 		isaHelper->InstallBattery(i,battery);
@@ -500,45 +607,47 @@ int main (int argc, char *argv[])
 		isaHelper->InstallApplication(nc,i,sensorNodeULApp);
 	}
 
-	// ******************* DOWNLINK *******************
-  // Sink application
-	Ptr<Isa100NetDevice> sinkNode = devContainer.Get(0)->GetObject<Isa100NetDevice>();
-  for (int16_t i = 1; i < numNodes; i++)
-  {
-    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
-    netDevice->GetDl()->GetAttribute("Address",address);
-//    Ptr<Isa100FieldNodeApplication> sinkNodeDLApp = CreateObject<Isa100FieldNodeApplication>();
-    Ptr<Isa100PacketGeneratorApplication> sinkNodeDLApp = CreateObject<Isa100PacketGeneratorApplication>();
+//	// ******************* DOWNLINK *******************
+//  // Sink application
+//	Ptr<Isa100NetDevice> sinkNode = devContainer.Get(0)->GetObject<Isa100NetDevice>();
+//  for (int16_t i = 1; i < numNodes; i++)
+//  {
+//    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+//    netDevice->GetDl()->GetAttribute("Address",address);
+////    Ptr<Isa100FieldNodeApplication> sinkNodeDLApp = CreateObject<Isa100FieldNodeApplication>();
+//    Ptr<Isa100PacketGeneratorApplication> sinkNodeDLApp = CreateObject<Isa100PacketGeneratorApplication>();
+//
+//    sinkNodeDLApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
+//    sinkNodeDLApp->SetAttribute("DestAddress",address);
+//    sinkNodeDLApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
+//    sinkNodeDLApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+//    sinkNodeDLApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+//
+////    // Hook the application and sensor together
+////    sinkNodeDLApp->SetSensor(sinkNode->GetSensor());
+////    sinkNodeDLApp->SetProcessor(sinkNode->GetProcessor());
+////    sinkNode->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sinkNodeDLApp));
+//
+//    // Install application
+//    isaHelper->InstallApplication(nc,0,sinkNodeDLApp);
+//  }
+//
+//  // Create the sensor node applications
+//  for (int16_t i = 1; i < numNodes; i++)
+//  {
+//    Ptr<Isa100BackboneNodeApplication> sensorNodeDLApp = CreateObject<Isa100BackboneNodeApplication>();
+//    // Sensor application attributes
+//    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+//    netDevice->GetDl()->GetAttribute("Address",address);
+//    sensorNodeDLApp->SetAttribute("SrcAddress",address);
+//    sensorNodeDLApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+//    sensorNodeDLApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
+//
+//    // Install application
+//    isaHelper->InstallApplication(nc,i,sensorNodeDLApp);
+//  }
 
-    sinkNodeDLApp->SetAttribute("SrcAddress",Mac16AddressValue(SINK_ADDR));
-    sinkNodeDLApp->SetAttribute("DestAddress",address);
-    sinkNodeDLApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
-    sinkNodeDLApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-    sinkNodeDLApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
-
-//    // Hook the application and sensor together
-//    sinkNodeDLApp->SetSensor(sinkNode->GetSensor());
-//    sinkNodeDLApp->SetProcessor(sinkNode->GetProcessor());
-//    sinkNode->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sinkNodeDLApp));
-
-    // Install application
-    isaHelper->InstallApplication(nc,0,sinkNodeDLApp);
-  }
-
-  // Create the sensor node applications
-  for (int16_t i = 1; i < numNodes; i++)
-  {
-    Ptr<Isa100BackboneNodeApplication> sensorNodeDLApp = CreateObject<Isa100BackboneNodeApplication>();
-    // Sensor application attributes
-    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
-    netDevice->GetDl()->GetAttribute("Address",address);
-    sensorNodeDLApp->SetAttribute("SrcAddress",address);
-    sensorNodeDLApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-    sensorNodeDLApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
-
-    // Install application
-    isaHelper->InstallApplication(nc,i,sensorNodeDLApp);
-  }
+	Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
 
 	// Traces
   Ptr<NetDevice> baseDevice;
@@ -559,6 +668,9 @@ int main (int argc, char *argv[])
   isaHelper->SetTdmaOptAttribute("NumPktsNode", UintegerValue (1));
   isaHelper->SetTdmaOptAttribute("SensitivityDbm", DoubleValue (RX_SENSITIVITY));
 
+  isaHelper->TraceConnectWithoutContext ("Schedule", MakeBoundCallback (&PrintSchedule, scheduleStream));
+  isaHelper->TraceConnectWithoutContext ("TxPower", MakeBoundCallback (&PrintTxPower, txPowerStream));
+
   // Call the helper
   clock_t begin = clock();
   SchedulingResult schedResult = isaHelper->CreateOptimizedTdmaSchedule(nc,propLossModel,hoppingPattern,1,(OptimizerSelect)optimizerType,scheduleStream);
@@ -570,6 +682,7 @@ int main (int argc, char *argv[])
     energyStream->GetStream()->flush();
     packetDropStream->GetStream()->flush();
     scheduleStream->GetStream()->flush();
+    txPowerStream->GetStream()->flush();
     reportStream->GetStream()->flush();
 
     return 0;
@@ -625,6 +738,7 @@ int main (int argc, char *argv[])
   energyStream->GetStream()->flush();
   packetDropStream->GetStream()->flush();
   scheduleStream->GetStream()->flush();
+  txPowerStream->GetStream()->flush();
   reportStream->GetStream()->flush();
   locationStream->GetStream()->flush();
 
