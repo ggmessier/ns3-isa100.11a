@@ -34,8 +34,8 @@
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
-//#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
-#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
+#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
+//#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
 
 // Topology
 #define SENSOR_DENSITY 0.0093  // Nodes/m^2
@@ -95,9 +95,6 @@ void BatteryDepletionCallbackEvent(Mac16Address addr)
 
 		//Rajth added & Changed begin
 		needToTerminateSensors.push_back(addr);
-//
-//    Simulator::Schedule (Simulator::Now(), &Application::StopApplication, sensor->);
-
 //		terminateSim = 1;
     //Rajith Added & Changed end
 	}
@@ -105,37 +102,51 @@ void BatteryDepletionCallbackEvent(Mac16Address addr)
 //	Simulator::Stop();
 }
 
-static void StopSensing(NodeContainer nc)
+void NodeFailureCallbackEvent(Mac16Address addr)
+{
+  if(!terminateSim){
+    double nodeFailedTime = (Simulator::Now()).GetSeconds();
+    NS_LOG_UNCOND(" Node " << addr << " suddenly failed at " << nodeFailedTime);
+    needToTerminateSensors.push_back(addr);
+  }
+}
+
+//static void StopSensing(NodeContainer nc)
+static void StopSensing(NetDeviceContainer devContainer)
 {
   while(!needToTerminateSensors.empty()){
     Mac16Address addr = needToTerminateSensors.back();
     needToTerminateSensors.pop_back();
+    NS_LOG_UNCOND("terminatedSensors: "<<terminatedSensors.size());
     if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0)
       {
-    //    terminatedSensors.pop_back();
         uint8_t buffer[4];
         addr.CopyTo (buffer);
 
-    //    uint8_t nodeInd = ;
         uint32_t i = static_cast<uint32_t> (buffer[1]);
-//        Ptr<Isa100NetDevice> netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
-//        NS_LOG_UNCOND("Sensing terminated! Node: "<<i);
+        Ptr<Isa100NetDevice> netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+        NS_LOG_UNCOND("Sensing terminated! Node: "<<i);
+        netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
 //        netDevice->GetSensor()->Dispose();
 
-        Ptr<Node> node = nc.Get(i);
-        Ptr<Application> app = node->GetApplication(0);
-        app->Dispose();
+//        netDevice->GetProcessor()->Dispose();
+//        netDevice->GetBattery()->Dispose();
+//        netDevice->Dispose();
+
+//        Simulator::ScheduleNow(&Isa100FieldNodeApplication::StartSensing,this);
+//        Ptr<Node> node = nc.Get(i);
+//        Ptr<Application> app = node->GetApplication(0);
+//        app->Dispose();
 
         terminatedSensors.push_back(addr);
-
-    //    Simulator::ScheduleNow(&Isa100FieldNodeApplication::StopApplication,devContainer);
       }
   }
   if(numSensorNodes == terminatedSensors.size() + 2)
     {
       terminateSim = 1;
     }
-  Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
+//  Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
+  Simulator::Schedule(terminateCheckPeriod,&StopSensing,devContainer);
 }
 
 
@@ -233,6 +244,8 @@ int main (int argc, char *argv[])
 	// Command Line Arguments
   uint32_t seed = 1002;
   std::string optString;
+  int16_t failNode = 0;
+  Time nodeFailingTime = Seconds(100.0);
 //  unsigned int numSensorNodes=0; //Rajith changed
 //  uint8_t numAccessPoints=2;    //Rajith
 
@@ -245,6 +258,8 @@ int main (int argc, char *argv[])
 //  cmd.AddValue("APs", "Number of access points.",numAccessPoints); // Rajith
   cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, "
       "ConvInt10ms, ConvIntPckt, Graph",optString); //Rajith changed
+  cmd.AddValue("failNode","Fail Node.",failNode); //Rajith added
+  cmd.AddValue("failNodeTime","Fail Node Time.",nodeFailingTime); //Rajith added
 
   cmd.Parse (argc, argv);
 
@@ -333,8 +348,8 @@ int main (int argc, char *argv[])
     NS_FATAL_ERROR("Number of transmit nodes cannot be zero!");
   }
 
-  // Cannot simulate more than 256 nodes
-  NS_ASSERT_MSG(numNodes <= 256, "Simulation can only support upto 256 nodes total. Num Nodes = " << numNodes);
+//  // Cannot simulate more than 256 nodes
+//  NS_ASSERT_MSG(numNodes <= 256, "Simulation can only support upto 256 nodes total. Num Nodes = " << numNodes);
 
 	// Change the random number seed to alter the random number sequence used by the simulator.
   RngSeedManager::SetSeed (seed);
@@ -647,7 +662,18 @@ int main (int argc, char *argv[])
 //    isaHelper->InstallApplication(nc,i,sensorNodeDLApp);
 //  }
 
-	Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
+//	Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
+	Simulator::Schedule(terminateCheckPeriod,&StopSensing,devContainer);
+
+  // intentionally fail a node
+  Mac16Address addr;
+	if(failNode != 0)
+	  {
+	    netDevice = devContainer.Get(5)->GetObject<Isa100NetDevice>();
+	    netDevice->GetDl()->GetAttribute("Address",address);
+	    addr = Mac16Address::ConvertFrom(netDevice->GetAddress());
+	    Simulator::Schedule(nodeFailingTime,&NodeFailureCallbackEvent,addr);
+	  }
 
 	// Traces
   Ptr<NetDevice> baseDevice;
