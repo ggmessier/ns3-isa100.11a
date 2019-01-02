@@ -197,6 +197,11 @@ TypeId Isa100Dl::GetTypeId (void)
                    MakeBooleanAccessor (&Isa100Dl::m_ackEnabled),
                    MakeBooleanChecker ())
 
+    .AddAttribute ("WorkingStatus", "Whether Link is at working condition.",
+                    BooleanValue (true),
+                    MakeBooleanAccessor (&Isa100Dl::m_working),
+                    MakeBooleanChecker ())
+
     .AddTraceSource ("DlTx",
                      "Trace source indicating a packet has arrived for transmission by this device",
                      MakeTraceSourceAccessor (&Isa100Dl::m_dlTxTrace),
@@ -293,6 +298,7 @@ Isa100Dl::Isa100Dl ()
   m_processor = 0;
   m_dlSleepEnabled = false;
   m_ackEnabled = false;
+  m_working = true;
 
 
   // Logging/results variables
@@ -440,6 +446,12 @@ void Isa100Dl::ProcessTrxStateRequest (ZigbeePhyEnumeration state)
 void Isa100Dl::ProcessLink ()
 {
   NS_LOG_FUNCTION (this << m_address);
+
+  if(!m_working)
+    {
+      NS_LOG_DEBUG("Failed Link. "<<m_address<<" Process Link aborted.");
+      return;
+    }
 
   NS_LOG_LOGIC (this << " " << m_address << " " << Simulator::Now ().GetSeconds ());
 
@@ -767,8 +779,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
             }
 
           if(m_routingAlgorithm){
-//              m_routingAlgorithm->
-//              (nextNodeAddr);
+              m_routingAlgorithm->DeleteTableEntry(nextNodeAddr);
           }
 
           return;
@@ -1146,7 +1157,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
               ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_TX_ON);
 
-              return;
+//              return; - Rajith removed
             }
 
           if (m_routingAlgorithm)
@@ -1202,7 +1213,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
             {
               m_nextRxPacketSeqNum[srcNodeInd] = rxDlHdr.GetSeqNum () + 1;
               m_dlRxTrace (m_address,origPacket);
-              NS_LOG_LOGIC (" Packet received successfully at node address " << m_address << " (Time: " << Simulator::Now ().GetSeconds () << ")");
+              NS_LOG_DEBUG (" Packet received successfully at node address " << m_address << " (Time: " << Simulator::Now ().GetSeconds () << ")");
 
               DlDataIndicationParams params;
               params.m_srcAddr = rxDlHdr.GetDaddrSrcAddress ();
@@ -1227,7 +1238,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
       m_infoDropTrace (m_address,origPacket, msg.str ());
 
-      NS_LOG_LOGIC (msg.str ());
+      NS_LOG_DEBUG (msg.str ());
 
     }
 

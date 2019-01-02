@@ -650,6 +650,7 @@ private:
   bool m_dlSleepEnabled; ///< Indicates whether DL is capable of sleeping.
 
   bool m_ackEnabled; ///< Whether the ACK mechanism is used.
+  bool m_working; ///< whether node is at working condition or not. (Rajith)
 };
 
 

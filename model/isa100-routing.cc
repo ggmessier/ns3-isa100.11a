@@ -265,7 +265,8 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader (Isa100DlHeader &header)
   NS_LOG_DEBUG (" Sending to node " << static_cast<uint32_t> (destNodeInd));
 
   for(uint32_t iHop=0; iHop < m_table[destNodeInd].size(); iHop++){
-//      NS_LOG_UNCOND("m_table dest size: "<<destNodeInd<<" "<<m_table[destNodeInd].size());
+      NS_LOG_DEBUG("m_table dest size: "<<destNodeInd<<" "<<m_table[destNodeInd].size());
+      NS_LOG_DEBUG("m_table[destNodeInd][iHop]: "<<m_table[destNodeInd][iHop]);
       header.SetGraphRouteHop(iHop,m_table[destNodeInd][iHop]);
   }
 
@@ -320,12 +321,17 @@ void Isa100GraphRoutingAlgorithm::DeleteTableEntry (Mac16Address nodeAddress)
 {
   NS_LOG_FUNCTION (this << m_address);
 
+  NS_LOG_DEBUG("Isa100GraphRoutingAlgorithm::DeleteTableEntry: "<<nodeAddress);
+  NS_LOG_DEBUG("table size: "<<m_table.size ());
+
   for (uint32_t tableEntry = 0; tableEntry < m_table.size (); tableEntry++)
     {
+      NS_LOG_DEBUG("m_table[tableEntry] size: "<<m_table[tableEntry].size ());
       for (std::vector<Mac16Address>::const_iterator it = m_table[tableEntry].begin ();
            it != m_table[tableEntry].end (); ++it)
         {
-          if (nodeAddress == it->operator ns3::Address ())
+          NS_LOG_DEBUG("iterator Address: "<<it->Allocate());
+          if (nodeAddress == it->Allocate())
             {
               m_table[tableEntry].erase (it);
             }
