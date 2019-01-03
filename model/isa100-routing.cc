@@ -240,6 +240,7 @@ Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm (std::map<uint32_t, std
   NS_LOG_FUNCTION (this);
 
   m_table = initTable;
+  m_nextSeqNum = 0;
 
 }
 
@@ -270,6 +271,8 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader (Isa100DlHeader &header)
       header.SetGraphRouteHop(iHop,m_table[destNodeInd][iHop]);
   }
 
+  header.SetSeqNum(m_nextSeqNum);
+  m_nextSeqNum++;
 
   // Set header for first hop.
   header.SetSrcAddrFields (0,m_address);

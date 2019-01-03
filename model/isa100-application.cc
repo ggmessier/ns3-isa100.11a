@@ -397,6 +397,11 @@ void Isa100BackboneNodeApplication::DlDataIndication (DlDataIndicationParams par
         }
       recievedDataSeqNums[params.m_srcAddr].push_back(params.m_dataSeqNum);
     }
+  else
+    {
+      NS_LOG_UNCOND("m_dataSeqNum count: "<<count(tempDataSeqNums.begin(),tempDataSeqNums.end(),params.m_dataSeqNum));
+      NS_LOG_UNCOND("m_dataSeqNum: "<<params.m_dataSeqNum<<"m_srcAddr: "<<params.m_srcAddr);
+    }
 
 }
 

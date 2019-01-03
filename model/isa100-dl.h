@@ -619,8 +619,8 @@ private:
   uint8_t m_backoffExponent; ///< Used to determine max number of backoff slots.
   uint16_t m_expArqBackoffCounter; ///< Backoff counter used for arq retransmissions.
   uint8_t m_arqBackoffExponent; ///< Used to determine max number of arq backoff slots.
-  uint8_t m_packetTxSeqNum[256]; ///< Transmitted packet sequence number.
-  uint8_t m_nextRxPacketSeqNum[256];  ///< Sequence number of the next packet expected.
+//  uint8_t m_packetTxSeqNum[256]; ///< Transmitted packet sequence number.
+//  uint8_t m_nextRxPacketSeqNum[256];  ///< Sequence number of the next packet expected.
   uint8_t m_maxFrameRetries; ///< The max number of retries allowed after a transmission failure. (Range: 0 to 7)
   int8_t m_maxTxPowerDbm; ///< The maximum transmit power at which this node can transmit at (in dBm)
   int8_t m_minTxPowerDbm; ///< The minimum transmit power at which this node can transmit at (in dBm)

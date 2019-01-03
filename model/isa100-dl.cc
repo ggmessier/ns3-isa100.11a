@@ -267,8 +267,8 @@ Isa100Dl::Isa100Dl ()
 
   for (int i = 0; i < 256; i++)
     {
-      m_packetTxSeqNum[i] = 0;
-      m_nextRxPacketSeqNum[i] = 0;
+//      m_packetTxSeqNum[i] = 0;
+//      m_nextRxPacketSeqNum[i] = 0;
       m_txPowerDbm[i] = 100;           // set to an invalid transmit power level
     }
   m_usePowerCtrl = 0;
@@ -798,7 +798,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
           // Set the sequence number
           txQElement->m_packet->RemoveHeader (header);
-          header.SetSeqNum (m_packetTxSeqNum[nextNodeInd]++);
+//          header.SetSeqNum (m_packetTxSeqNum[nextNodeInd]++);
           txQElement->m_packet->AddHeader (header);
 
           if (m_ackEnabled)
@@ -1058,7 +1058,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               destAddr.CopyTo (buffer);
               uint8_t destNodeInd = buffer[1];
 
-              m_packetTxSeqNum[destNodeInd] = dataHdr.GetSeqNum () + 1;
+//              m_packetTxSeqNum[destNodeInd] = dataHdr.GetSeqNum () + 1;
 
               DlDataConfirmParams params;
               params.m_dsduHandle = (*it)->m_dsduHandle;
@@ -1209,9 +1209,10 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
           // Accept any packet with a sequence number >= to what we're expecting.
 
           // GGM: Disabled this check because we need to handle the 8 bit wrap around (and really redesign this whole DL..)
-          else if (1 || rxDlHdr.GetSeqNum () >= m_nextRxPacketSeqNum[srcNodeInd])
+//          else if (1 || rxDlHdr.GetSeqNum () >= m_nextRxPacketSeqNum[srcNodeInd]) // Rajith changed
+          else
             {
-              m_nextRxPacketSeqNum[srcNodeInd] = rxDlHdr.GetSeqNum () + 1;
+//              m_nextRxPacketSeqNum[srcNodeInd] = rxDlHdr.GetSeqNum () + 1; // Rajith Changed
               m_dlRxTrace (m_address,origPacket);
               NS_LOG_DEBUG (" Packet received successfully at node address " << m_address << " (Time: " << Simulator::Now ().GetSeconds () << ")");
 
@@ -1235,7 +1236,8 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
       std::stringstream msg;
       msg << " Packet Dropped:  Hop dest " << rxDlHdr.GetShortDstAddr () << " received at node "
-          << m_address << " from " << rxDlHdr.GetShortSrcAddr () << ", Seq num: " << (uint16_t)rxDlHdr.GetSeqNum () << " (expected: " << (uint16_t)m_nextRxPacketSeqNum[srcNodeInd] << ")";
+          << m_address << " from " << rxDlHdr.GetShortSrcAddr () << ", Seq num: " << (uint16_t)rxDlHdr.GetSeqNum () << ")";
+//          << " (expected: " << (uint16_t)m_nextRxPacketSeqNum[srcNodeInd] << ")"; // Rajith removed
 
       m_infoDropTrace (m_address,origPacket, msg.str ());
 
