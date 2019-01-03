@@ -32,6 +32,7 @@
 #include "ns3/uinteger.h"
 #include "ns3/double.h"
 #include "ns3/packet.h"
+#include <algorithm>
 
 // Broadcast packet information
 // Prevent the complier from adding padding to the unions larger than 1 byte
@@ -384,7 +385,19 @@ void Isa100BackboneNodeApplication::DlDataIndication (DlDataIndicationParams par
   // There shouldn't be broadcasts happening in TDMA
   Mac16Address broadcastAddr ("ff:ff");
   NS_ASSERT_MSG(params.m_destAddr != broadcastAddr, "Sink App:TDMA does not support broadcasts!");
-  m_reportRxTrace(params.m_srcAddr);
+
+  vector<uint8_t> tempDataSeqNums = recievedDataSeqNums[params.m_srcAddr];
+
+  if(tempDataSeqNums.empty() || count(tempDataSeqNums.begin(),tempDataSeqNums.end(),params.m_dataSeqNum) == 0)
+    {
+      m_reportRxTrace(params.m_srcAddr);
+      if(tempDataSeqNums.size()>30)
+        {
+          recievedDataSeqNums[params.m_srcAddr].erase(recievedDataSeqNums[params.m_srcAddr].begin());
+        }
+      recievedDataSeqNums[params.m_srcAddr].push_back(params.m_dataSeqNum);
+    }
+
 }
 
 void Isa100BackboneNodeApplication::DlDataConfirm (DlDataConfirmParams params)

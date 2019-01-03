@@ -316,6 +316,8 @@ private:
 
   // ------- Trace Functions --------
   TracedCallback< Mac16Address > m_reportRxTrace;
+
+  std::map<Mac16Address,std::vector<uint8_t> > recievedDataSeqNums;
 };
 
 

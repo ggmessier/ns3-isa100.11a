@@ -817,7 +817,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       // This is a retransmission attempt of a data packet
       else if (m_ackEnabled && !IsAckPacket (txQElement->m_packet))
         {
-          NS_LOG_DEBUG (" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
+          NS_LOG_UNCOND (" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
 
           // Indicate a retransmission is happening
           m_retrxTrace (m_address);
@@ -1219,6 +1219,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               params.m_srcAddr = rxDlHdr.GetDaddrSrcAddress ();
               params.m_destAddr = rxDlHdr.GetDaddrDestAddress ();
               params.m_dsduLength = size;
+              params.m_dataSeqNum = rxDlHdr.GetSeqNum ();
 
               if (!m_dlDataIndicationCallback.IsNull ())
                 {

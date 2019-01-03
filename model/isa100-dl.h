@@ -125,6 +125,7 @@ struct DlDataIndicationParams
 	Mac16Address m_srcAddr;
 	Mac16Address m_destAddr;
 	uint8_t m_dsduLength; ///< DPDU payload length (in octets)
+	uint8_t m_dataSeqNum; ///< data sequence number information (DSN)
 };
 
 
