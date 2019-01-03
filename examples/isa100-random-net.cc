@@ -29,8 +29,8 @@
 
 // ************************************************** DEFINES *************************************************
 // Defines for simulation
-#define SIM_DURATION_S 1e9                  // Duration of simulation in (s) (really long so energy runs out)
-//#define SIM_DURATION_S 1e3        //Rajith Changed
+//#define SIM_DURATION_S 1e9                  // Duration of simulation in (s) (really long so energy runs out)
+#define SIM_DURATION_S 1e3        //Rajith Changed
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
@@ -245,7 +245,7 @@ int main (int argc, char *argv[])
   uint32_t seed = 1002;
   std::string optString;
   int16_t failNode = 0;
-  Time nodeFailingTime = Seconds(100.0);
+  int64_t tempNodeFailTime = 100;
 //  unsigned int numSensorNodes=0; //Rajith changed
 //  uint8_t numAccessPoints=2;    //Rajith
 
@@ -259,7 +259,7 @@ int main (int argc, char *argv[])
   cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, "
       "ConvInt10ms, ConvIntPckt, Graph",optString); //Rajith changed
   cmd.AddValue("failNode","Fail Node.",failNode); //Rajith added
-  cmd.AddValue("failNodeTime","Fail Node Time.",nodeFailingTime); //Rajith added
+  cmd.AddValue("failNodeTime","Fail Node Time.",tempNodeFailTime); //Rajith added
 
   cmd.Parse (argc, argv);
 
@@ -267,6 +267,7 @@ int main (int argc, char *argv[])
   bool multiplePacketsPerSlot = false;
   Time slotDuration;
   unsigned int numSlotsPerFrame;
+  Time nodeFailingTime = Seconds(tempNodeFailTime);
 
 
   if(optString == "MinHop10ms"){
@@ -600,7 +601,7 @@ int main (int argc, char *argv[])
 	// Create the sensor node applications
 	Mac16AddressValue address;
 	Ptr<Isa100NetDevice> netDevice;
-	for (int16_t i = 1; i < numNodes; i++)
+	for (int16_t i = 3; i < numNodes; i++)
 	{
 		Ptr<Isa100FieldNodeApplication> sensorNodeULApp = CreateObject<Isa100FieldNodeApplication>();
 
@@ -731,7 +732,7 @@ int main (int argc, char *argv[])
   Time totDelay = Seconds(0.0);
   bool starvedNode = false;
 
-  for (int16_t i = 1; i < numNodes; i++){
+  for (int16_t i = 3; i < numNodes; i++){
   	baseDevice = devContainer.Get(i);
   	netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
