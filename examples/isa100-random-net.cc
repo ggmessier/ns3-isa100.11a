@@ -30,7 +30,7 @@
 // ************************************************** DEFINES *************************************************
 // Defines for simulation
 //#define SIM_DURATION_S 1e9                  // Duration of simulation in (s) (really long so energy runs out)
-#define SIM_DURATION_S 1e4        //Rajith Changed
+//#define SIM_DURATION_S 1e4        //Rajith Changed
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
@@ -80,7 +80,6 @@ NS_LOG_COMPONENT_DEFINE ("RandomNetworkTdma");
 double networkLifetime;
 Time terminateCheckPeriod;
 int terminateSim = 0;
-bool initial = true;
 vector<Mac16Address> needToTerminateSensors;
 vector<Mac16Address> terminatedSensors;
 unsigned int numSensorNodes = 0;
@@ -235,10 +234,11 @@ int main (int argc, char *argv[])
 	// Command Line Arguments
   uint32_t seed = 1002;
   std::string optString;
-  int16_t failNode = 0;
-  int64_t tempNodeFailTime = 100;
-//  unsigned int numSensorNodes=0; //Rajith changed
-//  uint8_t numAccessPoints=2;    //Rajith
+  int16_t failNode = 0; //node that would fail suddenly after NodeFailTime
+  int64_t tempNodeFailTime = 100; //fail node fail time from seconds
+  double simDuration = 1e9; // Duration of simulation in (s) (really long so energy runs out)
+//  unsigned int numSensorNodes=0; //Rajith changed to global variable
+//  uint8_t numAccessPoints=2;
 
   int iter = -1;
 
@@ -251,6 +251,7 @@ int main (int argc, char *argv[])
       "ConvInt10ms, ConvIntPckt, Graph",optString); //Rajith changed
   cmd.AddValue("failNode","Fail Node.",failNode); //Rajith added
   cmd.AddValue("failNodeTime","Fail Node Time.",tempNodeFailTime); //Rajith added
+  cmd.AddValue("simDuration","Simulation Duration.",simDuration); //Rajith added
 
   cmd.Parse (argc, argv);
 
@@ -434,79 +435,23 @@ int main (int argc, char *argv[])
 
 	// ********************************************** NODE LOCATIONS **********************************************
 
+  NS_LOG_UNCOND(" Creating network...");
+
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
-  if(initial)
-    {
-      NS_LOG_UNCOND(" Creating network...");
+  isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
 
-      isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
+  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
+  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
+  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
 
-      ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
-      ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
-      ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
+  std::vector<Vector> coreNodeLocations;  //Rajith
+  coreNodeLocations.push_back(gateWayLoc);  //Rajith
+  coreNodeLocations.push_back(accessPoint1Loc); //Rajith
+  coreNodeLocations.push_back(accessPoint2Loc); //Rajith
+//  ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith removed
+  //  isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);   //Rajith removed
+  isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations);   //Rajith
 
-      std::vector<Vector> coreNodeLocations;  //Rajith
-      coreNodeLocations.push_back(gateWayLoc);  //Rajith
-      coreNodeLocations.push_back(accessPoint1Loc); //Rajith
-      coreNodeLocations.push_back(accessPoint2Loc); //Rajith
-    //  ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith removed
-      //  isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);   //Rajith removed
-      isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations);   //Rajith
-    }
-  else
-    {
-      //Rajith Added 2018 12 02
-      // *************** Reading Files for edges weights and Locations ***************
-
-       std::string filePath = "/home/rajith/NS30712/Rajith Important/INOUT/";
-       std::string line;
-       std::stringstream ss;
-
-       //Reading Locations
-       double loc[3];
-       ss.str(std::string());
-       ss.clear();
-       ss << filePath <<"IO_Locations_160_1500.txt";
-       ifstream myfile2 (ss.str());
-       if (myfile2.is_open())
-       {
-        while (getline (myfile2,line))
-        {
-           istringstream buffer(line);
-           buffer >> loc[0];
-           buffer >> loc[1];
-           buffer >> loc[2];
-
-           positionAlloc->Add(Vector(loc[0],loc[1],loc[2]));
-         }
-        myfile2.close();
-       }else NS_LOG_UNCOND("Unable to open the file: "<<ss.str());
-      // end of Reading Locations
-
-       //Reading weights
-         pair<uint32_t, uint32_t> edgeWeight;
-         unsigned int weight[2];
-         ss.str(std::string());
-         ss.clear();
-         ss << filePath <<"IO_edges_160_1500.txt";
-         ifstream myfile1 (ss.str());
-         if (myfile1.is_open())
-         {
-          while (getline (myfile1,line))
-          {
-             istringstream buffer(line);
-             buffer >> weight[0];
-             buffer >> weight[1];
-             edgeWeight.first = weight[0];
-             edgeWeight.second = weight[1];
-
-             isaHelper->AddEdgeWeights(edgeWeight);
-
-           }
-          myfile1.close();
-         }else NS_LOG_UNCOND("Unable to open the file: "<<ss.str());
-            // end of Reading Locations
-    }
 
 	*(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";
 	*(reportStream->GetStream()) << "FieldRatio," << fieldSizeY/FIELD_SIZE_Y << "\n";
@@ -712,7 +657,8 @@ int main (int argc, char *argv[])
   *(reportStream->GetStream()) << "Optimization," << optTime << "\n";
 
   // ********************************************** RUN SIMULATION **********************************************
-  Simulator::Stop (Seconds (SIM_DURATION_S));
+//  Simulator::Stop (Seconds (SIM_DURATION_S)); // Rajith Changed
+  Simulator::Stop (Seconds (simDuration));
   NS_LOG_UNCOND (" Simulation is running ....");
   Simulator::Run ();
 
