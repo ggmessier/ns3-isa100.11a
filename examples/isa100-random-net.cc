@@ -30,7 +30,7 @@
 // ************************************************** DEFINES *************************************************
 // Defines for simulation
 //#define SIM_DURATION_S 1e9                  // Duration of simulation in (s) (really long so energy runs out)
-#define SIM_DURATION_S 1e3        //Rajith Changed
+#define SIM_DURATION_S 1e4        //Rajith Changed
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
@@ -50,7 +50,7 @@
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
 //#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
-#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (4000ms)
+#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (8000ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
@@ -90,13 +90,14 @@ unsigned int numSensorNodes = 0;
 void BatteryDepletionCallbackEvent(Mac16Address addr)
 {
 	if(!terminateSim){
-		networkLifetime = (Simulator::Now()).GetSeconds();
-		NS_LOG_UNCOND(" Node " << addr << " out of energy at " << networkLifetime);
+	    if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0 &&
+	        count(needToTerminateSensors.begin(),needToTerminateSensors.end(),addr)==0)
+	      {
+	        networkLifetime = (Simulator::Now()).GetSeconds();
+	        NS_LOG_UNCOND(" Node " << addr << " out of energy at " << networkLifetime);
 
-		//Rajth added & Changed begin
-		needToTerminateSensors.push_back(addr);
-//		terminateSim = 1;
-    //Rajith Added & Changed end
+	        needToTerminateSensors.push_back(addr);
+	      }
 	}
 
 //	Simulator::Stop();
@@ -117,9 +118,9 @@ static void StopSensing(NetDeviceContainer devContainer)
   while(!needToTerminateSensors.empty()){
     Mac16Address addr = needToTerminateSensors.back();
     needToTerminateSensors.pop_back();
-    NS_LOG_UNCOND("terminatedSensors: "<<terminatedSensors.size());
     if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0)
       {
+        NS_LOG_UNCOND("terminatedSensors: "<<terminatedSensors.size());
         uint8_t buffer[4];
         addr.CopyTo (buffer);
 
@@ -127,16 +128,6 @@ static void StopSensing(NetDeviceContainer devContainer)
         Ptr<Isa100NetDevice> netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
         NS_LOG_UNCOND("Sensing terminated! Node: "<<i);
         netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
-//        netDevice->GetSensor()->Dispose();
-
-//        netDevice->GetProcessor()->Dispose();
-//        netDevice->GetBattery()->Dispose();
-//        netDevice->Dispose();
-
-//        Simulator::ScheduleNow(&Isa100FieldNodeApplication::StartSensing,this);
-//        Ptr<Node> node = nc.Get(i);
-//        Ptr<Application> app = node->GetApplication(0);
-//        app->Dispose();
 
         terminatedSensors.push_back(addr);
       }
@@ -145,7 +136,7 @@ static void StopSensing(NetDeviceContainer devContainer)
     {
       terminateSim = 1;
     }
-//  Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
+
   Simulator::Schedule(terminateCheckPeriod,&StopSensing,devContainer);
 }
 
