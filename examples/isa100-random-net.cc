@@ -83,6 +83,23 @@ int terminateSim = 0;
 vector<Mac16Address> needToTerminateSensors;
 vector<Mac16Address> terminatedSensors;
 unsigned int numSensorNodes = 0;
+int totPktSimulation = 0;     // Count the total Tx packets
+int totPktSimulationLimit = 0;    // when Tx packets exceeds this amount terminate simulation will be triggered.
+int logPktReportLimit = 1000;
+
+vector<int16_t> nodeMap;
+int16_t totPktsToNodeFail = 0;
+
+uint32_t seed = 1002;
+
+vector<int> reportTxNum;
+vector<int> reportRxNum;
+vector<Time> reportTxTime;
+vector<Time> reportTotalDelay;
+vector<int> reportRetxNum;
+
+bool starvedNode = false;
+bool failOccured = false;
 
 // ************************ CALLBACK FUNCTIONS ******************************
 
@@ -111,10 +128,26 @@ void NodeFailureCallbackEvent(Mac16Address addr)
   }
 }
 
-//static void StopSensing(NodeContainer nc)
 static void StopSensing(NetDeviceContainer devContainer)
 {
-  while(!needToTerminateSensors.empty()){
+  if(!failOccured && totPktsToNodeFail !=0 && totPktSimulation > totPktsToNodeFail)
+    {
+      for(int16_t i = 0; i < nodeMap.size(); i++)
+        {
+          int16_t nodeIndex =  nodeMap[i];
+          Ptr<Isa100NetDevice> netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
+          NS_LOG_UNCOND("Sensing terminated! Node: "<<nodeIndex);
+//          netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
+          Mac16Address addr = Mac16Address::ConvertFrom(netDevice->GetAddress());
+          netDevice->GetApplication(0)->SetAttribute("WorkingStatus", BooleanValue(false));
+          terminatedSensors.push_back(addr);
+          NS_LOG_DEBUG("@StopSensing Node: "<<nodeIndex<<"reportTxNum: "<<reportTxNum[nodeIndex]);
+        }
+      failOccured = true;
+    }
+
+  while(!needToTerminateSensors.empty())
+    {
     Mac16Address addr = needToTerminateSensors.back();
     needToTerminateSensors.pop_back();
     if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0)
@@ -130,36 +163,37 @@ static void StopSensing(NetDeviceContainer devContainer)
 
         terminatedSensors.push_back(addr);
       }
-  }
+    }
   if(numSensorNodes == terminatedSensors.size() + 2)
     {
       terminateSim = 1;
     }
 
+  NS_LOG_DEBUG("*** STOP SENSING TRIGGERED *** "<<Simulator::Now ().GetMilliSeconds());
   Simulator::Schedule(terminateCheckPeriod,&StopSensing,devContainer);
 }
 
 
 static void TerminateSimulation()
 {
+  NS_LOG_DEBUG("TerminateSimulation Start Time: "<<Simulator::Now().GetMilliSeconds());
+  if(totPktSimulationLimit != 0 && totPktSimulationLimit < totPktSimulation)
+    {
+      terminateSim = 1;
+    }
 	if(terminateSim){
 		NS_LOG_UNCOND(" Simulation terminated!");
 		Simulator::Stop();
 	}
 	else
 	  Simulator::Schedule(terminateCheckPeriod,&TerminateSimulation);
+//  NS_LOG_UNCOND("TerminateSimulation end Time: "<<Simulator::Now().GetMilliSeconds());
 }
 
 static void PrintDropPacket ( Ptr<OutputStreamWrapper> stream, Mac16Address addr, Ptr<const Packet> p, std::string message)
 {
   *stream->GetStream() << Simulator::Now ().GetNanoSeconds () << "," << addr << ",#" << message << "#," << *p << std::endl;
 }
-
-vector<int> reportTxNum;
-vector<int> reportRxNum;
-vector<Time> reportTxTime;
-vector<Time> reportTotalDelay;
-
 
 static void LogReportTx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
 {
@@ -170,6 +204,8 @@ static void LogReportTx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
 	reportTxNum[nodeInd]++;
 	reportTxTime[nodeInd] = Simulator::Now();
 
+	totPktSimulation++;
+	NS_LOG_DEBUG("Tx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr);
 //	*stream->GetStream() << "Tx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr << std::endl;
 }
 
@@ -182,7 +218,19 @@ static void LogReportRx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
 	reportRxNum[nodeInd]++;
 	reportTotalDelay[nodeInd] += Simulator::Now() - reportTxTime[nodeInd];
 
+	NS_LOG_DEBUG("Rx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr);
 //	*stream->GetStream() << "Rx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr << std::endl;
+}
+
+static void LogReportRetx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
+{
+  uint8_t buff[2];
+  addr.CopyTo(buff);
+  int nodeInd = ( (uint)buff[0] << 8 ) + (uint)buff[1];
+
+  reportRetxNum[nodeInd]++;
+  NS_LOG_DEBUG("ReTx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr);
+//  *stream->GetStream() << "Rx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr << std::endl;
 }
 
 static void LogHops(Ptr<OutputStreamWrapper> stream, vector<int> hops)
@@ -208,14 +256,59 @@ static void PrintTxPower(Ptr<OutputStreamWrapper> stream, int sNode, int dNode, 
 
 static void PrintSchedule(Ptr<OutputStreamWrapper> stream, int slot, int sNode, int dNode)
 {
-  *stream->GetStream() << "Slot: " << slot <<" sNode: " << sNode << " dNode: " << dNode << std::endl;
+//  *stream->GetStream() << "Slot: " << slot <<" sNode: " << sNode << " dNode: " << dNode << std::endl;
+  *stream->GetStream() << slot <<" " << sNode << " " << dNode << std::endl;
+}
+
+static void LogPktReport(Ptr<OutputStreamWrapper> stream)
+{
+//  NS_LOG_UNCOND("LogPktReport Start Time: "<<Simulator::Now().GetMilliSeconds());
+  if(totPktSimulationLimit != 0 && totPktSimulation > logPktReportLimit)
+    {
+      int totReportTx = 0, totReportRx = 0, totReportReTx = 0;
+        Time totDelay = Seconds(0.0);
+
+
+      for (uint16_t i = 3; i <= numSensorNodes; i++)
+        {
+          totReportTx += reportTxNum[i];
+          totReportRx += reportRxNum[i];
+          totDelay += reportTotalDelay[i];
+          totReportReTx += reportRetxNum[i];
+
+          NS_LOG_DEBUG("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]);
+          NS_LOG_DEBUG("Node: "<<i<<"reportRxNum: "<<reportRxNum[i]);
+
+          if(reportRxNum[i] == 0)
+            {
+//            starvedNode = true;
+              NS_LOG_UNCOND("*Starved Node*: " << i);
+            }
+        }
+
+//      NS_LOG_UNCOND("LogPktReport For loop completion Time: "<<Simulator::Now().GetMilliSeconds());
+      if(totReportRx == 0)
+        {
+          starvedNode = true;
+        }
+
+      if(starvedNode)
+        *stream->GetStream() << "Failure," << STARVED_NODE << "\n";
+      else
+        *stream->GetStream() << seed << " "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "<<totDelay.GetSeconds()/totReportRx << "\n";
+
+      logPktReportLimit += 1000;
+
+    }
+  Simulator::Schedule(terminateCheckPeriod,&LogPktReport,stream);
+//  NS_LOG_UNCOND("LogPktReport end Time: "<<Simulator::Now().GetMilliSeconds());
 }
 
 // ************************************************ MAIN BEGIN ************************************************
 int main (int argc, char *argv[])
 {
 //	  LogComponentEnable("FishPropagationLossModel",LOG_LEVEL_LOGIC);
-//		LogComponentEnable("Isa100Dl",LOG_LEVEL_LOGIC);
+//		LogComponentEnable("Isa100Dl",LOG_ALL);
 //	  LogComponentEnable("Isa100HelperScheduling",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("MinHopTdmaOptimizer",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("ConvexIntTdmaOptimizer",LOG_LEVEL_LOGIC);
@@ -224,7 +317,9 @@ int main (int argc, char *argv[])
 
 //	  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("Isa100Battery",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("Isa100Routing",LOG_LEVEL_LOGIC);
+//	  LogComponentEnable("Isa100Routing",LOG_ALL);
+//    LogComponentEnable("Isa100Application",LOG_ALL);
+//    LogComponentEnable("RandomNetworkTdma",LOG_ALL);
 
 
 	/*  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
@@ -232,11 +327,12 @@ int main (int argc, char *argv[])
 	*/
 
 	// Command Line Arguments
-  uint32_t seed = 1002;
+//  uint32_t seed = 1002;
   std::string optString;
-  int16_t failNode = 0; //node that would fail suddenly after NodeFailTime
-  int64_t tempNodeFailTime = 100; //fail node fail time from seconds
+  int16_t numOfFailNodes = 0; //node that would fail suddenly after NodeFailTime
+  int64_t tempNodeFailTime = 0; //fail node fail time from seconds
   double simDuration = 1e9; // Duration of simulation in (s) (really long so energy runs out)
+  int16_t initialFailNode = 0;
 //  unsigned int numSensorNodes=0; //Rajith changed to global variable
 //  uint8_t numAccessPoints=2;
 
@@ -249,9 +345,12 @@ int main (int argc, char *argv[])
 //  cmd.AddValue("APs", "Number of access points.",numAccessPoints); // Rajith
   cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, "
       "ConvInt10ms, ConvIntPckt, Graph",optString); //Rajith changed
-  cmd.AddValue("failNode","Fail Node.",failNode); //Rajith added
   cmd.AddValue("failNodeTime","Fail Node Time.",tempNodeFailTime); //Rajith added
+  cmd.AddValue("failTotPkts","Number of packets need to exceed to fail the nodes.",totPktsToNodeFail); //Rajith added
   cmd.AddValue("simDuration","Simulation Duration.",simDuration); //Rajith added
+  cmd.AddValue("totTxPkt","Total # of Tx Packets Limit.",totPktSimulationLimit); //Rajith added
+  cmd.AddValue("firstFailNode","Initially Fail Node.",initialFailNode); //Rajith added
+  cmd.AddValue("numfailNodes","Fail Node.",numOfFailNodes); //Rajith added
 
   cmd.Parse (argc, argv);
 
@@ -301,11 +400,9 @@ int main (int argc, char *argv[])
   NS_LOG_UNCOND("Slot Duration: " << slotDuration.GetSeconds() << "s, Slots Per Superframe: " << numSlotsPerFrame);
 
 
+//  Simulator::Schedule(terminateCheckPeriod/2,&TerminateSimulation);
 
-  terminateCheckPeriod = Seconds(numSlotsPerFrame*slotDuration.GetSeconds());
-  Simulator::Schedule(terminateCheckPeriod/2,&TerminateSimulation);
-
-  NS_LOG_UNCOND("Sample update period " << terminateCheckPeriod.GetSeconds() << " s");
+//  NS_LOG_UNCOND("Sample update period " << terminateCheckPeriod.GetSeconds() << " s");
 
   NS_ASSERT(numSensorNodes > 0);
   NS_ASSERT(iter >= 0);
@@ -329,6 +426,7 @@ int main (int argc, char *argv[])
 
   reportTxNum.assign(numNodes,0);
   reportRxNum.assign(numNodes,0);
+  reportRetxNum.assign(numNodes,0);
   reportTxTime.assign(numNodes,Seconds(0.0));
   reportTotalDelay.assign(numNodes,Seconds(0.0));
 
@@ -341,8 +439,8 @@ int main (int argc, char *argv[])
     NS_FATAL_ERROR("Number of transmit nodes cannot be zero!");
   }
 
-//  // Cannot simulate more than 256 nodes
-//  NS_ASSERT_MSG(numNodes <= 256, "Simulation can only support upto 256 nodes total. Num Nodes = " << numNodes);
+  // Cannot simulate more than 256 nodes
+  NS_ASSERT_MSG(numNodes <= 256, "Simulation can only support upto 256 nodes total. Num Nodes = " << numNodes);
 
 	// Change the random number seed to alter the random number sequence used by the simulator.
   RngSeedManager::SetSeed (seed);
@@ -422,13 +520,14 @@ int main (int argc, char *argv[])
 
 	*(energyStream->GetStream()) << "Iter," << iter << ",--------------\n";
 	*(packetDropStream->GetStream()) << "Iter," << iter << ",--------------\n";
-	*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";
+	//*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";   //Rajith new Report
 	*(locationStream->GetStream()) << "#" << iter << "#\n";
-	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
+//	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
+	*(scheduleStream->GetStream()) << "-1 " << iter << " "<< seed <<"\n";
 	*(txPowerStream->GetStream()) << "#" << iter << "#\n";
 
 
-	*(reportStream->GetStream()) << "Seed," << seed << "\n";
+//	*(reportStream->GetStream()) << "Seed," << seed << "\n";   //Rajith new Report
 
 	isaHelper->TraceConnectWithoutContext ("HopTrace", MakeBoundCallback (&LogHops, reportStream));
 
@@ -440,9 +539,13 @@ int main (int argc, char *argv[])
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
   isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
 
-  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
-  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
-  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
+//  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
+//  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
+//  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
+
+  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,fieldSizeY/2,0.0); //Rajith
+  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/2,fieldSizeY/4,0.0); //Rajith
+  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/2,fieldSizeY/4*3,0.0); //Rajith
 
   std::vector<Vector> coreNodeLocations;  //Rajith
   coreNodeLocations.push_back(gateWayLoc);  //Rajith
@@ -453,8 +556,8 @@ int main (int argc, char *argv[])
   isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations);   //Rajith
 
 
-	*(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";
-	*(reportStream->GetStream()) << "FieldRatio," << fieldSizeY/FIELD_SIZE_Y << "\n";
+//	*(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";  //Rajith new Report
+//	*(reportStream->GetStream()) << "FieldRatio," << fieldSizeY/FIELD_SIZE_Y << "\n";   //Rajith new Report
 
 	// routing debug
 
@@ -522,6 +625,29 @@ int main (int argc, char *argv[])
 		isaHelper->InstallBattery(i,battery);
 	}
 
+	if(numOfFailNodes != 0)
+	    {
+	      Ptr<Isa100NetDevice> netDevice;
+	      // initial failure simulation
+	      Ptr<UniformRandomVariable> randUni = CreateObject<UniformRandomVariable> ();
+	      int16_t nodeIndex = 0;
+	      while (nodeIndex != initialFailNode)
+	        {
+	          nodeIndex = randUni->GetInteger (3,numNodes);
+	        }
+	      nodeMap.push_back(nodeIndex);
+//        netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
+//        netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
+
+	      for(int i = 0; i< numOfFailNodes-1; i++)
+	        {
+	          nodeIndex = randUni->GetInteger (3,numNodes);
+	          nodeMap.push_back(nodeIndex);
+//	          netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
+//	          netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
+	        }
+	    }
+
   // ******************************************** APPLICATIONS SETUP *********************************************
 	// ******************* UPLINK *******************
 	// Sink application
@@ -539,24 +665,35 @@ int main (int argc, char *argv[])
 	Ptr<Isa100NetDevice> netDevice;
 	for (int16_t i = 3; i < numNodes; i++)
 	{
-		Ptr<Isa100FieldNodeApplication> sensorNodeULApp = CreateObject<Isa100FieldNodeApplication>();
+//	  if (count(nodeMap.begin(),nodeMap.end(),i) == 0)
+//	    {
+	      Ptr<Isa100FieldNodeApplication> sensorNodeULApp = CreateObject<Isa100FieldNodeApplication>();
 
-		// Sensor application attributes
-		netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
-		netDevice->GetDl()->GetAttribute("Address",address);
-		sensorNodeULApp->SetAttribute("SrcAddress",address);
-		sensorNodeULApp->SetAttribute("DestAddress",Mac16AddressValue(SINK_ADDR));
-		sensorNodeULApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
-		sensorNodeULApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-		sensorNodeULApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+        // Sensor application attributes
+        netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+        netDevice->GetDl()->GetAttribute("Address",address);
+        sensorNodeULApp->SetAttribute("SrcAddress",address);
+        sensorNodeULApp->SetAttribute("DestAddress",Mac16AddressValue(SINK_ADDR));
+        sensorNodeULApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
+        sensorNodeULApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+        sensorNodeULApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
 
-		// Hook the application and sensor together
-		sensorNodeULApp->SetSensor(netDevice->GetSensor());
-		sensorNodeULApp->SetProcessor(netDevice->GetProcessor());
-		netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sensorNodeULApp));
+//        netDevice->GetDl()->TraceConnectWithoutContext ("DlFirstTxTrace", MakeBoundCallback (&LogReportTx, reportStream)); //Rajith Changed
+        netDevice->GetDl()->TraceConnectWithoutContext ("RetrxTrace", MakeBoundCallback (&LogReportRetx, reportStream));
 
-		// Install application
-		isaHelper->InstallApplication(nc,i,sensorNodeULApp);
+        // Hook the application and sensor together
+        sensorNodeULApp->SetSensor(netDevice->GetSensor());
+        sensorNodeULApp->SetProcessor(netDevice->GetProcessor());
+        netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sensorNodeULApp));
+
+        // Install application
+        isaHelper->InstallApplication(nc,i,sensorNodeULApp);
+//	    }
+
+	  if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
+	    {
+	      Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
+	    }
 	}
 
 //	// ******************* DOWNLINK *******************
@@ -600,17 +737,37 @@ int main (int argc, char *argv[])
 //  }
 
 //	Simulator::Schedule(terminateCheckPeriod,&StopSensing,nc);
-	Simulator::Schedule(terminateCheckPeriod,&StopSensing,devContainer);
 
   // intentionally fail a node
-  Mac16Address addr;
-	if(failNode != 0)
-	  {
-	    netDevice = devContainer.Get(5)->GetObject<Isa100NetDevice>();
-	    netDevice->GetDl()->GetAttribute("Address",address);
-	    addr = Mac16Address::ConvertFrom(netDevice->GetAddress());
-	    Simulator::Schedule(nodeFailingTime,&NodeFailureCallbackEvent,addr);
-	  }
+//  Mac16Address addr;
+//	if(numOfFailNodes != 0 && tempNodeFailTime != 0)
+//	  {
+	     // schedule Failure simulation
+//	    netDevice = devContainer.Get(initialFailNode)->GetObject<Isa100NetDevice>();
+//	    netDevice->GetDl()->GetAttribute("Address",address);
+//	    addr = Mac16Address::ConvertFrom(netDevice->GetAddress());
+//	    Simulator::Schedule(nodeFailingTime,&NodeFailureCallbackEvent,addr);
+
+	    // initial failure simulation
+////	    vector<uint32_t> nodeMap;
+//      Ptr<UniformRandomVariable> randUni = CreateObject<UniformRandomVariable> ();
+//
+//	    for(int i = 0; i< numOfFailNodes; i++)
+//	      {
+//          uint32_t nodeIndex = randUni->GetInteger (3,numNodes);
+//
+//          Ptr<Isa100NetDevice> netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
+//
+//
+//          Ptr<Node> node = nc.Get(nodeIndex);
+////
+//          node->GetApplication(0)->Dispose();
+////          Simulator::Schedule(Seconds(0.0),&Isa100FieldNodeApplication::StopApplication,node->GetApplication(0));
+//          netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
+//          NS_LOG_UNCOND("Initial Failed Node: "<<nodeIndex);
+//	      }
+
+//	  }
 
 	// Traces
   Ptr<NetDevice> baseDevice;
@@ -651,10 +808,17 @@ int main (int argc, char *argv[])
     return 0;
   }
 
+  uint32_t offset = numSlotsPerFrame/8;
+  Time initialTerminateCheck = Seconds((isaHelper->GetSuperFrameSize()-offset)*slotDuration.GetSeconds());  // Rajith Added
+  Simulator::Schedule(initialTerminateCheck,&TerminateSimulation);
+  Simulator::Schedule(initialTerminateCheck,&StopSensing,devContainer);
+  Simulator::Schedule(initialTerminateCheck,&LogPktReport,reportStream);
+  terminateCheckPeriod = Seconds(isaHelper->GetSuperFrameSize()*slotDuration.GetSeconds());  // Rajith Added
 
+  NS_LOG_UNCOND("terminateCheckPeriod: "<<terminateCheckPeriod);
   double optTime = ((double)end-(double)begin)/CLOCKS_PER_SEC;
   NS_LOG_UNCOND("  Optimization Time: " << optTime << " s");
-  *(reportStream->GetStream()) << "Optimization," << optTime << "\n";
+//  *(reportStream->GetStream()) << "Optimization," << optTime << "\n";   //Rajith new Report
 
   // ********************************************** RUN SIMULATION **********************************************
 //  Simulator::Stop (Seconds (SIM_DURATION_S)); // Rajith Changed
@@ -665,9 +829,9 @@ int main (int argc, char *argv[])
 
   // ************************************************* SIMULATION COMPLETE **************************************************
 
-  int totReportTx = 0, totReportRx = 0;
+  int totReportTx = 0, totReportRx = 0, totReportReTx = 0;
   Time totDelay = Seconds(0.0);
-  bool starvedNode = false;
+//  bool starvedNode = false;
 
   for (int16_t i = 3; i < numNodes; i++){
   	baseDevice = devContainer.Get(i);
@@ -678,9 +842,13 @@ int main (int argc, char *argv[])
   	totReportTx += reportTxNum[i];
   	totReportRx += reportRxNum[i];
   	totDelay += reportTotalDelay[i];
+  	totReportReTx += reportRetxNum[i];
+
+    NS_LOG_DEBUG("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]);
+    NS_LOG_DEBUG("Node: "<<i<<"reportRxNum: "<<reportRxNum[i]);
 
   	if(reportRxNum[i] == 0){
-  		starvedNode = true;
+//  		starvedNode = true;
   		NS_LOG_UNCOND("*Starved Node*: " << i);
   	}
 
@@ -688,14 +856,23 @@ int main (int argc, char *argv[])
 
   }
 
+  if(totReportRx == 0)
+    {
+      starvedNode = true;
+    }
+
   if(starvedNode)
     *(reportStream->GetStream()) << "Failure," << STARVED_NODE << "\n";
   else{
-    *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
-  	*(reportStream->GetStream()) << "TotalTx," << totReportTx << "\n";
-  	*(reportStream->GetStream()) << "TotalRx," << totReportRx << "\n";
-  	*(reportStream->GetStream()) << "DropPct," << (1.0-(double)totReportRx/totReportTx) << "\n";
-  	*(reportStream->GetStream()) << "AvgDelay," << totDelay.GetSeconds()/totReportRx << "\n";
+      //Rajith new Report
+      *(reportStream->GetStream()) << seed << " "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "<<totDelay.GetSeconds()/totReportRx << "\n";
+//    *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
+//  	*(reportStream->GetStream()) << "TotalTx," << totReportTx << "\n";
+//  	*(reportStream->GetStream()) << "TotalRx," << totReportRx << "\n";
+//  	*(reportStream->GetStream()) << "DropPct," << (1.0-(double)totReportRx/totReportTx) << "\n";
+//  	*(reportStream->GetStream()) << "AvgDelay," << totDelay.GetSeconds()/totReportRx << "\n";
+//  	*(reportStream->GetStream()) << "DropPctNum," << (totReportTx-totReportRx) << "\n";
+//  	*(reportStream->GetStream()) << "ReTx," << totReportReTx << "\n";
   }
 
   // Flush streams
