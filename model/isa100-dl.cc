@@ -202,6 +202,11 @@ TypeId Isa100Dl::GetTypeId (void)
                     MakeBooleanAccessor (&Isa100Dl::m_working),
                     MakeBooleanChecker ())
 
+    .AddTraceSource ("DlFirstTxTrace",
+                     "Trace source indicating a packet is initiated it's first transmission by this device",
+                     MakeTraceSourceAccessor (&Isa100Dl::m_dlFirstTxTrace),
+                     "ns3::TracedCallback::DlInfo")
+
     .AddTraceSource ("DlTx",
                      "Trace source indicating a packet has arrived for transmission by this device",
                      MakeTraceSourceAccessor (&Isa100Dl::m_dlTxTrace),
@@ -272,6 +277,7 @@ Isa100Dl::Isa100Dl ()
       m_txPowerDbm[i] = 100;           // set to an invalid transmit power level
     }
   m_usePowerCtrl = 0;
+  m_txPowerLevelMarginDb = 3;
 
   m_address = Mac16Address::Allocate ();
 
@@ -661,29 +667,117 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
         }
       NS_LOG_DEBUG (" " << m_txQueue.size () << " packets to transmit.");
 
-
       TxQueueElement *txQElement = m_txQueue.front ();
+
+      for (int i = 0; i<m_txQueue.size(); i++)
+        {
+          std::stringstream ssTemp;
+          TxQueueElement *txQElementTemp = m_txQueue[i];
+          if (IsAckPacket (txQElementTemp->m_packet))
+            {
+              Isa100DlAckHeader ackHdrTemp;
+              txQElementTemp->m_packet->PeekHeader (ackHdrTemp);
+              ackHdrTemp.Print(ssTemp);
+            }
+          else
+            {
+              Isa100DlHeader headerTemp;
+              txQElementTemp->m_packet->PeekHeader (headerTemp);
+              headerTemp.Print(ssTemp);
+
+            }
+          std::string msgTemp = ssTemp.str ();
+          NS_LOG_DEBUG(msgTemp);
+        }
+
 
       Mac16Address nextNodeAddr;
       uTwoBytes_t buffer;
       uint8_t nextNodeInd;
+      bool ACK = false; //Rajith new temporary
 
       if (IsAckPacket (txQElement->m_packet))
         {
           Isa100DlAckHeader ackHdr;
           txQElement->m_packet->PeekHeader (ackHdr);
           nextNodeAddr = ackHdr.GetShortDstAddr ();
+          ACK = true;
         }
       else
         {
           Isa100DlHeader header;
           txQElement->m_packet->PeekHeader (header);
           nextNodeAddr = header.GetShortDstAddr ();
+          NS_LOG_DEBUG("PlmeSetTrxStateConfirm Source: "<<header.GetDaddrSrcAddress()<<" Destination: "<<header.GetDaddrDestAddress());
         }
 
 
       nextNodeAddr.CopyTo (buffer.byte);
       nextNodeInd = buffer.byte[1];
+
+      int8_t txPowerTemp;
+      if(!ACK)
+        {
+          Isa100DlHeader headerTemp;
+          txQElement->m_packet->PeekHeader (headerTemp);
+          Mac16Address nextNodeAddrTemp;
+          uTwoBytes_t bufferTemp;
+          //Temporary code to set the power // Rajith
+          txPowerTemp = m_txPowerDbm[nextNodeInd];
+
+          uint8_t nextNodeIndTemp;
+
+          for (int i = 0; i < headerTemp.GetNumOfGraphRouteHop(); i++)
+            {
+              nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
+              nextNodeAddrTemp.CopyTo (bufferTemp.byte);
+              nextNodeIndTemp = bufferTemp.byte[1];
+              if(m_txPowerDbm[nextNodeIndTemp] > txPowerTemp)
+                {
+                  txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
+                }
+            }
+
+          ZigbeePibAttributeIdentifier id = phyTransmitPower;
+          ZigbeePhyPIBAttributes attribute;
+
+          attribute.phyTransmitPower = txPowerTemp;
+
+          // Set the tx power attribute
+          if (!m_plmeSetAttribute.IsNull ())
+            {
+              m_plmeSetAttribute (id,&attribute);
+            }
+          else
+            {
+              NS_FATAL_ERROR ("m_plmeSetAttribute null.");
+            }
+          NS_LOG_DEBUG("not ACK packet TXpwr: "<<to_string(txPowerTemp));
+          //end of new code // rajith
+        }
+      else
+        {
+          // Obtain and format tx power for PHY layer
+          txPowerTemp = m_txPowerDbm[nextNodeInd];
+
+          ZigbeePibAttributeIdentifier id = phyTransmitPower;
+          ZigbeePhyPIBAttributes attribute;
+
+          attribute.phyTransmitPower = txPowerTemp;
+
+//          NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPower << "dBm");
+
+          // Set the tx power attribute
+          if (!m_plmeSetAttribute.IsNull ())
+            {
+              m_plmeSetAttribute (id,&attribute);
+            }
+          else
+            {
+              NS_FATAL_ERROR ("m_plmeSetAttribute null.");
+            }
+          NS_LOG_DEBUG("ACK packet TXpwr: "<<to_string(txPowerTemp));
+        }
 
       if (m_usePowerCtrl)
         {
@@ -791,15 +885,15 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
           NS_LOG_DEBUG (" First packet transmit attempt.");
 
-          Isa100DlHeader header;
+//          Isa100DlHeader header;
 
           // GGM: I'm going to increment the sequence number here.. double check to see if that's a problem for the ACK mechanism.
 
 
           // Set the sequence number
-          txQElement->m_packet->RemoveHeader (header);
+//          txQElement->m_packet->RemoveHeader (header);
 //          header.SetSeqNum (m_packetTxSeqNum[nextNodeInd]++);
-          txQElement->m_packet->AddHeader (header);
+//          txQElement->m_packet->AddHeader (header);
 
           if (m_ackEnabled)
             {
@@ -811,13 +905,22 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
               // Set the arq backoff counter
               m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue (0,pow (2,m_arqBackoffExponent - 1)));
+
+//              Isa100DlHeader header;
+//              txQElement->m_packet->PeekHeader (header);
+
+//              if (m_address == header.GetDaddrSrcAddress())
+//                {
+//                  m_dlFirstTxTrace (m_address);   //Rajith added.
+//                }
             }
+
         }
 
       // This is a retransmission attempt of a data packet
       else if (m_ackEnabled && !IsAckPacket (txQElement->m_packet))
         {
-          NS_LOG_UNCOND (" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
+          NS_LOG_DEBUG(" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
 
           // Indicate a retransmission is happening
           m_retrxTrace (m_address);
@@ -835,7 +938,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       // This is the first attempt of an ACK packet
       else if ( IsAckPacket (txQElement->m_packet) )
         {
-          NS_LOG_DEBUG (" ACK packet sent. " << txQElement->m_txAttemptsRem << " attempts remaining.");
+          NS_LOG_DEBUG (" ACK packet sent. " << std::to_string(txQElement->m_txAttemptsRem) << " attempts remaining.");
 
           // Decrement transmit attempts remaining for the packet
 
@@ -919,6 +1022,8 @@ void Isa100Dl::PdDataConfirm (ZigbeePhyEnumeration status)
               // Check if we are expecting an ACK
               Isa100DlHeader header;
               txQElement->m_packet->PeekHeader (header);
+
+              NS_LOG_DEBUG("PdDataConfirm Source: "<<header.GetDaddrSrcAddress()<<" Destination: "<<header.GetDaddrDestAddress());
 
               if (header.GetDhdrFrameControl ().ackReq == 1)
                 {
@@ -1053,10 +1158,10 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               m_expArqBackoffCounter = 0;
 
               // Increment seq number
-              uint8_t buffer[2];
-              Mac16Address destAddr = dataHdr.GetShortDstAddr ();
-              destAddr.CopyTo (buffer);
-              uint8_t destNodeInd = buffer[1];
+//              uint8_t buffer[2];
+//              Mac16Address destAddr = dataHdr.GetShortDstAddr ();
+//              destAddr.CopyTo (buffer);
+//              uint8_t destNodeInd = buffer[1];
 
 //              m_packetTxSeqNum[destNodeInd] = dataHdr.GetSeqNum () + 1;
 
@@ -1111,6 +1216,8 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       uint8_t srcNodeInd = shortSrcBuffer.byte[1];
       bool forwardPacketOn = false;
 
+      NS_LOG_DEBUG("ProcessPdDataIndication Source: "<<rxDlHdr.GetDaddrSrcAddress()<<" Destination: "<<rxDlHdr.GetDaddrDestAddress());
+
       bool addressMatch = false;
       // check address match - Rajith
       if(rxDlHdr.GetShortDstAddr() == m_address)
@@ -1124,7 +1231,11 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               addressMatch = true;
             }
         }
-      //
+
+      if(!addressMatch)
+        {
+          NS_LOG_DEBUG("Address doesn't match. Current: "<<m_address<<" Source: "<<rxDlHdr.GetDaddrSrcAddress ());
+        }
       // Else check for an address match
       if(addressMatch)
         {
@@ -1143,8 +1254,8 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
               ack->AddHeader (ackHdr);
               NS_LOG_LOGIC (" ACK ready: " << *ack);
-              NS_LOG_LOGIC (" ACK Response: Node " << m_address << " received a data packet from " << rxDlHdr.GetDaddrSrcAddress () <<
-                            " and is responding to ACK request with DMIC " << ackHdr.GetDmic ());             // Rajith Changed the GetDaddrSrcAddress from short address
+              NS_LOG_LOGIC (" ACK Response: Node " << m_address << " received a data packet from " << rxDlHdr.GetShortSrcAddr () <<
+                            " and is responding to ACK request with DMIC " << ackHdr.GetDmic ());
 
               m_dlTxTrace (m_address,ack);
 
@@ -1171,7 +1282,10 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
               // Update the tx power for this neighbour
               double chLossDb = trailer.GetDistrRoutingTxPower () - rxPowDbm;
-              SetTxPowerDbm (chLossDb - 101, srcNodeInd);
+              NS_LOG_DEBUG("TX: " <<rxDlHdr.GetDaddrSrcAddress ()<<" Rx: "<<m_address<<" Txpwr:"<< to_string(m_txPowerDbm[srcNodeInd])<<" Loss: "<<to_string(chLossDb)<<" Rxpwr "<<rxPowDbm);
+
+              SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
+//              SetTxPowerDbm (chLossDb - 101, srcNodeInd);
 
               // Process the rx packet
               m_routingAlgorithm->ProcessRxPacket (p,forwardPacketOn);
@@ -1185,7 +1299,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               uint64_t pVal = (uint64_t)PeekPointer (p);
               uint32_t dmic = (uint32_t)pVal;
 
-              // Modify header
+              // Modify headerSS
               Isa100DlHeader header;
               p->RemoveHeader (header);
               header.SetDmic (dmic);
@@ -1202,6 +1316,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
               m_dlForwardTrace (m_address,p);
 
+              NS_LOG_DEBUG("Packet Fwd: "<<std::to_string(dmic));
               return;
 
             }
@@ -1451,7 +1566,7 @@ void Isa100Dl::SetTxPowersDbm (double * txPowers, uint8_t numNodes)
   NS_LOG_FUNCTION (this << txPowers << numNodes);
 
   // Indicate that we're using power control
-  m_usePowerCtrl = 1;
+  m_usePowerCtrl = 0;
 
   int8_t val;
 

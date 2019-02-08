@@ -584,6 +584,8 @@ private:
    */
   TracedCallback<Mac16Address> m_retrxTrace;
 
+  TracedCallback<Mac16Address> m_dlFirstTxTrace;
+
   // -------- Member Variables ----------
 
   /** Structure for storing a queued packet and associated information.
@@ -624,6 +626,7 @@ private:
   uint8_t m_maxFrameRetries; ///< The max number of retries allowed after a transmission failure. (Range: 0 to 7)
   int8_t m_maxTxPowerDbm; ///< The maximum transmit power at which this node can transmit at (in dBm)
   int8_t m_minTxPowerDbm; ///< The minimum transmit power at which this node can transmit at (in dBm)
+  double m_txPowerLevelMarginDb; ///<
 
   int8_t m_txPowerDbm[256];   ///< A list of power required to transmit to each node (dBm)
   uint8_t m_usePowerCtrl;     ///< Is power control being used

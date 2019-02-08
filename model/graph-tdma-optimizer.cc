@@ -137,7 +137,7 @@ void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
         {
           for (uint32_t nNode = 1; nNode < numNodes; nNode++)
             {
-              if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
+              if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm - 5)
                 {
     //              G->AddEdge(parent, nNode);
                   m_graph->AddEdge(parent, nNode);
