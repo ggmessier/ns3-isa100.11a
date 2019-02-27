@@ -50,11 +50,13 @@
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
 //#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
-#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (8000ms)
+#define SENSOR_SAMPLE_PERIOD 4.0 // Sample period (s) //Rajith Changed (8000ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
 #define SINK_ADDR "00:00"                  // Data sink address
+#define MAX_TX_POWER 4         // Maximum allowable transmit power
+#define MIN_TX_POWER -17         // Minimum allowable transmit power
 
 // Phy layer defines
 #define DEFAULT_INITIAL_ENERGY_J 3.0       // Originally: 5J Default initial energy each sensor node has available (J)
@@ -86,6 +88,8 @@ unsigned int numSensorNodes = 0;
 int totPktSimulation = 0;     // Count the total Tx packets
 int totPktSimulationLimit = 0;    // when Tx packets exceeds this amount terminate simulation will be triggered.
 int logPktReportLimit = 1000;
+
+double factor = 1; // Area expansion factor
 
 vector<int16_t> nodeMap;
 int16_t totPktsToNodeFail = 0;
@@ -245,7 +249,7 @@ static void LogHops(Ptr<OutputStreamWrapper> stream, vector<int> hops)
 static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, double y, double z)
 {
 //	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y); //Rajith removed
-	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y); //Rajith
+	float distToSink = sqrt((FIELD_SIZE_X*factor/2-x)*(FIELD_SIZE_X*factor/2-x) + y*y); //Rajith
 	*stream->GetStream() << "Node " << node << ": (" << x << "," << y << ") " << distToSink << "m from sink." << std::endl;
 }
 
@@ -254,10 +258,22 @@ static void PrintTxPower(Ptr<OutputStreamWrapper> stream, int sNode, int dNode, 
   *stream->GetStream() << "sNode: " << sNode << " dNode: " << dNode << ": " << power << std::endl;
 }
 
-static void PrintSchedule(Ptr<OutputStreamWrapper> stream, int slot, int sNode, int dNode)
+static void PrintSchedule(Ptr<OutputStreamWrapper> stream, int slot, int sNode, int dNode, int channel)
 {
 //  *stream->GetStream() << "Slot: " << slot <<" sNode: " << sNode << " dNode: " << dNode << std::endl;
-  *stream->GetStream() << slot <<" " << sNode << " " << dNode << std::endl;
+  *stream->GetStream() << slot <<" " <<channel<<" "<< sNode << " " << dNode << std::endl;
+}
+
+static void PrintAvgHops(Ptr<OutputStreamWrapper> stream, int node, double avgHops)
+{
+//  *stream->GetStream() << "Slot: " << slot <<" sNode: " << sNode << " dNode: " << dNode << std::endl;
+  *stream->GetStream() << node <<" " <<avgHops<< std::endl;
+}
+
+static void PrintGraph(Ptr<OutputStreamWrapper> stream, int node, int neighbor)
+{
+//  *stream->GetStream() << "Slot: " << slot <<" sNode: " << sNode << " dNode: " << dNode << std::endl;
+  *stream->GetStream() << node <<" " <<neighbor<< std::endl;
 }
 
 static void LogPktReport(Ptr<OutputStreamWrapper> stream)
@@ -282,7 +298,7 @@ static void LogPktReport(Ptr<OutputStreamWrapper> stream)
           if(reportRxNum[i] == 0)
             {
 //            starvedNode = true;
-              NS_LOG_UNCOND("*Starved Node*: " << i);
+              NS_LOG_DEBUG("*Starved Node*: " << i);
             }
         }
 
@@ -333,6 +349,7 @@ int main (int argc, char *argv[])
   int64_t tempNodeFailTime = 0; //fail node fail time from seconds
   double simDuration = 1e9; // Duration of simulation in (s) (really long so energy runs out)
   int16_t initialFailNode = 0;
+  int maxTxPower = MAX_TX_POWER;
 //  unsigned int numSensorNodes=0; //Rajith changed to global variable
 //  uint8_t numAccessPoints=2;
 
@@ -351,6 +368,8 @@ int main (int argc, char *argv[])
   cmd.AddValue("totTxPkt","Total # of Tx Packets Limit.",totPktSimulationLimit); //Rajith added
   cmd.AddValue("firstFailNode","Initially Fail Node.",initialFailNode); //Rajith added
   cmd.AddValue("numfailNodes","Fail Node.",numOfFailNodes); //Rajith added
+  cmd.AddValue("maxTxPwr","Maximum allowable Transmission Power.",maxTxPower); //Rajith added7
+  cmd.AddValue("factor","Area Expansion Factor.",factor); //Rajith added
 
   cmd.Parse (argc, argv);
 
@@ -458,8 +477,8 @@ int main (int argc, char *argv[])
   isaHelper->SetDlAttribute("SuperFrameSlotDuration",TimeValue(slotDuration));
 
   // Dl attributes
-  isaHelper->SetDlAttribute("MaxTxPowerDbm", IntegerValue(4));
-  isaHelper->SetDlAttribute("MinTxPowerDbm", IntegerValue(-17));
+  isaHelper->SetDlAttribute("MaxTxPowerDbm", IntegerValue(maxTxPower));
+  isaHelper->SetDlAttribute("MinTxPowerDbm", IntegerValue(MIN_TX_POWER));
   isaHelper->SetDlAttribute("DlSleepEnabled", BooleanValue(true));
 
   // Phy attributes
@@ -491,7 +510,8 @@ int main (int argc, char *argv[])
 
   // Channel hopping, channels 11-26 are available in the hopping pattern (802.15.4 channel page 0, OQPSK)
   // Nodes will operate on channel 11.
-  uint8_t hoppingPattern[] = { 11 };
+//  uint8_t hoppingPattern[] = { 11 };
+  vector<uint8_t> carriers = { 11 };
 
 
   // ********************************************* FILE STREAMS ************************************************
@@ -514,6 +534,12 @@ int main (int argc, char *argv[])
   CREATE_STREAM_FILENAME("locations.txt");
   Ptr<OutputStreamWrapper> locationStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
 
+  CREATE_STREAM_FILENAME("avgHops.txt");
+  Ptr<OutputStreamWrapper> avgHopsStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+
+  CREATE_STREAM_FILENAME("initGraph.txt");
+  Ptr<OutputStreamWrapper> initGraphStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
+
 //  CREATE_STREAM_FILENAME("schedule.txt");
 //  Ptr<OutputStreamWrapper> scheduleStream = asciiTraceHelper.CreateFileStream (filename,std::ios::app);
 
@@ -523,8 +549,10 @@ int main (int argc, char *argv[])
 	//*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";   //Rajith new Report
 	*(locationStream->GetStream()) << "#" << iter << "#\n";
 //	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
-	*(scheduleStream->GetStream()) << "-1 " << iter << " "<< seed <<"\n";
+	*(scheduleStream->GetStream()) << "-1 " << iter << " "<< seed <<" "<<maxTxPower<<"\n";
 	*(txPowerStream->GetStream()) << "#" << iter << "#\n";
+	*(avgHopsStream->GetStream()) << "-1 " << iter << "\n";
+	*(initGraphStream->GetStream()) << "-1 " << iter << "\n";
 
 
 //	*(reportStream->GetStream()) << "Seed," << seed << "\n";   //Rajith new Report
@@ -539,13 +567,18 @@ int main (int argc, char *argv[])
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
   isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
 
-//  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
-//  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
-//  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
+  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
+  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
+  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
 
-  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,fieldSizeY/2,0.0); //Rajith
-  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/2,fieldSizeY/4,0.0); //Rajith
-  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/2,fieldSizeY/4*3,0.0); //Rajith
+  // in order to comply with the
+//  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,fieldSizeY/2,0.0); //Rajith
+//  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/2,fieldSizeY/4,0.0); //Rajith
+//  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/2,fieldSizeY/4*3,0.0); //Rajith
+
+//  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,fieldSizeY/2,0.0); //Rajith
+//  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,fieldSizeY/2,0.0); //Rajith
+//  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,fieldSizeY/2,0.0); //Rajith
 
   std::vector<Vector> coreNodeLocations;  //Rajith
   coreNodeLocations.push_back(gateWayLoc);  //Rajith
@@ -553,7 +586,8 @@ int main (int argc, char *argv[])
   coreNodeLocations.push_back(accessPoint2Loc); //Rajith
 //  ns3::Vector sinkLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith removed
   //  isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,sinkLoc);   //Rajith removed
-  isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations);   //Rajith
+  NS_LOG_UNCOND("Feild Area: "<<to_string(FIELD_SIZE_X*factor)<<" "<<to_string(fieldSizeY*factor));
+  isaHelper->GenerateLocationsFixedNumNodes(positionAlloc,numNodes,FIELD_SIZE_X,fieldSizeY,MIN_NODE_SPACING,coreNodeLocations,factor);   //Rajith
 
 
 //	*(reportStream->GetStream()) << "FieldArea," << FIELD_SIZE_X*fieldSizeY << "\n";  //Rajith new Report
@@ -602,7 +636,7 @@ int main (int argc, char *argv[])
 		sensor->SetAttribute("ActiveCurrent", DoubleValue(SENSOR_SAMPLE_POWER_W/3.0));
 		sensor->SetAttribute("IdleCurrent", DoubleValue(0.0));
 		sensor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
-    sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
+        sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
 
 		isaHelper->InstallSensor(i,sensor);
 
@@ -626,27 +660,27 @@ int main (int argc, char *argv[])
 	}
 
 	if(numOfFailNodes != 0)
-	    {
-	      Ptr<Isa100NetDevice> netDevice;
-	      // initial failure simulation
-	      Ptr<UniformRandomVariable> randUni = CreateObject<UniformRandomVariable> ();
-	      int16_t nodeIndex = 0;
-	      while (nodeIndex != initialFailNode)
-	        {
-	          nodeIndex = randUni->GetInteger (3,numNodes);
-	        }
-	      nodeMap.push_back(nodeIndex);
+    {
+      Ptr<Isa100NetDevice> netDevice;
+      // initial failure simulation
+      Ptr<UniformRandomVariable> randUni = CreateObject<UniformRandomVariable> ();
+      int16_t nodeIndex = 0;
+      while (nodeIndex != initialFailNode)
+        {
+          nodeIndex = randUni->GetInteger (3,numNodes);
+        }
+      nodeMap.push_back(nodeIndex);
 //        netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
 //        netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
 
-	      for(int i = 0; i< numOfFailNodes-1; i++)
-	        {
-	          nodeIndex = randUni->GetInteger (3,numNodes);
-	          nodeMap.push_back(nodeIndex);
+      for(int i = 0; i< numOfFailNodes-1; i++)
+        {
+          nodeIndex = randUni->GetInteger (3,numNodes);
+          nodeMap.push_back(nodeIndex);
 //	          netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
 //	          netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
-	        }
-	    }
+        }
+    }
 
   // ******************************************** APPLICATIONS SETUP *********************************************
 	// ******************* UPLINK *******************
@@ -693,6 +727,7 @@ int main (int argc, char *argv[])
 	  if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
 	    {
 	      Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
+	      netDevice->GetDl()->SetAttribute("WorkingStatus",BooleanValue (false));
 	    }
 	}
 
@@ -790,10 +825,12 @@ int main (int argc, char *argv[])
 
   isaHelper->TraceConnectWithoutContext ("Schedule", MakeBoundCallback (&PrintSchedule, scheduleStream));
   isaHelper->TraceConnectWithoutContext ("TxPower", MakeBoundCallback (&PrintTxPower, txPowerStream));
+  isaHelper->TraceConnectWithoutContext ("avgHops", MakeBoundCallback (&PrintAvgHops, avgHopsStream));
+  isaHelper->TraceConnectWithoutContext ("printGraph", MakeBoundCallback (&PrintGraph, initGraphStream));
 
   // Call the helper
   clock_t begin = clock();
-  SchedulingResult schedResult = isaHelper->CreateOptimizedTdmaSchedule(nc,propLossModel,hoppingPattern,1,(OptimizerSelect)optimizerType,scheduleStream);
+  SchedulingResult schedResult = isaHelper->CreateOptimizedTdmaSchedule(nc,propLossModel,carriers,1,(OptimizerSelect)optimizerType,scheduleStream);
   clock_t end = clock();
 
   if(schedResult != SCHEDULE_FOUND){
@@ -804,6 +841,8 @@ int main (int argc, char *argv[])
     scheduleStream->GetStream()->flush();
     txPowerStream->GetStream()->flush();
     reportStream->GetStream()->flush();
+    avgHopsStream->GetStream()->flush();
+    initGraphStream->GetStream()->flush();
 
     return 0;
   }
@@ -844,15 +883,11 @@ int main (int argc, char *argv[])
   	totDelay += reportTotalDelay[i];
   	totReportReTx += reportRetxNum[i];
 
-    NS_LOG_DEBUG("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]);
-    NS_LOG_DEBUG("Node: "<<i<<"reportRxNum: "<<reportRxNum[i]);
+    NS_LOG_DEBUG("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
 
   	if(reportRxNum[i] == 0){
-//  		starvedNode = true;
   		NS_LOG_UNCOND("*Starved Node*: " << i);
   	}
-
- // 	NS_LOG_UNCOND(" Node " << i << ", Tx: " << reportTxNum[i] << " Rx: " << reportRxNum[i]);
 
   }
 
