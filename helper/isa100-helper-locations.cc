@@ -71,7 +71,8 @@ Isa100Helper::SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionA
 
 //void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, Vector sinkLocation)
 //{   //Rajith removed
-void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, std::vector<Vector> coreNodeLocations)
+void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength,
+		double minNodeSpacing, std::vector<Vector> coreNodeLocations, double factor)
 { //Rajith
   std::vector<Vector> nodeLocations;
 
@@ -89,7 +90,7 @@ void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> pos
   for (unsigned int i = 0; i < coreNodeLocations.size(); i++)  //Rajith
     { //Rajith
       positionAlloc->Add(coreNodeLocations[i]); //Rajith
-      m_locationTrace(i,coreNodeLocations[i].x, coreNodeLocations[i].y, coreNodeLocations[i].z);  //Rajith
+      m_locationTrace(i,coreNodeLocations[i].x*factor, coreNodeLocations[i].y*factor, coreNodeLocations[i].z*factor);  //Rajith
 
       checkDist.push_back(coreNodeLocations[i]);  //Rajith
     } //Rajith
@@ -132,6 +133,10 @@ void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> pos
 
     // At this point valid x,y coordinates have been generated
     checkDist.push_back(Vector(x,y,0));
+
+    x = x * factor;
+    y = y * factor;
+
     positionAlloc->Add(Vector(x,y,0));
 
 

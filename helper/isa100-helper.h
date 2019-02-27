@@ -57,8 +57,17 @@ typedef struct{
  */
 typedef struct{
 	std::vector<uint16_t> slotSched;  ///< Array of slot numbers where the node is active
+//	std::vector<uint8_t> channelSched;  ///< channel used for the communication
 	std::vector<DlLinkType> slotType;  ///< What the node is actually doing in those slots
 } NodeSchedule;
+
+/** Used to contain slot and frequency information
+ *
+ */
+typedef struct{
+  uint32_t timeSlot;  ///< time slot number
+  uint8_t channelIndex;  ///< carrier used for the communication
+} Resource;
 
 /** Indicates the result of attempting to schedule a routing algorithm solution.
  *
@@ -80,10 +89,13 @@ typedef enum{
  */
 typedef TracedCallback<int, double, double, double> HelperLocationTracedCallback;
 
-typedef TracedCallback<int, int, int> HelperScheduleTracedCallback;
+typedef TracedCallback<int, int, int, int> HelperScheduleTracedCallback;
 
 typedef TracedCallback<int, int, double> HelperTxPowerTracedCallback;
 
+typedef TracedCallback<int, double> HelperHopCountTracedCallback;
+
+typedef TracedCallback<int, int> HelperGraphTracedCallback;
 
 /**
  * \defgroup isa100-11a-helper ISA 100.11a Helper Implementation
@@ -203,7 +215,8 @@ public:
    * @param minNodeSpacing Nodes must be separated by at least this much (m).
    * @param sinkLocation Location of the sink node.
    */
-  void GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, std::vector<Vector> coreNodeLocations);
+  void GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength,
+		  double minNodeSpacing, std::vector<Vector> coreNodeLocations, double factor);
   //Rajith Changed
 
 
@@ -242,7 +255,7 @@ public:
    * @return Result of scheduling attempt.
    */
   SchedulingResult CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<PropagationLossModel> propModel,
-      uint8_t *hopPattern, uint32_t numHop, OptimizerSelect optSelect,
+      vector<uint8_t> carriers, uint32_t numHop, OptimizerSelect optSelect,
       Ptr<OutputStreamWrapper> stream = NULL);
 
   //Rajith code addition for graph scheduling
@@ -266,7 +279,7 @@ public:
      *
      * @param timeSlot time slot that required to consider to find the next available slot
      */
-    uint32_t GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option);
+    Resource GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option);
 
 //    void SetGroupSampleRate(uint32_t node, vector<Ptr<Node>> groups);
 //    vector<Ptr<Node>> GetGroupSampleRate(uint32_t);
@@ -276,7 +289,9 @@ public:
 
     void AddEdgeWeights (pair<uint32_t,uint32_t> edge);
 
-//    vector<pair<uint32_t,uint32_t>> GetEdgeWeights ();
+    uint32_t GetSuperFrameSize ();
+
+    void PrintGraph (Ptr<IsaGraph> Graph);
   //end of Rajith code addition
   /**}@*/
 
@@ -401,11 +416,16 @@ private:
 
   // Additional private variables used by Rajith
   bool m_graphType;  ///< Rajith - use to identify the graph
-  vector<vector<uint32_t>> m_mainSchedule;  ///< main schedule information (slot, TX if 0 and TX if 1)
-  map<uint32_t, map<uint32_t, DlLinkType>> m_nodeScheduleN;    ///< schedule for each node of the network (map of slot to LinkType)
+  // slot -> channel -> TX/ RX -> node
+  vector<vector<vector<uint32_t>>> m_mainSchedule;  ///< main schedule information (slot, channel index,  TX if 0 and TX if 1)
+  // node -> slot -> (channel, TX/ RX/ Shared)
+  map<uint32_t, map<uint32_t, pair<uint8_t, DlLinkType>>> m_nodeScheduleN;    ///< schedule for each node of the network (map of node to NodeSchedule)
   map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
   map<uint32_t, map<uint32_t, vector<uint32_t>>> m_avgHopCount;  ///< average hop count of each node
-  vector<uint32_t> m_repLength;   ///<repetition length of the slot (slot // ***channel offset need to be considered***)
+  vector<vector<uint32_t>> m_repLength;   ///<repetition length of the slot and channel index
+  vector<uint8_t> m_carriers;    ///< carriers used (channels)
+  map<uint32_t, uint32_t> m_nextAvailableSlot;   ///< to track the next available time slot for schedule (current slot -> next)
+  map<uint32_t, uint8_t> m_nextAvailableChIndex;   ///< to track the next available carrier for schedule (slot -> next channel index)
 
   map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
   // end of additional private variables used by Rajith
@@ -413,6 +433,8 @@ private:
   HelperLocationTracedCallback m_locationTrace;
   HelperScheduleTracedCallback m_scheduleTrace;
   HelperTxPowerTracedCallback m_txPowerTrace;
+  HelperHopCountTracedCallback m_hopCountTrace;
+  HelperGraphTracedCallback m_graphTrace;
 
   vector<pair<uint32_t,uint32_t>> m_edgeWeight;
 
