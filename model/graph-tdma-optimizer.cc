@@ -34,7 +34,6 @@
 #include "ns3/isa100-battery.h"
 #include "ns3/isa-graph.h"
 
-#include <ilcplex/ilocplex.h>
 #include <algorithm>
 
 

@@ -71,7 +71,6 @@ TypeId TdmaOptimizerBase::GetTypeId (void)
 			 MakeIntegerAccessor(&TdmaOptimizerBase::m_packetsPerSlot),
 			 MakeIntegerChecker<int32_t>(0,10000))
 
-
 	 .AddAttribute ("SensitivityDbm",
 			 "The sensitivity of the receiver (dBm)",
 			 DoubleValue (-101.0), // Sensitivity for the RF233 is -101 dBm for 250kbit/s.

@@ -33,6 +33,7 @@
 #include "ns3/integer.h"
 #include "ns3/application.h"
 #include <ns3/random-variable-stream.h>
+#include "ns3/double.h"
 
 #include "ns3/packet.h"
 #include "ns3/isa100-net-device.h"
@@ -904,7 +905,8 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
               m_numFramesSent++;
 
               // Set the arq backoff counter
-              m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue (0,pow (2,m_arqBackoffExponent - 1)));
+              m_expArqBackoffCounter = 0;
+//              m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue (0,pow (2,m_arqBackoffExponent - 1)));
 
 //              Isa100DlHeader header;
 //              txQElement->m_packet->PeekHeader (header);
@@ -932,7 +934,8 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
           m_numRetrx++;
 
           // Set the arq backoff counter
-          m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue (0,pow (2,m_arqBackoffExponent - 1)));
+          m_expArqBackoffCounter = 0;
+//          m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue (0,pow (2,m_arqBackoffExponent - 1)));
         }
 
       // This is the first attempt of an ACK packet

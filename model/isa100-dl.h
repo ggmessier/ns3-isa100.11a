@@ -251,7 +251,7 @@ private:
 	std::vector<DlLinkType> m_dlLinkScheduleTypes;   ///< Type of link activity in each slot.
 	std::vector<Mac16Address> m_dlLinkScheduleDests; ///< Destination of each link for a TDMA schedule
 	std::vector<uint16_t> m_multiFrameBounds;        ///< Indexes in the above vectors which represent a new Frame
-  std::vector<uint16_t> m_numPktsInSlot;           ///< The number of packets which are being sent during each slot
+    std::vector<uint16_t> m_numPktsInSlot;           ///< The number of packets which are being sent during each slot
 	uint16_t m_currMultiFrameI;                      ///< Index of the current frame in a multiframe superframe
 };
 
