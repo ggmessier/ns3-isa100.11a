@@ -75,6 +75,16 @@ Isa100Helper::GetTypeId (void)
         MakeTraceSourceAccessor (&Isa100Helper::m_txPowerTrace),
         "ns3::TracedCallback::TxPower")
 
+    .AddTraceSource("avgHops",
+        "avg Hops for each node.",
+        MakeTraceSourceAccessor (&Isa100Helper::m_hopCountTrace),
+        "ns3::TracedCallback::avgHops")
+
+	.AddTraceSource("printGraph",
+		"Print the graph",
+		MakeTraceSourceAccessor (&Isa100Helper::m_graphTrace),
+		"ns3::TracedCallback::printGraph")
+
   ;
   return tid;
 }
@@ -87,6 +97,7 @@ Isa100Helper::Isa100Helper(void)
 
   m_txPwrDbm = 0;
   m_graphType = false;
+  m_ResourceAvailable = true;
 }
 
 Isa100Helper::~Isa100Helper(void)
@@ -242,6 +253,8 @@ void Isa100Helper::InstallApplication(NodeContainer c, uint32_t nodeIndex, Ptr<I
   devPtr->GetDl()->SetDlDataConfirmCallback (MakeCallback (&Isa100Application::DlDataConfirm, app));
 
 
+  devPtr->AddApplication(app); //Rajith Added
+
 	Ptr<Node> node = c.Get(nodeIndex);
 
 	if(!node)
@@ -250,11 +263,7 @@ void Isa100Helper::InstallApplication(NodeContainer c, uint32_t nodeIndex, Ptr<I
 	app->SetNode(node);
 	node->AddApplication(app);
 
-
 }
-
-
-
 
 
 void Isa100Helper::SetDlAttribute(std::string n, const AttributeValue &v)

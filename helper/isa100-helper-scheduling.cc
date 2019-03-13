@@ -99,13 +99,14 @@ void Isa100Helper::SetTdmaOptimizerAttributes(Ptr<TdmaOptimizerBase> optimizer)
 
 
 SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<PropagationLossModel> propModel,
-    uint8_t *hopPattern, uint32_t numHop, OptimizerSelect optSelect, Ptr<OutputStreamWrapper> stream)
+    vector<uint8_t> carriers, uint32_t numHop, OptimizerSelect optSelect, Ptr<OutputStreamWrapper> stream)
 {
 
   Ptr<Isa100NetDevice> devPtr = c.Get(1)->GetDevice(0)->GetObject<Isa100NetDevice>();
 	UintegerValue numSlotsV;
   devPtr->GetDl()->GetAttribute("SuperFramePeriod", numSlotsV);
   m_numTimeslots = numSlotsV.Get();
+  m_carriers = carriers;
 
   m_graphType = false;
 
@@ -133,6 +134,7 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
   	case TDMA_GRAPH:  //Rajith
     {  //Rajith
       tdmaOptimizer = CreateObject<GraphTdmaOptimzer> ();  //Rajith
+      devPtr->GetDl()->SetAttribute("IsGraph", BooleanValue (true));
       m_graphType = true;
       break;  //Rajith
     }  //Rajith
@@ -156,9 +158,12 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
 
   if (m_graphType)
     {
-      ConstructDataCommunicationSchedule (tdmaOptimizer->m_graph, tdmaOptimizer->m_graphMap);
+      SchedulingResult schedResult = ConstructDataCommunicationSchedule (tdmaOptimizer->m_graph, tdmaOptimizer->m_graphMap);
 
-      return ScheduleAndRouteTDMAgraph();
+      if (schedResult == SCHEDULE_FOUND)
+        return ScheduleAndRouteTDMAgraph();
+      else
+        return schedResult;
     }
   else
     {
@@ -274,7 +279,14 @@ void Isa100Helper::CalculateTxPowers(NodeContainer c, Ptr<PropagationLossModel> 
   	for(int jNode=iNode; jNode < numNodes; jNode++){
   		if(iNode == jNode)
   			m_txPwrDbm[iNode][jNode] = rxSensitivityDbm;
-  		else{
+  		else if((iNode == 0 && jNode != 1 && jNode != 2) || (jNode == 0 && iNode != 1 && iNode != 2))
+		{
+  			//to prohibit the communication between gateway and field nodes (except APs)
+  			m_txPwrDbm[iNode][jNode] = maxTxPowerDbm + 1;
+  			m_txPwrDbm[jNode][iNode] = maxTxPowerDbm + 1;
+  		}
+  		else
+  		{
   			m_txPwrDbm[iNode][jNode] = -(propModel->CalcRxPower (0, positions[iNode], positions[jNode])) + rxSensitivityDbm;
   			m_txPwrDbm[jNode][iNode] = m_txPwrDbm[iNode][jNode];
   		}
@@ -407,6 +419,9 @@ void Isa100Helper::PopulateNodeSchedule(int src, int dst, int weight, vector<Nod
 		schedules[dst].slotSched.insert(schedules[dst].slotSched.begin(), nSlot--);
 		schedules[dst].slotType.insert(schedules[dst].slotType.begin(), RECEIVE);
 
+		int carrier = 11; //Rajith Temporary
+		m_scheduleTrace(nSlot+1,src,dst,carrier);
+
 		NS_LOG_DEBUG( " (" << src << ")->(" << dst << ") in slot " << (nSlot+1) );
 	}
 
@@ -506,6 +521,8 @@ SchedulingResult Isa100Helper::CalculateSourceRouteStrings(vector<std::string> &
 
 			routingStrings[ startNode ] = ss.str();
 			hopCount.push_back(numHops);
+
+			m_hopCountTrace(startNode,numHops);
 		}
 	}
 
@@ -518,15 +535,18 @@ SchedulingResult Isa100Helper::CalculateSourceRouteStrings(vector<std::string> &
 
 SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 {
-  int numNodes = m_devices.GetN();
+  uint32_t numNodes = m_devices.GetN();
   SchedulingResult schedulingResult = SCHEDULE_FOUND;
 
   NS_LOG_DEBUG("size: "<<(this)->m_mainSchedule.size());
   for(uint32_t j = 0; j<(this)->m_mainSchedule.size();j++)
     {
-      if ((this)->m_mainSchedule[j][0] != 65535)
+      for(uint32_t k = 0; k<(this)->m_mainSchedule[j].size();k++)
         {
-          m_scheduleTrace(j,(this)->m_mainSchedule[j][0],(this)->m_mainSchedule[j][1]);
+          if ((this)->m_mainSchedule[j][k][0] != 65535)
+            {
+              m_scheduleTrace(j,(this)->m_mainSchedule[j][k][0],(this)->m_mainSchedule[j][k][1],(this)->m_carriers[k]);
+            }
         }
     }
 
@@ -540,13 +560,16 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     Ptr<NetDevice> baseDevice = m_devices.Get(nNode);
     Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
+    vector<uint8_t> hoppingPattern;
     NS_LOG_DEBUG("nNode for Node schedule: "<<nNode);
-    for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
+//    for (map<uint32_t, DlLinkType>::const_iterator it = m_nodeScheduleN[nNode].begin ();
+    for (map<uint32_t, pair<uint8_t, DlLinkType>>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
           nodeSchedule.slotSched.push_back(it->first);
-          nodeSchedule.slotType.push_back(it->second);
-          NS_LOG_DEBUG("slot schedule: "<<it->first<<" "<<it->second);
+          nodeSchedule.slotType.push_back(it->second.second);
+          hoppingPattern.push_back(it->second.first);
+          NS_LOG_DEBUG("slot: "<<it->first<<" ch: "<<to_string(it->second.first)<<" "<<it->second.second);
         }
 
     netDevice->GetDl()->SetAttribute("SuperFramePeriod", UintegerValue(m_mainSchedule.size()));
@@ -566,7 +589,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     netDevice->GetDl()->SetTxPowersDbm(m_txPwrDbm[nNode], numNodes);
 
     // Set the sfSchedule
-    vector<uint8_t> hoppingPattern(1,11);  // Stay on channel 11.
+//    vector<uint8_t> hoppingPattern(1,11);  // Stay on channel 11.
 
     Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
 
@@ -578,5 +601,9 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
   return schedulingResult;
 }
 
+uint32_t Isa100Helper::GetSuperFrameSize ()
+{
+  return (this)->m_mainSchedule.size();
+}
 
 }

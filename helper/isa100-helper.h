@@ -263,7 +263,7 @@ public:
      *
      * @param G Pointer for the graph network that need to create the schedule
      */
-    bool ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> mapOfG);
+  SchedulingResult ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> mapOfG);
 
     /** Schedule link for specific graph type
      *
@@ -437,6 +437,7 @@ private:
   HelperGraphTracedCallback m_graphTrace;
 
   vector<pair<uint32_t,uint32_t>> m_edgeWeight;
+  bool m_ResourceAvailable;     //frame size is sufficent to create the scheduling
 
 };
 

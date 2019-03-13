@@ -30,10 +30,11 @@ using namespace std;
 
 namespace ns3 {
 
-bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> mapOfG)
+SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> mapOfG)
 {
   NS_LOG_FUNCTION (this);
 
+  (this)->PrintGraph (G);
   map <uint32_t, GraphNode> graphNodeMap = G->GetGraphNodeMap();
   Ptr<Node> gateway = G->GetGateway();        ///< g node of the algorithm
 
@@ -48,6 +49,7 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
       uint32_t tempTimeSlots = it->second.m_numTimeSlots;
 //      NS_LOG_UNCOND("tempTimeSlots "<<tempTimeSlots);
       // Sort device sample rates in ascending order: r 1 < r 2 < . . . < r k . (Here Map is storing data in sorted manner.)
+      m_hopCountTrace(it->second.m_head->GetId(),it->second.m_avgHopCount);
       m_groupSameSampleRate[tempTimeSlots].push_back(it->second.m_head);
     }
 
@@ -65,21 +67,29 @@ bool Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uin
       while(!GroupwithSampleRate.empty())
         {
           Ptr<Node> v = GroupwithSampleRate.back();
-//          NS_LOG_UNCOND("v: "<<v->GetId());
+          bool scheduleFound = true;
           if(v != gateway)
             {
               // Schedule primary and retry links for publishing data
-              (this)->ScheduleLinks(v, gateway, GUL , superframe, 0, TRANSMIT);
-//              (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED);
+              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, 0, TRANSMIT);
+              if (!scheduleFound)
+                return INSUFFICIENT_SLOTS;
+              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED);
+              if (!scheduleFound)
+                return INSUFFICIENT_SLOTS;
               // Schedule primary and retry links for control data
-//              (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, TRANSMIT);
-//              (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/4*3, SHARED);
+//              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, TRANSMIT);
+//              if (!scheduleFound)
+//                return INSUFFICIENT_SLOTS;
+//              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/4*3, SHARED);
+//              if (!scheduleFound)
+//                return INSUFFICIENT_SLOTS;
             }
           GroupwithSampleRate.pop_back();
         }
     }
 
-  return true;
+  return SCHEDULE_FOUND;
 }
 
 // ScheduleLinks(u, v, G, F , t, o) - additionally channel offset has included.
@@ -126,9 +136,11 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 //        }
 //    }
 
-//  Slot slot;
-  uint32_t slot;
-  slot = (this)->GetNextAvailableSlot(timeSlot, option);
+  Resource resource = (this)->GetNextAvailableSlot(timeSlot, option);
+  if(!m_ResourceAvailable)
+    return false;
+  uint32_t slot = resource.timeSlot;
+  uint8_t chIndex = resource.channelIndex;
 
   Ptr<Node> next;
   Ptr<NetDevice> baseDevice_next;
@@ -145,15 +157,29 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 
       netDevice_next->GetDl()->GetAttribute("Address",address_next);
 
-      m_tableList[u->GetId()][v->GetId()].push_back(address_next.Get());   //update the routing tables
+      if(count(m_tableList[u->GetId()][v->GetId()].begin(),m_tableList[u->GetId()][v->GetId()].end(),address_next.Get()) == 0)
+        {
+          m_tableList[u->GetId()][v->GetId()].push_back(address_next.Get());   //update the routing tables
+        }
+
+      // check the slot has not previously used by either TX or RX node.
+      while((this)->m_nodeScheduleN[u->GetId()].count(slot) > 0 || (this)->m_nodeScheduleN[next->GetId()].count(slot) > 0)
+        {
+          resource = GetNextAvailableSlot(++slot, option);
+          if(!m_ResourceAvailable)
+            return false;
+          slot = resource.timeSlot;
+          chIndex = resource.channelIndex;
+        }
 
       if (successorsOfU.size()==1)              // if next is the only successor of u then
         {
-          (this)->m_mainSchedule[slot][0] = u->GetId();
-          (this)->m_mainSchedule[slot][1] = next->GetId();
-          (this)->m_nodeScheduleN[u->GetId()][slot] = TRANSMIT;
-          (this)->m_nodeScheduleN[next->GetId()][slot] = RECEIVE;
-          (this)->m_repLength[slot] = superframe;
+
+          (this)->m_mainSchedule[slot][chIndex][0] = u->GetId();
+          (this)->m_mainSchedule[slot][chIndex][1] = next->GetId();
+          (this)->m_nodeScheduleN[u->GetId()][slot] = pair<uint8_t, DlLinkType> (m_carriers[chIndex],TRANSMIT);
+          (this)->m_nodeScheduleN[next->GetId()][slot] = pair<uint8_t, DlLinkType> (m_carriers[chIndex],RECEIVE);
+          (this)->m_repLength[slot][chIndex] = superframe;
 
           if (next != v)
             {
@@ -164,21 +190,35 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
         {
           if(nNode == 0)
             {
-              (this)->m_mainSchedule[slot][0] = u->GetId();
-              (this)->m_mainSchedule[slot][1] = next->GetId();
-              (this)->m_nodeScheduleN[u->GetId()][slot] = TRANSMIT;
-              (this)->m_nodeScheduleN[next->GetId()][slot] = RECEIVE;
-              (this)->m_repLength[slot] = superframeF_1;
+              (this)->m_mainSchedule[slot][chIndex][0] = u->GetId();
+              (this)->m_mainSchedule[slot][chIndex][1] = next->GetId();
+              (this)->m_nodeScheduleN[u->GetId()][slot] = pair<uint8_t, DlLinkType> (m_carriers[chIndex],TRANSMIT);
+              (this)->m_nodeScheduleN[next->GetId()][slot] = pair<uint8_t, DlLinkType> (m_carriers[chIndex],RECEIVE);
+              (this)->m_repLength[slot][chIndex] = superframeF_1;
             }
           else
             {
-              slot = (this)->GetNextAvailableSlot(timeSlot + superframe, option);
+              resource = (this)->GetNextAvailableSlot(timeSlot + superframe, option);
+              if(!m_ResourceAvailable)
+                return false;
+              slot = resource.timeSlot;
+              chIndex = resource.channelIndex;
 
-              (this)->m_mainSchedule[slot][0] = u->GetId();
-              (this)->m_mainSchedule[slot][1] = next->GetId();
-              (this)->m_nodeScheduleN[u->GetId()][slot] = TRANSMIT;
-              (this)->m_nodeScheduleN[next->GetId()][slot] = RECEIVE;
-              (this)->m_repLength[slot] = superframeF_1;
+              // check the slot has not previously used by either TX or RX node.
+              while((this)->m_nodeScheduleN[u->GetId()].count(slot) > 0 || (this)->m_nodeScheduleN[next->GetId()].count(slot) > 0)
+                {
+                  resource = GetNextAvailableSlot(++slot, option);
+                  if(!m_ResourceAvailable)
+                    return false;
+                  slot = resource.timeSlot;
+                  chIndex = resource.channelIndex;
+                }
+
+              (this)->m_mainSchedule[slot][chIndex][0] = u->GetId();
+              (this)->m_mainSchedule[slot][chIndex][1] = next->GetId();
+              (this)->m_nodeScheduleN[u->GetId()][slot] = pair<uint8_t, DlLinkType> (m_carriers[chIndex],TRANSMIT);
+              (this)->m_nodeScheduleN[next->GetId()][slot] = pair<uint8_t, DlLinkType> (m_carriers[chIndex],RECEIVE);
+              (this)->m_repLength[slot][chIndex] = superframeF_1;
             }
 
           if (next != v)
@@ -194,90 +234,117 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
 }
 
 // Identify the earliest slot from t with a channel c to:
-uint32_t Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option)
+Resource Isa100Helper::GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option)
 {
+  Resource resource;
+  uint8_t chIndex = 0;
+
   NS_LOG_FUNCTION (this);
   uint32_t nSlot = timeSlot;
   uint32_t slotIndex = 0;
   uint32_t frameSize = (this)->m_mainSchedule.size();
-//  NS_LOG_UNCOND("frameSize: "<<frameSize);
 
   switch (option)
   {
     case TRANSMIT:
     case RECEIVE:
-//      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
-//      NS_LOG_UNCOND("nSlot: "<<nSlot);
-//      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
-//      if(nSlot+slotIndex > frameSize)
-//        {
-//          NS_LOG_UNCOND("INSUFFICIENT FRAME");
-//          frameSize = frameSize*2;
-//          (this)->ResizeSchedule(frameSize);
-//        }
-      while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
+      while((this)->m_mainSchedule[nSlot+slotIndex][chIndex][0] != 65535)
         {
-          slotIndex++;
-          if(slotIndex > frameSize)
+          chIndex++;
+          if (chIndex >= m_carriers.size())
             {
-              NS_LOG_UNCOND("INSUFFICIENT SLOTS");
-              frameSize = frameSize*2;
-              (this)->ResizeSchedule(frameSize);
+              chIndex = 0;
+              slotIndex++;
+              if(slotIndex > frameSize)
+                {
+                  NS_LOG_UNCOND("INSUFFICIENT SLOTS");
+                  m_ResourceAvailable = false;
+                }
             }
+
         }
       nSlot += slotIndex;
       break;
 
     case SHARED:
-//      for(; (this)->m_mainSchedule[nSlot][0] < 65535; nSlot++);
-//      NS_LOG_UNCOND("nSlot: "<<nSlot);
-//      NS_LOG_UNCOND("slotIndex: "<<slotIndex);
-//      if(nSlot+slotIndex > frameSize)
-//        {
-//          NS_LOG_UNCOND("INSUFFICIENT FRAME");
-//        }
-      while((this)->m_mainSchedule[nSlot+slotIndex][0] != 65535)
+
+      while((this)->m_mainSchedule[nSlot+slotIndex][chIndex][0] != 65535)
         {
-          slotIndex++;
-          if(slotIndex > frameSize)
+          chIndex++;
+          if (chIndex >= m_carriers.size())
             {
-              NS_LOG_UNCOND("INSUFFICIENT SLOTS");
-              frameSize = frameSize*2;
-              (this)->ResizeSchedule(frameSize);
+              chIndex = 0;
+              slotIndex++;
+              if(slotIndex > frameSize)
+                {
+                  NS_LOG_UNCOND("INSUFFICIENT SLOTS");
+                  m_ResourceAvailable = false;
+                }
             }
+
         }
       nSlot += slotIndex;
       break;
   }
 
-  return nSlot;
+  resource.channelIndex = chIndex;
+  resource.timeSlot = nSlot;
+  return resource;
 }
 
 void Isa100Helper::ResizeSchedule(uint32_t superframe)
 {
+  uint8_t numChannels = m_carriers.size();
   if (superframe > (this)->m_mainSchedule.size())
     {
-      (this)->m_mainSchedule.resize(superframe, vector <uint32_t> (2, 65535));
+      // resize the schedule to support new # of slots (superframe)
+      (this)->m_mainSchedule.resize(superframe, vector<vector <uint32_t>> (numChannels, vector <uint32_t> (2, 65535)));
 
       for(uint32_t nSlot = 0; nSlot < (this)->m_repLength.size(); nSlot++)
           {
-            if((this)->m_repLength[nSlot] > 0)
+            for(uint32_t chIndex = 0; chIndex < (this)->m_repLength[nSlot].size(); chIndex++)
               {
-                uint32_t repTime = 1;
-                uint32_t nextSlot = nSlot+repTime*(this)->m_repLength[nSlot];
-                while(nextSlot<(this)->m_mainSchedule.size())
+                if((this)->m_repLength[nSlot][chIndex] > 0)
                   {
-                    (this)->m_mainSchedule[nextSlot] = (this)->m_mainSchedule[nSlot];
-                    (this)->m_nodeScheduleN[(this)->m_mainSchedule[nSlot][0]][nextSlot] = TRANSMIT;
-                    (this)->m_nodeScheduleN[(this)->m_mainSchedule[nSlot][1]][nextSlot] = RECEIVE;
-                    repTime++;
-                    nextSlot = nSlot+repTime*(this)->m_repLength[nSlot];
+                    uint32_t repTime = 1;
+                    uint32_t nextSlot = nSlot+repTime*(this)->m_repLength[nSlot][chIndex];
+                    while(nextSlot<(this)->m_mainSchedule.size())
+                      {
+                        (this)->m_mainSchedule[nextSlot][chIndex] = (this)->m_mainSchedule[nSlot][chIndex];
+
+                        // populate the repeating schedules through the new superframe
+                        uint32_t TxNode = (this)->m_mainSchedule[nSlot][chIndex][0];
+                        uint32_t RxNode = (this)->m_mainSchedule[nSlot][chIndex][1];
+                        (this)->m_nodeScheduleN[TxNode][nextSlot] = (this)->m_nodeScheduleN[TxNode][nSlot];
+                        (this)->m_nodeScheduleN[RxNode][nextSlot] = (this)->m_nodeScheduleN[RxNode][nSlot];
+
+                        repTime++;
+                        nextSlot = nSlot+repTime*(this)->m_repLength[nSlot][chIndex];
+                      }
                   }
               }
+
           }
-      (this)->m_repLength.resize(superframe,0);
+      (this)->m_repLength.resize(superframe,vector<uint32_t> (numChannels));
     }
 
+}
+
+void Isa100Helper::PrintGraph (Ptr<IsaGraph> Graph)
+{
+  NS_LOG_FUNCTION (this);
+  map<uint32_t, GraphNode> graphMap = Graph->GetGraphNodeMap();
+  for (map<uint32_t, GraphNode>::const_iterator it = graphMap.begin ();it != graphMap.end (); ++it)
+    {
+      vector<Ptr<Node> > tempNodeList = it->second.m_neighbors;
+
+      while (!tempNodeList.empty ())
+        {
+          m_graphTrace(it->second.m_head->GetId (),tempNodeList.back ()->GetId ());
+          tempNodeList.pop_back ();
+        }
+
+    }
 }
 
 } // namespace ns3
