@@ -38,7 +38,7 @@
 //#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
 
 // Topology
-#define SENSOR_DENSITY 0.0093  // Nodes/m^2
+#define SENSOR_DENSITY 0.0185  // Nodes/m^2
 #define MIN_NODE_SPACING 3.0               // Node spacing is at least this distance (m)
 #define FIELD_SIZE_X 60.0  // Field size in the x direction.
 #define FIELD_SIZE_Y 90.0  // Field size in the y direction.
@@ -50,7 +50,7 @@
 #define PACKET_DATA_BYTES         40       // Size of Packet's data payload (bytes)
 #define PACKET_OVERHEAD_BYTES 29 // Number of overhead bytes in a packet
 //#define SENSOR_SAMPLE_PERIOD 2.0 // Sample period (s)
-#define SENSOR_SAMPLE_PERIOD 4.0 // Sample period (s) //Rajith Changed (8000ms)
+#define SENSOR_SAMPLE_PERIOD 8.0 // Sample period (s) //Rajith Changed (8000ms)
 #define TX_EARLIEST_S 2.212e-3  // Transmit dead time at the start of each timeslot (ms)
 
 // DL layer defines
@@ -109,18 +109,23 @@ bool failOccured = false;
 
 void BatteryDepletionCallbackEvent(Mac16Address addr)
 {
-	if(!terminateSim){
-	    if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0 &&
-	        count(needToTerminateSensors.begin(),needToTerminateSensors.end(),addr)==0)
-	      {
-	        networkLifetime = (Simulator::Now()).GetSeconds();
-	        NS_LOG_UNCOND(" Node " << addr << " out of energy at " << networkLifetime);
+//	if(!terminateSim){
+//	    if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0 &&
+//	        count(needToTerminateSensors.begin(),needToTerminateSensors.end(),addr)==0)
+//	      {
+//	        networkLifetime = (Simulator::Now()).GetSeconds();
+//	        NS_LOG_UNCOND(" Node " << addr << " out of energy at " << networkLifetime);
+//
+//	        needToTerminateSensors.push_back(addr);
+//	      }
+//	}
 
-	        needToTerminateSensors.push_back(addr);
-	      }
-	}
+  if(!terminateSim){
+    networkLifetime = (Simulator::Now()).GetSeconds();
+    NS_LOG_UNCOND(" Node " << addr << " out of energy at " << networkLifetime);
+    terminateSim = 1;
+  }
 
-//	Simulator::Stop();
 }
 
 void NodeFailureCallbackEvent(Mac16Address addr)
@@ -180,18 +185,24 @@ static void StopSensing(NetDeviceContainer devContainer)
 
 static void TerminateSimulation()
 {
-  NS_LOG_DEBUG("TerminateSimulation Start Time: "<<Simulator::Now().GetMilliSeconds());
-  if(totPktSimulationLimit != 0 && totPktSimulationLimit < totPktSimulation)
-    {
-      terminateSim = 1;
-    }
-	if(terminateSim){
-		NS_LOG_UNCOND(" Simulation terminated!");
-		Simulator::Stop();
-	}
-	else
-	  Simulator::Schedule(terminateCheckPeriod,&TerminateSimulation);
-//  NS_LOG_UNCOND("TerminateSimulation end Time: "<<Simulator::Now().GetMilliSeconds());
+//  if(totPktSimulationLimit != 0 && totPktSimulationLimit < totPktSimulation)
+//    {
+//      terminateSim = 1;
+//    }
+//	if(terminateSim){
+//		NS_LOG_UNCOND(" Simulation terminated!");
+//		Simulator::Stop();
+//	}
+//	else
+//	  Simulator::Schedule(terminateCheckPeriod,&TerminateSimulation);
+
+  if(terminateSim){
+    NS_LOG_UNCOND(" Simulation terminated!");
+    Simulator::Stop();
+  }
+  else
+    Simulator::Schedule(terminateCheckPeriod,&TerminateSimulation);
+
 }
 
 static void PrintDropPacket ( Ptr<OutputStreamWrapper> stream, Mac16Address addr, Ptr<const Packet> p, std::string message)
@@ -324,7 +335,7 @@ static void LogPktReport(Ptr<OutputStreamWrapper> stream)
 int main (int argc, char *argv[])
 {
 //	  LogComponentEnable("FishPropagationLossModel",LOG_LEVEL_LOGIC);
-//		LogComponentEnable("Isa100Dl",LOG_ALL);
+		LogComponentEnable("Isa100Dl",LOG_ALL);
 //	  LogComponentEnable("Isa100HelperScheduling",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("MinHopTdmaOptimizer",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("ConvexIntTdmaOptimizer",LOG_LEVEL_LOGIC);
@@ -475,6 +486,7 @@ int main (int argc, char *argv[])
   // These are ISA100 frame size parameters.  Look in the ISA100 standard for more information.
   isaHelper->SetDlAttribute("SuperFramePeriod",UintegerValue(numSlotsPerFrame));
   isaHelper->SetDlAttribute("SuperFrameSlotDuration",TimeValue(slotDuration));
+  isaHelper->SetDlAttribute("SensorUpdatePeriod",UintegerValue(numSlotsPerFrame));
 
   // Dl attributes
   isaHelper->SetDlAttribute("MaxTxPowerDbm", IntegerValue(maxTxPower));
@@ -546,7 +558,7 @@ int main (int argc, char *argv[])
 
 	*(energyStream->GetStream()) << "Iter," << iter << ",--------------\n";
 	*(packetDropStream->GetStream()) << "Iter," << iter << ",--------------\n";
-	//*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";   //Rajith new Report
+//	*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";   //Rajith new Report
 	*(locationStream->GetStream()) << "#" << iter << "#\n";
 //	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
 	*(scheduleStream->GetStream()) << "-1 " << iter << " "<< seed <<" "<<maxTxPower<<"\n";
@@ -812,6 +824,8 @@ int main (int argc, char *argv[])
 
     netDevice->GetPhy()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
     netDevice->GetDl()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
+    if (optString == "Graph")
+      netDevice->GetDl()->SetAttribute("IsGraph", BooleanValue(true));
   }
 
   // ******************************************** TDMA OPTIMIZATION *********************************************
@@ -847,12 +861,19 @@ int main (int argc, char *argv[])
     return 0;
   }
 
+  unsigned int frameSize = numSlotsPerFrame;
+//  if (optString == "Graph")
+//    {
+////      frameSize = isaHelper->GetSuperFrameSize();
+//      isaHelper->SetDlAttribute("IsGraph", BooleanValue(true));
+//    }
+
   uint32_t offset = numSlotsPerFrame/8;
-  Time initialTerminateCheck = Seconds((isaHelper->GetSuperFrameSize()-offset)*slotDuration.GetSeconds());  // Rajith Added
+  Time initialTerminateCheck = Seconds((frameSize-offset)*slotDuration.GetSeconds());  // Rajith Added
   Simulator::Schedule(initialTerminateCheck,&TerminateSimulation);
   Simulator::Schedule(initialTerminateCheck,&StopSensing,devContainer);
   Simulator::Schedule(initialTerminateCheck,&LogPktReport,reportStream);
-  terminateCheckPeriod = Seconds(isaHelper->GetSuperFrameSize()*slotDuration.GetSeconds());  // Rajith Added
+  terminateCheckPeriod = Seconds(frameSize*slotDuration.GetSeconds());  // Rajith Added
 
   NS_LOG_UNCOND("terminateCheckPeriod: "<<terminateCheckPeriod);
   double optTime = ((double)end-(double)begin)/CLOCKS_PER_SEC;
@@ -883,7 +904,7 @@ int main (int argc, char *argv[])
   	totDelay += reportTotalDelay[i];
   	totReportReTx += reportRetxNum[i];
 
-    NS_LOG_DEBUG("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
+    NS_LOG_UNCOND("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
 
   	if(reportRxNum[i] == 0){
   		NS_LOG_UNCOND("*Starved Node*: " << i);
@@ -901,7 +922,7 @@ int main (int argc, char *argv[])
   else{
       //Rajith new Report
       *(reportStream->GetStream()) << seed << " "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "<<totDelay.GetSeconds()/totReportRx << "\n";
-//    *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
+      *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
 //  	*(reportStream->GetStream()) << "TotalTx," << totReportTx << "\n";
 //  	*(reportStream->GetStream()) << "TotalRx," << totReportRx << "\n";
 //  	*(reportStream->GetStream()) << "DropPct," << (1.0-(double)totReportRx/totReportTx) << "\n";
