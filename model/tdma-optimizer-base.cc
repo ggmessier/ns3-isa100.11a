@@ -190,6 +190,12 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
         double chnGainDbm = propModel->CalcRxPower(0, positions[i], positions[j]);
         txPow = ceil(m_minRxPowerDbm - chnGainDbm);
 
+        if((i == 0 && j != 1 && j != 2) || (j == 0 && i != 1 && i != 2))
+		{
+			//to prohibit the communication between gateway and field nodes (except APs)
+        	txPow = m_maxTxPowerDbm + 1;
+		}
+
         if (txPow < minTxPowerDbm){
           txPow = minTxPowerDbm;
         }

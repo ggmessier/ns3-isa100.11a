@@ -655,6 +655,9 @@ private:
 
   bool m_ackEnabled; ///< Whether the ACK mechanism is used.
   bool m_working; ///< whether node is at working condition or not. (Rajith)
+  bool m_isGraph; ///< whether node is at working condition or not. (Rajith)
+  uint16_t m_sensorUpdatePeriod;  ///< Sensor update period (number of timeslots).
+
 };
 
 

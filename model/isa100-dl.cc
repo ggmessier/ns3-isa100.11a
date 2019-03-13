@@ -203,6 +203,16 @@ TypeId Isa100Dl::GetTypeId (void)
                     MakeBooleanAccessor (&Isa100Dl::m_working),
                     MakeBooleanChecker ())
 
+	.AddAttribute ("IsGraph", "Whether Optimization is based on graph routing.",
+					BooleanValue (false),
+					MakeBooleanAccessor (&Isa100Dl::m_isGraph),
+					MakeBooleanChecker ())
+
+	.AddAttribute ("SensorUpdatePeriod","Sensor initiate the data in this period.",
+				   UintegerValue (1),
+				   MakeUintegerAccessor (&Isa100Dl::m_sensorUpdatePeriod),
+				   MakeUintegerChecker<uint16_t>())
+
     .AddTraceSource ("DlFirstTxTrace",
                      "Trace source indicating a packet is initiated it's first transmission by this device",
                      MakeTraceSourceAccessor (&Isa100Dl::m_dlFirstTxTrace),
@@ -528,7 +538,7 @@ void Isa100Dl::ProcessLink ()
   uint16_t nextSlot = m_sfSchedule->m_dlLinkScheduleSlots[m_dlLinkIndex % scheduleSize];
   uint16_t slotJump;
 
-  NS_LOG_DEBUG (" Current Slot Index: " << currentSlot << " Next Slot Index: " << nextSlot);
+  NS_LOG_LOGIC (" Current Slot Index: " << currentSlot << " Next Slot Index: " << nextSlot);
 
   if (nextSlot <= currentSlot)
     {
@@ -1227,11 +1237,15 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
         {
           addressMatch = true;
         }
-      for (int i = 0; i < rxDlHdr.GetNumOfGraphRouteHop(); i++)
+
+      if (m_isGraph)
         {
-          if(rxDlHdr.GetGraphRouteHop(i) == m_address)
+          for (int i = 0; i < rxDlHdr.GetNumOfGraphRouteHop(); i++)
             {
-              addressMatch = true;
+              if(rxDlHdr.GetGraphRouteHop(i) == m_address)
+                {
+                  addressMatch = true;
+                }
             }
         }
 

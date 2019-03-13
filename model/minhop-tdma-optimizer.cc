@@ -149,7 +149,6 @@ void MinHopTdmaOptimizer::BreadthFirstMinHopFlowSolver(int parent, vector< vecto
 	// Check for new links
 	for(int nNode=0; nNode < m_numNodes; nNode++){
 
-
 		if(m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm
 				&& (hopCount[nNode] > hopCount[parent]+1
 						|| (hopCount[nNode] == hopCount[parent]+1 && m_txPowerDbm[parent][nNode] < curTxPwr[nNode]) ) ){

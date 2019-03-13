@@ -34,6 +34,8 @@
 #include "ns3/packet.h"
 #include <algorithm>
 
+#include "ns3/boolean.h"
+
 // Broadcast packet information
 // Prevent the complier from adding padding to the unions larger than 1 byte
 #pragma pack(push,1)
@@ -93,13 +95,17 @@ TypeId Isa100Application::GetTypeId (void)
 				MakeMac16AddressAccessor (&Isa100Application::m_srcAddress),
 				MakeMac16AddressChecker ())
 
+    .AddAttribute ("WorkingStatus", "Whether Application is at working condition.",
+                    BooleanValue (true),
+                    MakeBooleanAccessor (&Isa100Application::m_workingStatus),
+                    MakeBooleanChecker ())
 				;
   return tid;
 }
 
 Isa100Application::Isa100Application ()
 {
-	;
+  m_workingStatus = true;
 }
 
 Isa100Application::~Isa100Application ()
@@ -236,8 +242,6 @@ TypeId Isa100FieldNodeApplication::GetTypeId (void)
         MakeTraceSourceAccessor (&Isa100FieldNodeApplication::m_reportTxTrace),
         "ns3::TracedCallback::ReportTx")
 
-
-
         ;
   return tid;
 }
@@ -287,22 +291,24 @@ void Isa100FieldNodeApplication::SensorSampleCallback(double data)
 	 * a new packet.  The definition of "ready" can be sorted out by the DL.
 	 */
 
-  // A new sample exists, request to send the measurement to the sink
-  Ptr<Packet> measurementPacket = Create<Packet>(m_packetSize);
+  if(m_workingStatus)
+    {
+      // A new sample exists, request to send the measurement to the sink
+      Ptr<Packet> measurementPacket = Create<Packet>(m_packetSize);
 
-  DlDataRequestParams params;
-  params.m_dsduHandle = DATA_PACKET;
-  params.m_srcAddr = m_srcAddress;
-  params.m_destAddr = m_dstAddress;
-  params.m_dsduLength = m_packetSize;
+      DlDataRequestParams params;
+      params.m_dsduHandle = DATA_PACKET;
+      params.m_srcAddr = m_srcAddress;
+      params.m_destAddr = m_dstAddress;
+      params.m_dsduLength = m_packetSize;
 
-  // Send the packet to the sink and put the processor to sleep.
-  m_dlDataRequest(params,measurementPacket);
-  m_processor->SetState(PROCESSOR_SLEEP);
+      // Send the packet to the sink and put the processor to sleep.
+      m_dlDataRequest(params,measurementPacket);
+      m_processor->SetState(PROCESSOR_SLEEP);
 
-  // Log the transmission
-  m_reportTxTrace(params.m_srcAddr);
-
+      // Log the transmission
+      m_reportTxTrace(params.m_srcAddr);
+    }
 
 }
 
@@ -313,7 +319,8 @@ void Isa100FieldNodeApplication::StartApplication (void)
   TimeValue slotDurationV;
   PointerValue sfSchedV;
   Ptr<Isa100NetDevice> devPtr = m_node->GetDevice(0)->GetObject<Isa100NetDevice>();
-  devPtr->GetDl()->GetAttribute("SuperFramePeriod", framePeriodV);
+//  devPtr->GetDl()->GetAttribute("SuperFramePeriod", framePeriodV);
+  devPtr->GetDl()->GetAttribute("SensorUpdatePeriod", framePeriodV);
   devPtr->GetDl()->GetAttribute("SuperFrameSlotDuration", slotDurationV);
   devPtr->GetDl()->GetAttribute("SuperFrameSchedule", sfSchedV);
   m_slotDuration = slotDurationV.Get();
@@ -336,7 +343,11 @@ void Isa100FieldNodeApplication::StopApplication (void)
   m_sampleTaskId.Cancel();
 }
 
-
+void Isa100FieldNodeApplication::SetFault(void)
+{
+  m_workingStatus = false;
+  NS_LOG_UNCOND("****** Set Fault ******");
+}
 
 
 // ----------------------------- ISA 100 Backbone Application ----------------------------
@@ -399,10 +410,11 @@ void Isa100BackboneNodeApplication::DlDataIndication (DlDataIndicationParams par
     }
   else
     {
-      NS_LOG_UNCOND("m_dataSeqNum count: "<<count(tempDataSeqNums.begin(),tempDataSeqNums.end(),params.m_dataSeqNum));
-      NS_LOG_UNCOND("m_dataSeqNum: "<<params.m_dataSeqNum<<"m_srcAddr: "<<params.m_srcAddr);
+      NS_LOG_DEBUG("m_dataSeqNum count: "<<count(tempDataSeqNums.begin(),tempDataSeqNums.end(),params.m_dataSeqNum));
+      NS_LOG_DEBUG("m_dataSeqNum: "<<std::to_string(params.m_dataSeqNum)<<"m_srcAddr: "<<params.m_srcAddr);
     }
 
+  NS_LOG_DEBUG("Received packet info m_dataSeqNum: "<<std::to_string(params.m_dataSeqNum)<<" m_srcAddr: "<<params.m_srcAddr);
 }
 
 void Isa100BackboneNodeApplication::DlDataConfirm (DlDataConfirmParams params)
