@@ -30,6 +30,7 @@
 #include "ns3/integer.h"
 #include "ns3/log.h"
 #include "ns3/boolean.h"
+#include <math.h>
 
 #include "ns3/isa-graph.h"
 
@@ -167,12 +168,27 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
     positions.push_back(devPtr->GetPhy()->GetMobility());
   }
 
+  double txPower = 0;
+  double txPower_Wu = 0;
+  double PRR = 0.9;
+  double rxPower = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(m_maxTxPowerDbm) + procActiveCurr) *
+      zigbeePhy->GetSupplyVoltage();
+  double tsMaxPacket = 4256*1e-6;   //-> need to send to helper class as attribute
+  double tsRxWait = 2200*1e-6;    //-> need to send to helper class as attribute
+
+  m_rxEnergyGeneralExpected = (2 - PRR)*rxPower*tsMaxPacket;
+  m_rxEnergyBackupGeneralExpected = pow(1 - PRR,2.0)*rxPower*tsMaxPacket + (1-pow(1 - PRR,2.0))*rxPower*tsRxWait;
   // Iterate over all links
   for (uint16_t i = 0; i < m_numNodes; i++)
   {
     row_t txPowRw;
     row_t txEnergiesRwBit;
     row_t txEnergiesRwByte;
+    row_t packetReceptionRatioRw_Wu;
+    row_t txEnergyExpectedRw_Wu;
+    row_t rxEnergyExpectedRw_Wu;
+    row_t txEnergyBackupExpectedRw_Wu;
+    row_t rxEnergyBackupExpectedRw_Wu;
 
   	std::stringstream ss;
   	ss << "Node " << i << ": ";
@@ -182,6 +198,11 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
       double txEnergyBit = 0;
       double txEnergyByte = 0;
       double txPow = -999;
+      double packetReceptionRatio_Wu = PRR;   //-> need to send to device class as attribute
+      double txEnergyExpected_Wu = 0;
+      double rxEnergyExpected_Wu = 0;
+      double txEnergyBackupExpected_Wu = 0;
+      double rxEnergyBackupExpected_Wu = 0;
 
       // Only calculate bit energies for links between nodes
       if (i != j)
@@ -190,25 +211,34 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
         double chnGainDbm = propModel->CalcRxPower(0, positions[i], positions[j]);
         txPow = ceil(m_minRxPowerDbm - chnGainDbm);
 
-        if((i == 0 && j != 1 && j != 2) || (j == 0 && i != 1 && i != 2))
-		{
-			//to prohibit the communication between gateway and field nodes (except APs)
-        	txPow = m_maxTxPowerDbm + 1;
-		}
+        if((i == 0 && j != 1 && j != 2) || (j == 0 && i != 1 && i != 2) || (i == 1 && j == 2) || (j == 1 && i == 2))
+          {
+            //to prohibit the communication between gateway and field nodes (except APs)
+            txPow = m_maxTxPowerDbm + 1;
+          }
 
-        if (txPow < minTxPowerDbm){
-          txPow = minTxPowerDbm;
-        }
+        if (txPow < minTxPowerDbm)
+          {
+            txPow = minTxPowerDbm;
+          }
 
     		ss << "(" << i << "->" << j << "," << txPow << "," << (m_minRxPowerDbm - chnGainDbm) << ") ";
 
         // Calculate the tx energy required per bit (uJ)
+    		txPower = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(txPow) + procActiveCurr) *
+            zigbeePhy->GetSupplyVoltage();
+        txEnergyBit = txPower / m_bitRate * 1e6;
 
-        txEnergyBit = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(txPow) + procActiveCurr) *
-            zigbeePhy->GetSupplyVoltage() / m_bitRate * 1e6;
+        txEnergyByte = txPower / m_bitRate * 8 * 1e6;
 
-        txEnergyByte = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(txPow) + procActiveCurr) *
-            zigbeePhy->GetSupplyVoltage() / m_bitRate * 8 * 1e6;
+        // this is to avoid difference values for the busy current
+        txPower_Wu = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(m_maxTxPowerDbm) + procActiveCurr) *
+            zigbeePhy->GetSupplyVoltage();
+        txEnergyExpected_Wu = (2 - packetReceptionRatio_Wu)*txPower_Wu*tsMaxPacket;
+        rxEnergyExpected_Wu = (2 - packetReceptionRatio_Wu)*rxPower*tsMaxPacket;
+        txEnergyBackupExpected_Wu = pow(1 - packetReceptionRatio_Wu,2.0)*txPower_Wu*tsMaxPacket;
+        rxEnergyBackupExpected_Wu = pow(1 - packetReceptionRatio_Wu,2.0)*rxPower*tsMaxPacket +
+            (1-pow(1 - packetReceptionRatio_Wu,2.0))*rxPower*tsRxWait;
 
       }
 
@@ -216,6 +246,12 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
       txPowRw.push_back(txPow);
       txEnergiesRwBit.push_back(txEnergyBit);
       txEnergiesRwByte.push_back(txEnergyByte);
+      packetReceptionRatioRw_Wu.push_back(packetReceptionRatio_Wu);
+      txEnergyExpectedRw_Wu.push_back(txEnergyExpected_Wu);
+      rxEnergyExpectedRw_Wu.push_back(rxEnergyExpected_Wu);
+      txEnergyBackupExpectedRw_Wu.push_back(txEnergyBackupExpected_Wu);
+      rxEnergyBackupExpectedRw_Wu.push_back(rxEnergyBackupExpected_Wu);
+
     }
 
     NS_LOG_DEBUG(ss.str());
@@ -224,6 +260,11 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
     m_txPowerDbm.push_back(txPowRw);
     m_txEnergyBit.push_back(txEnergiesRwBit);
     m_txEnergyByte.push_back(txEnergiesRwByte);
+    m_packetReceptionRatio.push_back(packetReceptionRatioRw_Wu);
+    m_txEnergyExpected.push_back(txEnergyExpectedRw_Wu);
+    m_rxEnergyExpected.push_back(rxEnergyExpectedRw_Wu);
+    m_txEnergyBackupExpected.push_back(txEnergyBackupExpectedRw_Wu);
+    m_rxEnergyBackupExpected.push_back(rxEnergyBackupExpectedRw_Wu);
   }
 
   // Calculate max tx energy per bit
@@ -233,7 +274,6 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
   // Calculate rx energy per bit
   m_rxEnergyBit = (zigbeePhy->GetTrxCurrents()->GetBusyRxCurrentA() + procActiveCurr) *
       zigbeePhy->GetSupplyVoltage() / m_bitRate * 1e6;
-
 
   // Calculate max tx energy per byte
   m_maxTxEnergyByte = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(m_maxTxPowerDbm) + procActiveCurr) *

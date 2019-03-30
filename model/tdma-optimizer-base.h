@@ -30,6 +30,8 @@
 typedef std::vector<double> row_t;
 typedef std::vector<row_t> matrix_t;
 
+typedef std::vector<unsigned int> rowUInt_t;
+typedef std::vector<rowUInt_t> matrixUInt_t;
 
 namespace ns3 {
 class PropagationLossModel;
@@ -48,7 +50,8 @@ typedef enum
   TDMA_GOLDSMITH = 1,
   TDMA_CONVEX_INT = 2,
   TDMA_CONVEX_SLOT_C = 3,
-  TDMA_GRAPH = 4  //Rajith
+  TDMA_GRAPH = 4,
+  TDMA_MIN_LOAD = 5
 } OptimizerSelect;
 
 typedef std::vector<std::vector<NetworkLink> > tdmaSchedule;
@@ -78,11 +81,6 @@ public:
 
   void SetEdgeWeights (std::vector<std::pair<uint32_t,uint32_t>> edgeWeight);
 
-//  virtual std::map <uint32_t, Ptr<IsaGraph>> GetGraphMap(void);
-//  virtual Ptr<IsaGraph> GetGraph(void);
-
-//  virtual std::map <uint32_t, Ptr<IsaGraph>> SolveTdmaGraph (NodeContainer c); // Rajith
-  //Rajith added parameters
   std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;
   Ptr<IsaGraph> m_graph;
   std::vector<std::pair<uint32_t,uint32_t>> m_edgeWeightTDMA;
@@ -120,6 +118,15 @@ protected:
   matrix_t m_txEnergyByte;  ///< A matrix[i][j] for the tx energy per byte (Joules/byte) for each link (i->j).
   double m_maxTxEnergyByte; ///< The maximum energy which can be used to transmit one byte (Joules/byte)
   double m_rxEnergyByte;    ///< The amount of energy to receive one byte (Joules/byte).
+
+  // Attributes for the Wu's algorithm
+  matrix_t m_packetReceptionRatio; ///< A matrix[i][j] for Packet Reception Ratio (PPR) as a rate (e.g.: 0.90 for 90%) for each link (i->j).
+  matrix_t m_txEnergyExpected; ///< A matrix[i][j] for based on the Wu's Expected TX energy for each link (i->j).
+  matrix_t m_rxEnergyExpected; ///< A matrix[i][j] for based on the Wu's Expected RX energy for each link (i->j).
+  matrix_t m_txEnergyBackupExpected; ///< A matrix[i][j] for based on the Wu's Expected TX energy for each backup path (i->j).
+  matrix_t m_rxEnergyBackupExpected; ///< A matrix[i][j] for based on the Wu's Expected RX energy for each backup path (i->j).
+  double m_rxEnergyGeneralExpected; ///< General value based on the Wu's Expected RX energy for any link.
+  double m_rxEnergyBackupGeneralExpected; ///< General value based on the Wu's Expected RX energy for any link of backup paths.
 
 };
 
