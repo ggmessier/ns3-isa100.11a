@@ -91,7 +91,7 @@ private:
      */
   void GraphCreation(NodeContainer c);
 
-  map<uint32_t, MinLoadVertex>  MinLoadGraphRoute(uint32_t routeIndexIt, uint32_t src, uint32_t dst);
+  map<uint32_t, MinLoadVertex>  MinLoadGraphRoute(map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
 
   map<uint32_t, MinLoadVertex>  MinLoadSourceRoute(map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
 

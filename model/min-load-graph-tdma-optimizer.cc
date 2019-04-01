@@ -154,15 +154,13 @@ void MinLoadGraphTdmaOptimzer::GraphCreation(NodeContainer c)
   // UPLINK routes creation
   Ptr<IsaGraph> G = CreateObject<IsaGraph> ();
   std::map<uint32_t, MinLoadVertex> vertex;
+//  std::map<uint32_t, MinLoadVertex> vertex = m_vertexVector;
   for(uint32_t i = 3; i < numNodes; i++)
     {
       m_routeIndexMat[i][gwID] = m_routeIndexIt;
       G.operator *() = m_graph.operator *();
-      vertex = MinLoadGraphRoute(m_routeIndexIt, i, gwID);
-//      m_vertexVector[i] = vertex[i];
-//      m_vertexVector = vertex;
-//      NS_LOG_UNCOND("m_routeIndexMat "<<m_routeIndexIt);
-//      NS_LOG_UNCOND("m_normalizedLoadMap "<<vertex[i].m_normalizedLoad);
+//      vertex = MinLoadGraphRoute(vertex, m_routeIndexIt, i, gwID);
+      vertex = MinLoadGraphRoute(m_vertexVector, m_routeIndexIt, i, gwID);
 
       NS_LOG_UNCOND("****** PRIMARY PATH "<<i<<" -> "<<gwID);
       uint32_t j = i;
@@ -183,14 +181,7 @@ void MinLoadGraphTdmaOptimzer::GraphCreation(NodeContainer c)
         {
           NS_LOG_UNCOND(m_backUpPath[m_routeIndexIt][k]);
         }
-//      for (map<uint32_t, MinLoadVertex>::const_iterator it = vertex.begin ();it != vertex.end (); ++it)
-//        {
-//          if (it->second.m_normalizedLoad != INF_DOUBLE)
-//            {
-//              NS_LOG_UNCOND("src: "<<i<<" dst: "<<gwID<<" "<<it->first<<" norm Load "<<it->second.m_normalizedLoad
-//                            <<" Last Hop: "<<it->second.m_lastHop);
-//            }
-//        }
+
       m_routeIndexIt++;
     }
 
@@ -206,17 +197,17 @@ vector< vector<int> > MinLoadGraphTdmaOptimzer::SolveTdma (void)
 
 }
 
-map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute(uint32_t routeIndexIt, uint32_t src, uint32_t dst)
+map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute(map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst)
 {
   map<uint32_t, MinLoadVertex> vertex = m_rawVertex;
 
   if (src == dst)
-    return vertex;
+    return vertexVect;
 
   vector<uint32_t> queue;
 
   // LAMDA_d = GAMMA_d + r * E_r/ B_d (ALG1 of Wu's)
-  vertex[dst].m_normalizedLoad = m_vertexVector[dst].m_normalizedLoad +
+  vertex[dst].m_normalizedLoad = vertexVect[dst].m_normalizedLoad +
       vertex[dst].m_flowRate*m_rxEnergyGeneralExpected/vertex[dst].m_initialBatteryEnergy;
 
   // add v to Q (ALG1 of Wu's)
@@ -253,24 +244,37 @@ map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute(uint32_
 //    NS_LOG_UNCOND("MLGR min: "<<min<<" "<<index_min<<" "<<u);
     queue.erase(queue.begin () + index_min);
 
+//    vertexVect[u] = vertex[u];
+//    NS_LOG_UNCOND("***** MLGR u "<<u<<" "<<vertex[u].m_normalizedLoad);
     // (if LAMDA_u is INF_DOUBLE return INF_DOUBLE) & (if u is source return LAMDA_u) (ALG1 of Wu's)
 //    if (min == INF_DOUBLE || u == src)
 //        return vertex;
     if (min == INF_DOUBLE || u == src)
       {
 //        NS_LOG_UNCOND("MLGR min "<<min<<" u "<<u);
+//        return vertexVect;
         return vertex;
       }
 
-    map<uint32_t, MinLoadVertex> tempVertex;
     vector <Ptr<Node> > neighborsOfU = m_graph->GetGraphNodeMap()[u].m_neighbors;
 
     for (vector<Ptr<Node>>::const_iterator it = neighborsOfU.begin ();it != neighborsOfU.end (); ++it)
       {
         uint32_t neighborV = it->operator ->()->GetId();
+//        NS_LOG_UNCOND("***** MLGR ****** neighborV "<<neighborV);
+
         if (count(queue.begin(),queue.end(),neighborV) > 0)
           {
-            tempVertex = MinLoadSourceRoute(vertex, routeIndexIt, neighborV, dst);     // Need to sort out this graph issue
+            map<uint32_t, MinLoadVertex> vertexBackup = vertexVect;
+
+            uint32_t j = u;
+            while (j != dst && vertex[u].m_normalizedLoad != INF_DOUBLE)
+              {
+                vertexBackup[j].m_normalizedLoad = vertex[j].m_normalizedLoad;
+                j = vertex[j].m_lastHop;
+              }
+//            vertexBackup = MinLoadSourceRoute(vertexVect, routeIndexIt, neighborV, dst);     // Need to sort out this graph issue
+            vertexBackup = MinLoadSourceRoute(vertexBackup, routeIndexIt, neighborV, dst);     // Need to sort out this graph issue
 
 //            for (map<uint32_t, MinLoadVertex>::const_iterator it = tempVertex.begin ();it != tempVertex.end (); ++it)
 //              {
@@ -282,21 +286,21 @@ map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute(uint32_
 //              }
 //            NS_LOG_UNCOND("tempVertex[neighborV].m_normalizedLoad "<<tempVertex[neighborV].m_normalizedLoad);
             vector<uint32_t> tempBackupPath;
-            if (tempVertex[neighborV].m_normalizedLoad != INF_DOUBLE)
+            if (vertexBackup[neighborV].m_normalizedLoad != INF_DOUBLE)
               {
                 // update backup path vector
                 uint32_t j = neighborV;
                 tempBackupPath.push_back(j);
                 while (j != dst)
                   {
-                    tempBackupPath.push_back(tempVertex[j].m_lastHop);
-                    j = tempVertex[j].m_lastHop;
+                    tempBackupPath.push_back(vertexBackup[j].m_lastHop);
+                    j = vertexBackup[j].m_lastHop;
                   }
 
-                double newNormLoad = m_vertexVector[neighborV].m_normalizedLoad  +
+                double newNormLoad = vertexVect[neighborV].m_normalizedLoad  +
                     vertex[neighborV].m_flowRate*(m_txEnergyExpected[neighborV][u] + m_rxEnergyExpected[neighborV][u])/
                     vertex[neighborV].m_initialBatteryEnergy;
-                double alt = max(vertex[u].m_normalizedLoad, max(newNormLoad, tempVertex[neighborV].m_normalizedLoad ));
+                double alt = max(vertex[u].m_normalizedLoad, max(newNormLoad, vertexBackup[neighborV].m_normalizedLoad ));
 //                if (alt < m_vertexVector[neighborV].m_normalizedLoad || m_vertexVector[neighborV].m_normalizedLoad == 0)
                 if (alt < vertex[neighborV].m_normalizedLoad)
                   {
@@ -332,7 +336,7 @@ map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadSourceRoute(map<ui
   vector<uint32_t> queue;
 
   // LAMDA_d = GAMMA_d + r * E_r/ B_d (ALG1 of Wu's)
-  vertex[dst].m_normalizedLoad = m_vertexVector[dst].m_normalizedLoad +
+  vertex[dst].m_normalizedLoad = vertexVect[dst].m_normalizedLoad +
       vertex[dst].m_flowRate*m_rxEnergyBackupGeneralExpected/vertex[dst].m_initialBatteryEnergy;
 
   // add v to Q (ALG1 of Wu's)
@@ -370,25 +374,30 @@ map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadSourceRoute(map<ui
 //      NS_LOG_UNCOND("MLSR min: "<<min<<" "<<index_min<<" "<<u);
       queue.erase(queue.begin () + index_min);
 
+//      vertexVect[u] = vertex[u];
+//      NS_LOG_UNCOND("MLSR u "<<u<<" "<<vertex[u].m_normalizedLoad);
       // (if LAMDA_u is INF_DOUBLE return INF_DOUBLE) & (if u is source return LAMDA_u) (ALG1 of Wu's)
       //    if (min == INF_DOUBLE || u == src)
       //        return vertex;
-          if (min == INF_DOUBLE || u == src)
-            {
-//              NS_LOG_UNCOND("MLSR min "<<min<<" u "<<u);
-              return vertex;
-            }
+      if (min == INF_DOUBLE || u == src)
+        {
+  //        NS_LOG_UNCOND("MLGR min "<<min<<" u "<<u);
+//          return vertexVect;
+          return vertex;
+        }
 
       vector <Ptr<Node> > neighborsOfU = m_graph->GetGraphNodeMap()[u].m_neighbors;
 
       for (vector<Ptr<Node>>::const_iterator it = neighborsOfU.begin ();it != neighborsOfU.end (); ++it)
         {
           uint32_t neighborV = it->operator ->()->GetId();
+//          NS_LOG_UNCOND("MLSR neighborV "<<neighborV);
           if (count(queue.begin(),queue.end(),neighborV) > 0)
             {
-              double newNormLoad = m_vertexVector[neighborV].m_normalizedLoad +
+              double newNormLoad = vertexVect[neighborV].m_normalizedLoad +
                   vertex[neighborV].m_flowRate*(m_rxEnergyBackupExpected[neighborV][u])/vertex[neighborV].m_initialBatteryEnergy;
               double alt = max(vertex[u].m_normalizedLoad, newNormLoad);
+//              NS_LOG_UNCOND("MSLR vertex[u].m_normalizedLoad "<<vertex[u].m_normalizedLoad<<" newNormLoad "<<newNormLoad);
               if (alt < vertex[neighborV].m_normalizedLoad)
                 {
                   vertex[neighborV].m_normalizedLoad = alt;
