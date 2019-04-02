@@ -56,13 +56,16 @@ def build(bld):
 	'model/goldsmith-tdma-optimizer.cc',
 	'model/minhop-tdma-optimizer.cc',
     	'model/convex-integer-tdma-optimizer.cc',
-    	'model/isa100-graph-scheduling.cc',
      	'model/isa100-broadcast-graph.cc', 
      	'model/isa100-downlink-graph.cc', 
      	'model/isa100-uplink-graph.cc', 
-        'helper/isa-graph.cc',       
+        'model/isa-graph.cc',  
+        'model/graph-tdma-optimizer.cc', 
+    	'model/min-load-graph-tdma-optimizer.cc',    
 	'helper/isa100-helper.cc',
 	'helper/isa100-helper-locations.cc',
+    	'helper/isa100-graph-scheduling.cc',
+        'helper/isa100-min-load-graph-scheduling.cc',
 	'helper/isa100-helper-scheduling.cc'
         ]
 
@@ -96,11 +99,9 @@ def build(bld):
 	'model/goldsmith-tdma-optimizer.h',
 	'model/minhop-tdma-optimizer.h',
 	'model/convex-integer-tdma-optimizer.h',
-    	'model/isa100-graph-scheduling.h',
-     	'model/isa100-broadcast-graph.h', 
-     	'model/isa100-downlink-graph.h', 
-     	'model/isa100-uplink-graph.h', 
-        'helper/isa-graph.h', 
+        'model/graph-tdma-optimizer.h',
+        'model/min-load-graph-tdma-optimizer.h',
+        'model/isa-graph.h', 
         'helper/isa100-helper.h'
         ]
 
