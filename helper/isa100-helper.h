@@ -217,8 +217,6 @@ public:
    */
   void GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength,
 		  double minNodeSpacing, std::vector<Vector> coreNodeLocations, double factor);
-  //Rajith Changed
-
 
   // ------ Scheduling -----------
 
@@ -258,41 +256,78 @@ public:
       vector<uint8_t> carriers, uint32_t numHop, OptimizerSelect optSelect,
       Ptr<OutputStreamWrapper> stream = NULL);
 
-  //Rajith code addition for graph scheduling
+  // ------ Graph Scheduling Exclusive Functions -----------
+
   /** Construct the data communication schedule of the graph network
      *
      * @param G Pointer for the graph network that need to create the schedule
      */
   SchedulingResult ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> mapOfG);
 
-    /** Schedule link for specific graph type
-     *
-     * @param u and v are the source and destination of the communication
-     * @param Graph Pointer for the graph network that need to create the schedule
-     * @param superframe superframe size considering the sample rate
-     * @param timeSlot time slot that required to consider to find the next available slot
-     * @param option link option whether exclusive or shared
-     */
-    bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option);
+  /** Schedule link for specific graph type
+   *
+   * @param u and v are the source and destination of the communication
+   * @param Graph Pointer for the graph network that need to create the schedule
+   * @param superframe SUPERFRAME size considering the sample rate
+   * @param timeSlot earliest slot to be allocated
+   * @param option link option whether exclusive or shared
+   */
+  bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option);
 
-    /** Get next available channel offset and the time slot
-     *
-     * @param timeSlot time slot that required to consider to find the next available slot
-     */
-    Resource GetNextAvailableSlot(uint32_t timeSlot, DlLinkType option);
+  /** Get next available channel offset and the time slot
+   *
+   * @param u and v are the source and destination of the communication
+   * @param timeSlot earliest slot to be allocated
+   * @param option link option whether exclusive or shared
+   * @param repLength for the allocating slot
+   */
+  Resource GetNextAvailableSlot(uint32_t u, uint32_t v, uint32_t timeSlot, DlLinkType option, uint32_t repLength);
 
-//    void SetGroupSampleRate(uint32_t node, vector<Ptr<Node>> groups);
-//    vector<Ptr<Node>> GetGroupSampleRate(uint32_t);
-    SchedulingResult ScheduleAndRouteTDMAgraph();
+  /** Set created schedule for simulation
+   *
+   * @return Result of scheduling attempt.
+   */
+  SchedulingResult ScheduleAndRouteTDMAgraph();
 
-    void ResizeSchedule(uint32_t superframe);
+  /** Resize the main schedule (and repeat length vector) to fit all the slots of the SUPERFRAME
+   *
+   * @param superframe SUPERFRAME size considering the sample rate
+   */
+  void ResizeSchedule(uint32_t superframe);
 
-    void AddEdgeWeights (pair<uint32_t,uint32_t> edge);
+  /** Add Edge Weights to Han's Graph Algorithms (Not Required)
+   *
+   * @param edge information of the edge. i.e., source and destination node ID pairs
+   */
+  void AddEdgeWeights (pair<uint32_t,uint32_t> edge);
 
-    uint32_t GetSuperFrameSize ();
+  /** Iterate over the Graph nodes for "printGraph" TRACE
+   *
+   * @param Graph Pointer for the graph network that need to create the schedule
+   */
+  void PrintGraph (Ptr<IsaGraph> Graph);
 
-    void PrintGraph (Ptr<IsaGraph> Graph);
-  //end of Rajith code addition
+  /** Iterate over the main schedule for "Schedule" TRACE
+   *
+   */
+  void PrintGraphSchedule ();
+
+  // ------ MIN Load Graph (Wu's) Scheduling Exclusive Functions -----------
+
+  /** Set created schedule for simulation
+   *
+   * @return Result of scheduling attempt.
+   */
+  SchedulingResult ConstructDataCommunicationScheduleMinLoad(vector< vector<uint32_t>> UL_Ex, vector< vector<uint32_t>> UL_Sh,
+                                               vector< vector<uint32_t>> DL_Ex, vector< vector<uint32_t>> DL_Sh, int frameSize);
+
+  bool ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int frameSize, uint32_t timeSlot, DlLinkType option);
+//  /** Construct the data communication schedule of the graph network
+//     *
+//     * @param G Pointer for the graph network that need to create the schedule
+//     */
+//  SchedulingResult ConstructDataCommunicationSchedule (vector< vector<uint32_t>> flows, vector<uint32_t> flowBoundaries);
+
   /**}@*/
 
 private:
@@ -386,9 +421,6 @@ private:
    */
   SchedulingResult CalculateSourceRouteStrings(vector<std::string> &routingStrings, vector< vector<int> > schedule);
 
-
-
-
   /** Set the DL attributes of a net device.
    * @param device Pointer to the net device object.
    */
@@ -415,7 +447,7 @@ private:
   int m_numTimeslots; ///< Number of timeslots in a superframe.
 
   // Additional private variables used by Rajith
-  bool m_graphType;  ///< Rajith - use to identify the graph
+  bool m_graphType;  ///< use to identify the graph
   // slot -> channel -> TX/ RX -> node
   vector<vector<vector<uint32_t>>> m_mainSchedule;  ///< main schedule information (slot, channel index,  TX if 0 and TX if 1)
   // node -> slot -> (channel, TX/ RX/ Shared)
@@ -428,7 +460,6 @@ private:
   map<uint32_t, uint8_t> m_nextAvailableChIndex;   ///< to track the next available carrier for schedule (slot -> next channel index)
 
   map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
-  // end of additional private variables used by Rajith
 
   HelperLocationTracedCallback m_locationTrace;
   HelperScheduleTracedCallback m_scheduleTrace;
@@ -437,7 +468,7 @@ private:
   HelperGraphTracedCallback m_graphTrace;
 
   vector<pair<uint32_t,uint32_t>> m_edgeWeight;
-  bool m_ResourceAvailable;     //frame size is sufficent to create the scheduling
+  bool m_ResourceAvailable;     ///< whether frame size is sufficient to create the scheduling
 
 };
 
