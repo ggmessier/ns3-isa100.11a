@@ -38,7 +38,8 @@
 //#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
 
 // Topology
-#define SENSOR_DENSITY 0.0185  // Nodes/m^2
+//#define SENSOR_DENSITY 0.0185  // Nodes/m^2
+#define SENSOR_DENSITY 0.0093  // Nodes/m^2
 #define MIN_NODE_SPACING 3.0               // Node spacing is at least this distance (m)
 #define FIELD_SIZE_X 60.0  // Field size in the x direction.
 #define FIELD_SIZE_Y 90.0  // Field size in the y direction.
@@ -335,7 +336,7 @@ static void LogPktReport(Ptr<OutputStreamWrapper> stream)
 int main (int argc, char *argv[])
 {
 //	  LogComponentEnable("FishPropagationLossModel",LOG_LEVEL_LOGIC);
-		LogComponentEnable("Isa100Dl",LOG_ALL);
+//		LogComponentEnable("Isa100Dl",LOG_ALL);
 //	  LogComponentEnable("Isa100HelperScheduling",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("MinHopTdmaOptimizer",LOG_LEVEL_LOGIC);
 //	  LogComponentEnable("ConvexIntTdmaOptimizer",LOG_LEVEL_LOGIC);
@@ -372,7 +373,7 @@ int main (int argc, char *argv[])
   cmd.AddValue("nnodes", "Number of sensor nodes.",numSensorNodes);
 //  cmd.AddValue("APs", "Number of access points.",numAccessPoints); // Rajith
   cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, "
-      "ConvInt10ms, ConvIntPckt, Graph",optString); //Rajith changed
+      "ConvInt10ms, ConvIntPckt, Graph, MinLoad",optString); //Rajith changed
   cmd.AddValue("failNodeTime","Fail Node Time.",tempNodeFailTime); //Rajith added
   cmd.AddValue("failTotPkts","Number of packets need to exceed to fail the nodes.",totPktsToNodeFail); //Rajith added
   cmd.AddValue("simDuration","Simulation Duration.",simDuration); //Rajith added
@@ -415,11 +416,16 @@ int main (int argc, char *argv[])
   	optimizerType = TDMA_CONVEX_INT;
   	slotDuration = Seconds((double)(PACKET_OVERHEAD_BYTES+PACKET_DATA_BYTES) * 8 / 250e3 + TX_EARLIEST_S);
   }
-  else if(optString == "Graph")       //Rajith
-    {               //Rajith
-      optimizerType = TDMA_GRAPH;   //Rajith
-      slotDuration = MilliSeconds(10);  //Rajith
-    }           //Rajith
+  else if(optString == "Graph")
+    {
+      optimizerType = TDMA_GRAPH;
+      slotDuration = MilliSeconds(10);
+    }
+  else if(optString == "MinLoad")
+    {
+      optimizerType = TDMA_MIN_LOAD;
+      slotDuration = MilliSeconds(10);
+    }
   else
   	NS_FATAL_ERROR("Command line optimization string incorrect.");
 
@@ -648,7 +654,7 @@ int main (int argc, char *argv[])
 		sensor->SetAttribute("ActiveCurrent", DoubleValue(SENSOR_SAMPLE_POWER_W/3.0));
 		sensor->SetAttribute("IdleCurrent", DoubleValue(0.0));
 		sensor->SetAttribute("SupplyVoltage", DoubleValue(3.0));
-        sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
+    sensor->SetAttribute("SensingTime", TimeValue( Seconds(SENSOR_SAMPLE_DURATION_S) ) );
 
 		isaHelper->InstallSensor(i,sensor);
 
@@ -656,14 +662,12 @@ int main (int argc, char *argv[])
 
 		//Rajith Changed - begin
 		if(i >= 3)
-		  {
-		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
-
-		  }
+		  battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e6);
+		else if(i == 0)
+		  battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e300);
 		else
-		  {
-		    battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e300);
-		  }
+		  battery->SetInitEnergy(DEFAULT_INITIAL_ENERGY_J*1e250);
+
     //Rajith Changed - end
 		battery->SetBatteryDepletionCallback(MakeCallback(&BatteryDepletionCallbackEvent));
 
@@ -826,6 +830,8 @@ int main (int argc, char *argv[])
     netDevice->GetDl()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
     if (optString == "Graph")
       netDevice->GetDl()->SetAttribute("IsGraph", BooleanValue(true));
+
+    netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
   }
 
   // ******************************************** TDMA OPTIMIZATION *********************************************
@@ -904,7 +910,7 @@ int main (int argc, char *argv[])
   	totDelay += reportTotalDelay[i];
   	totReportReTx += reportRetxNum[i];
 
-    NS_LOG_UNCOND("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
+    NS_LOG_DEBUG("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
 
   	if(reportRxNum[i] == 0){
   		NS_LOG_UNCOND("*Starved Node*: " << i);
@@ -921,8 +927,9 @@ int main (int argc, char *argv[])
     *(reportStream->GetStream()) << "Failure," << STARVED_NODE << "\n";
   else{
       //Rajith new Report
-      *(reportStream->GetStream()) << seed << " "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "<<totDelay.GetSeconds()/totReportRx << "\n";
-      *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
+      *(reportStream->GetStream()) << seed << " "<<numNodes<<" "<<factor<<" "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "
+          <<totDelay.GetSeconds()/totReportRx << " "<< networkLifetime << "\n";
+//      *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
 //  	*(reportStream->GetStream()) << "TotalTx," << totReportTx << "\n";
 //  	*(reportStream->GetStream()) << "TotalRx," << totReportRx << "\n";
 //  	*(reportStream->GetStream()) << "DropPct," << (1.0-(double)totReportRx/totReportTx) << "\n";
