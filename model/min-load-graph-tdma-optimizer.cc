@@ -143,7 +143,7 @@ void MinLoadGraphTdmaOptimzer::GraphCreation(NodeContainer c)
 
       for (uint32_t nNode = 1; nNode < numNodes; nNode++)
         {
-          if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm - 5)
+          if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
             {
               m_graph->AddEdge(parent, nNode);
               NS_LOG_UNCOND("Edge: "<<parent<<" "<<nNode);
@@ -164,33 +164,41 @@ void MinLoadGraphTdmaOptimzer::GraphCreation(NodeContainer c)
 
       NS_LOG_UNCOND("****** PRIMARY PATH "<<i<<" -> "<<gwID);
       uint32_t j = i;
-      m_primaryPath[m_routeIndexIt].push_back(j);
+      vector<uint32_t> primaryPathUL;
+      vector<uint32_t> backupPathUL = vertex[i].m_backupPath;
+//      m_primaryPath[m_routeIndexIt].push_back(j);
+      primaryPathUL.push_back(j);
       NS_LOG_UNCOND(j);
       while (j != gwID && vertex[i].m_normalizedLoad != INF_DOUBLE)
         {
-          m_primaryPath[m_routeIndexIt].push_back(vertex[j].m_lastHop);
+//          m_primaryPath[m_routeIndexIt].push_back(vertex[j].m_lastHop);
+          primaryPathUL.push_back(vertex[j].m_lastHop);
           m_vertexVector[j].m_normalizedLoad = vertex[j].m_normalizedLoad;
           j = vertex[j].m_lastHop;
           NS_LOG_UNCOND(j);
         }
 
-      NS_LOG_UNCOND(" BACKUP PATH "<<i<<" -> "<<gwID);
-      j = i;
-      m_backUpPath[m_routeIndexIt] = vertex[i].m_backupPath;
-      for (uint32_t k = 0; k < m_backUpPath[m_routeIndexIt].size(); k++)
-        {
-          NS_LOG_UNCOND(m_backUpPath[m_routeIndexIt][k]);
-        }
+//      NS_LOG_UNCOND(" BACKUP PATH "<<i<<" -> "<<gwID);
+//
+////      m_backUpPath[m_routeIndexIt] = vertex[i].m_backupPath;
+//      for (uint32_t k = 0; k < backupPathUL.size(); k++)
+//        {
+//          NS_LOG_UNCOND(backupPathUL[k]);
+//        }
 
       m_routeIndexIt++;
+      m_ULEx.push_back(primaryPathUL);
+      m_ULSh.push_back(backupPathUL);
+
     }
 
+//  m_flowBoundaries[0] = --m_routeIndexIt;
+//  m_flowBoundaries[1] = m_routeIndexIt*2;
 }
 
 vector< vector<int> > MinLoadGraphTdmaOptimzer::SolveTdma (void)
 {
   NS_LOG_FUNCTION (this);
-
   vector< vector<int> > flows(m_numNodes);
 
   return flows;
@@ -199,6 +207,7 @@ vector< vector<int> > MinLoadGraphTdmaOptimzer::SolveTdma (void)
 
 map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute(map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst)
 {
+  NS_LOG_FUNCTION (this);
   map<uint32_t, MinLoadVertex> vertex = m_rawVertex;
 
   if (src == dst)
@@ -241,7 +250,7 @@ map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute(map<uin
           }
         index_u++;
       }
-//    NS_LOG_UNCOND("MLGR min: "<<min<<" "<<index_min<<" "<<u);
+    NS_LOG_UNCOND("MLGR min: "<<min<<" "<<index_min<<" "<<u);
     queue.erase(queue.begin () + index_min);
 
 //    vertexVect[u] = vertex[u];
@@ -332,6 +341,7 @@ map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute(map<uin
 
 map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadSourceRoute(map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst)
 {
+  NS_LOG_FUNCTION (this);
   map<uint32_t, MinLoadVertex> vertex = m_rawVertex;
   vector<uint32_t> queue;
 

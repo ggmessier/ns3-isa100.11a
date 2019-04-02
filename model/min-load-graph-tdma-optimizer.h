@@ -38,7 +38,6 @@ typedef struct
   Ptr<Node> m_head;                  ///< Pointer for the node.
   double m_normalizedLoad;        ///< LAMDA - temporary normalized load
   uint32_t m_lastHop;    ///< (H) - track the last hop devices
-//  double m_normalizedBackupLoad;        ///< LAMDA - temporary normalized load
   vector<uint32_t> m_backupPath;      ///< (P) - backup paths
   double m_flowRate;    ///< flow rate of the node
   double m_initialBatteryEnergy;  ///< initial battery energy value
@@ -100,8 +99,6 @@ private:
   std::map<uint32_t, double> m_normalizedLoadMap;   ///< temporary normalized load vector; map<m_routeIndexIt, Load>
   uint32_t m_routeIndexIt;        //< route index iterator
   matrixUInt_t m_routeIndexMat;     //< route index iterator is stored in a matrix. (i -> j)
-  map<uint32_t, vector<uint32_t>> m_primaryPath;  //< Last hop vector; map<m_routeIndexIt, map<v, u>>
-  map<uint32_t, vector<uint32_t>> m_backUpPath;  //< Last hop vector; map<m_routeIndexIt, map<v, u>>
 
 };
 

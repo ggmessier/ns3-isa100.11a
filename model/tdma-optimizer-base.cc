@@ -96,7 +96,7 @@ TdmaOptimizerBase::TdmaOptimizerBase ()
   m_numTimeslots = 0;
   m_currMultiFrame = 0;
   m_frameInitEnergiesJ.clear();
-  m_graph = 0;   // Rajith
+  m_graph = 0;
 }
 
 TdmaOptimizerBase::~TdmaOptimizerBase ()

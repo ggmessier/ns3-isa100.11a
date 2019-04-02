@@ -81,9 +81,18 @@ public:
 
   void SetEdgeWeights (std::vector<std::pair<uint32_t,uint32_t>> edgeWeight);
 
-  std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;
-  Ptr<IsaGraph> m_graph;
-  std::vector<std::pair<uint32_t,uint32_t>> m_edgeWeightTDMA;
+  // Attributes for the HAN's Graph Algorithm
+  std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;  // all the graphs
+  Ptr<IsaGraph> m_graph;        // pointer for the main graph (initial)
+  std::vector<std::pair<uint32_t,uint32_t>> m_edgeWeightTDMA;   // edge weight graph if necessary
+
+  // Attributes for Wu's Algorithm
+  std::vector<std::vector<uint32_t>> m_ULEx;  //< UL paths vector; Exclusive; vector< path source -> destination >
+  std::vector<std::vector<uint32_t>> m_ULSh;  //< UL paths vector; Shared; vector< path source -> destination >
+  std::vector<std::vector<uint32_t>> m_DLEx;  //< DL paths vector; Exclusive; vector< path source -> destination >
+  std::vector<std::vector<uint32_t>> m_DLSh;  //< DL paths vector; Shared; vector< path source -> destination >
+//  // size of UL DL EX SHARED slots for Wu's ALGO
+//  std::vector<uint32_t> m_flowBoundaries;     // UL-EX [0] UL-SHARED [1] DL-EX [2] DL-SHARED [3]
 
 protected:
 
