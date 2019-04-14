@@ -49,6 +49,8 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector<
   if (!scheduleFound)
     return INSUFFICIENT_SLOTS;  // schedule FAIL
 
+  // scheduling for DOWNLINK need to add here.
+
   schedulingResult = SCHEDULE_FOUND;
 
   return schedulingResult;
@@ -74,13 +76,13 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
   for(uint32_t i = 0; i < flows.size(); i++)
     {
       dstNode = flows[i][flows[i].size()-1];
-      NS_LOG_DEBUG("dstNode: "<<dstNode);
+      NS_LOG_UNCOND("dstNode: "<<dstNode);
       for(uint32_t j = 0; j < flows[i].size() - 1; j++)
         {
           txNode = flows[i][j];
           rxNode = flows[i][j + 1];
 
-          NS_LOG_DEBUG("txNode: "<<txNode<<" rxNode: "<<rxNode);
+          NS_LOG_UNCOND("txNode: "<<txNode<<" rxNode: "<<rxNode);
           // identify the earliest slot from t with a channel c
           resource = (this)->GetNextAvailableSlot(txNode, rxNode ,timeSlot, option, frameSize);
           if(!m_ResourceAvailable)
@@ -88,7 +90,7 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
           slot = resource.timeSlot;
           chIndex = resource.channelIndex;
 
-          NS_LOG_DEBUG("slot: "<<slot<<" chIndex: "<<to_string(chIndex));
+          NS_LOG_UNCOND("slot: "<<slot<<" chIndex: "<<to_string(chIndex));
 
           (this)->m_mainSchedule[slot][chIndex][0] = txNode;
           (this)->m_mainSchedule[slot][chIndex][1] = rxNode;
@@ -103,6 +105,7 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
           if(count(m_tableList[txNode][dstNode].begin(),m_tableList[txNode][dstNode].end(),address_next.Get()) == 0)
             {
               m_tableList[txNode][dstNode].push_back(address_next.Get());   //update the routing tables
+              NS_LOG_UNCOND("m_tableList: "<<txNode<<" dstNode: "<<dstNode<<" address_next"<<address_next.Get());
             }
         }
     }
