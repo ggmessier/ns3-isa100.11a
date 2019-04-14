@@ -680,7 +680,8 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
       TxQueueElement *txQElement = m_txQueue.front ();
 
-      for (int i = 0; i<m_txQueue.size(); i++)
+      // Print the information of the packets in the queue.
+      for (unsigned int i = 0; i<m_txQueue.size(); i++)
         {
           std::stringstream ssTemp;
           TxQueueElement *txQElementTemp = m_txQueue[i];
@@ -700,7 +701,6 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
           std::string msgTemp = ssTemp.str ();
           NS_LOG_DEBUG(msgTemp);
         }
-
 
       Mac16Address nextNodeAddr;
       uTwoBytes_t buffer;
@@ -726,71 +726,73 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       nextNodeAddr.CopyTo (buffer.byte);
       nextNodeInd = buffer.byte[1];
 
-      int8_t txPowerTemp;
-      if(!ACK)
+      if(m_isGraph)
         {
-          Isa100DlHeader headerTemp;
-          txQElement->m_packet->PeekHeader (headerTemp);
-          Mac16Address nextNodeAddrTemp;
-          uTwoBytes_t bufferTemp;
-          //Temporary code to set the power // Rajith
-          txPowerTemp = m_txPowerDbm[nextNodeInd];
-
-          uint8_t nextNodeIndTemp;
-
-          for (int i = 0; i < headerTemp.GetNumOfGraphRouteHop(); i++)
+          int8_t txPowerTemp;
+          if(!ACK)
             {
-              nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
-              nextNodeAddrTemp.CopyTo (bufferTemp.byte);
-              nextNodeIndTemp = bufferTemp.byte[1];
-              if(m_txPowerDbm[nextNodeIndTemp] > txPowerTemp)
+              Isa100DlHeader headerTemp;
+              txQElement->m_packet->PeekHeader (headerTemp);
+              Mac16Address nextNodeAddrTemp;
+              uTwoBytes_t bufferTemp;
+              //Temporary code to set the power // Rajith
+              txPowerTemp = m_txPowerDbm[nextNodeInd];
+
+              uint8_t nextNodeIndTemp;
+
+              for (int i = 0; i < headerTemp.GetNumOfGraphRouteHop(); i++)
                 {
-                  txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
+                  nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
+                  nextNodeAddrTemp.CopyTo (bufferTemp.byte);
+                  nextNodeIndTemp = bufferTemp.byte[1];
+                  if(m_txPowerDbm[nextNodeIndTemp] > txPowerTemp)
+                    {
+                      txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
+                    }
                 }
-            }
 
-          ZigbeePibAttributeIdentifier id = phyTransmitPower;
-          ZigbeePhyPIBAttributes attribute;
+              ZigbeePibAttributeIdentifier id = phyTransmitPower;
+              ZigbeePhyPIBAttributes attribute;
 
-          attribute.phyTransmitPower = txPowerTemp;
+              attribute.phyTransmitPower = txPowerTemp;
 
-          // Set the tx power attribute
-          if (!m_plmeSetAttribute.IsNull ())
-            {
-              m_plmeSetAttribute (id,&attribute);
-            }
-          else
-            {
-              NS_FATAL_ERROR ("m_plmeSetAttribute null.");
-            }
-          NS_LOG_DEBUG("not ACK packet TXpwr: "<<to_string(txPowerTemp));
-          //end of new code // rajith
-        }
-      else
-        {
-          // Obtain and format tx power for PHY layer
-          txPowerTemp = m_txPowerDbm[nextNodeInd];
-
-          ZigbeePibAttributeIdentifier id = phyTransmitPower;
-          ZigbeePhyPIBAttributes attribute;
-
-          attribute.phyTransmitPower = txPowerTemp;
-
-//          NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPower << "dBm");
-
-          // Set the tx power attribute
-          if (!m_plmeSetAttribute.IsNull ())
-            {
-              m_plmeSetAttribute (id,&attribute);
+              // Set the tx power attribute
+              if (!m_plmeSetAttribute.IsNull ())
+                {
+                  m_plmeSetAttribute (id,&attribute);
+                }
+              else
+                {
+                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
+                }
+              NS_LOG_DEBUG("not ACK packet TXpwr: "<<to_string(txPowerTemp));
+              //end of new code // rajith
             }
           else
             {
-              NS_FATAL_ERROR ("m_plmeSetAttribute null.");
-            }
-          NS_LOG_DEBUG("ACK packet TXpwr: "<<to_string(txPowerTemp));
-        }
+              // Obtain and format tx power for PHY layer
+              txPowerTemp = m_txPowerDbm[nextNodeInd];
 
-      if (m_usePowerCtrl)
+              ZigbeePibAttributeIdentifier id = phyTransmitPower;
+              ZigbeePhyPIBAttributes attribute;
+
+              attribute.phyTransmitPower = txPowerTemp;
+
+              NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPowerTemp << "dBm");
+
+              // Set the tx power attribute
+              if (!m_plmeSetAttribute.IsNull ())
+                {
+                  m_plmeSetAttribute (id,&attribute);
+                }
+              else
+                {
+                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
+                }
+              NS_LOG_DEBUG("ACK packet TXpwr: "<<to_string(txPowerTemp));
+            }
+        }
+      else if (m_usePowerCtrl)
         {
 
           // Obtain and format tx power for PHY layer
@@ -883,7 +885,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
               m_dlDataConfirmCallback (params);
             }
 
-          if(m_routingAlgorithm){
+          if(m_routingAlgorithm && m_isGraph){
               m_routingAlgorithm->DeleteTableEntry(nextNodeAddr);
           }
 
@@ -1127,8 +1129,6 @@ void Isa100Dl::PdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t lqi, dou
 
   Time delay = m_minLIFSPeriod;
 
-//  delay = delay + Seconds(0.008); // Rajith Added
-
   NS_LOG_DEBUG (" MAC delay " << delay.GetSeconds ());
 
   Simulator::Schedule (delay,&Isa100Dl::ProcessPdDataIndication,this,size,p,lqi, rxPowDbm);
@@ -1301,8 +1301,10 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               double chLossDb = trailer.GetDistrRoutingTxPower () - rxPowDbm;
               NS_LOG_DEBUG("TX: " <<rxDlHdr.GetDaddrSrcAddress ()<<" Rx: "<<m_address<<" Txpwr:"<< to_string(m_txPowerDbm[srcNodeInd])<<" Loss: "<<to_string(chLossDb)<<" Rxpwr "<<rxPowDbm);
 
-              SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
-//              SetTxPowerDbm (chLossDb - 101, srcNodeInd);
+//              if (m_isGraph)
+//                SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
+//              else
+                SetTxPowerDbm (chLossDb - 101, srcNodeInd);
 
               // Process the rx packet
               m_routingAlgorithm->ProcessRxPacket (p,forwardPacketOn);
@@ -1417,8 +1419,8 @@ void Isa100Dl::DlDataRequest (DlDataRequestParams params, Ptr<Packet> p)
       // Set generation time for tracing
       dlHdr.SetTimeGeneratedNS (Simulator::Now ().GetNanoSeconds ());
 
-      NS_LOG_LOGIC (" ACK Requested: Node " << m_address << " is sending a data packet to " << dlHdr.GetDaddrDestAddress () <<
-                    " and requests an ACK with DMIC " << dmic);                       // Rajith changed the short address to DD request address
+      NS_LOG_LOGIC (" ACK Requested: Node " << m_address << " is sending a data packet to " << dlHdr.GetShortSrcAddr()<<
+                    " and requests an ACK with DMIC " << dmic);
 
       // Number of retries plus the initial tx attempt
       txQElement->m_txAttemptsRem = m_maxFrameRetries + 1;
@@ -1583,7 +1585,7 @@ void Isa100Dl::SetTxPowersDbm (double * txPowers, uint8_t numNodes)
   NS_LOG_FUNCTION (this << txPowers << numNodes);
 
   // Indicate that we're using power control
-  m_usePowerCtrl = 0;
+  m_usePowerCtrl = 1;
 
   int8_t val;
 

@@ -231,9 +231,10 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
 
         txEnergyByte = txPower / m_bitRate * 8 * 1e6;
 
+        txPower_Wu = txPower;
         // this is to avoid difference values for the busy current
-        txPower_Wu = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(m_maxTxPowerDbm) + procActiveCurr) *
-            zigbeePhy->GetSupplyVoltage();
+//        txPower_Wu = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(m_maxTxPowerDbm) + procActiveCurr) *
+//            zigbeePhy->GetSupplyVoltage();
         txEnergyExpected_Wu = (2 - packetReceptionRatio_Wu)*txPower_Wu*tsMaxPacket;
         rxEnergyExpected_Wu = (2 - packetReceptionRatio_Wu)*rxPower*tsMaxPacket;
         txEnergyBackupExpected_Wu = pow(1 - packetReceptionRatio_Wu,2.0)*txPower_Wu*tsMaxPacket;
