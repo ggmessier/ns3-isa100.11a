@@ -828,7 +828,7 @@ int main (int argc, char *argv[])
 
     netDevice->GetPhy()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
     netDevice->GetDl()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
-    if (optString == "Graph")
+    if (optString == "Graph" || optString == "MinLoad")
       netDevice->GetDl()->SetAttribute("IsGraph", BooleanValue(true));
 
     netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
@@ -910,7 +910,7 @@ int main (int argc, char *argv[])
   	totDelay += reportTotalDelay[i];
   	totReportReTx += reportRetxNum[i];
 
-    NS_LOG_DEBUG("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
+    NS_LOG_UNCOND("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
 
   	if(reportRxNum[i] == 0){
   		NS_LOG_UNCOND("*Starved Node*: " << i);
