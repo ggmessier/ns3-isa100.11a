@@ -539,6 +539,7 @@ void Isa100Dl::ProcessLink ()
   uint16_t slotJump;
 
   NS_LOG_LOGIC (" Current Slot Index: " << currentSlot << " Next Slot Index: " << nextSlot);
+//  NS_LOG_UNCOND(" Current Slot Index: " << currentSlot << " Next Slot Index: " << nextSlot);
 
   if (nextSlot <= currentSlot)
     {
@@ -726,7 +727,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       nextNodeAddr.CopyTo (buffer.byte);
       nextNodeInd = buffer.byte[1];
 
-      if(m_isGraph)
+      if(m_isGraph && m_usePowerCtrl)
         {
           int8_t txPowerTemp;
           if(!ACK)
@@ -742,19 +743,22 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
               for (int i = 0; i < headerTemp.GetNumOfGraphRouteHop(); i++)
                 {
-                  nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
+//                  nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
+
+                  nextNodeAddrTemp = m_routingAlgorithm->NextNeighbor(headerTemp.GetGraphRouteHop(i));
                   nextNodeAddrTemp.CopyTo (bufferTemp.byte);
                   nextNodeIndTemp = bufferTemp.byte[1];
+
                   if(m_txPowerDbm[nextNodeIndTemp] > txPowerTemp)
-                    {
-                      txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
-                    }
+                    txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
                 }
 
               ZigbeePibAttributeIdentifier id = phyTransmitPower;
               ZigbeePhyPIBAttributes attribute;
 
               attribute.phyTransmitPower = txPowerTemp;
+
+//              NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPowerTemp << "dBm");
 
               // Set the tx power attribute
               if (!m_plmeSetAttribute.IsNull ())
@@ -1229,65 +1233,42 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       uint8_t srcNodeInd = shortSrcBuffer.byte[1];
       bool forwardPacketOn = false;
 
-      NS_LOG_DEBUG("ProcessPdDataIndication Source: "<<rxDlHdr.GetDaddrSrcAddress()<<" Destination: "<<rxDlHdr.GetDaddrDestAddress());
+//      NS_LOG_UNCOND("ProcessPdDataIndication Source: "<<rxDlHdr.GetDaddrSrcAddress()<<" Destination: "<<rxDlHdr.GetDaddrDestAddress());
 
       bool addressMatch = false;
       // check address match - Rajith
       if(rxDlHdr.GetShortDstAddr() == m_address)
-        {
-          addressMatch = true;
-        }
+        addressMatch = true;
 
-      if (m_isGraph)
-        {
-          for (int i = 0; i < rxDlHdr.GetNumOfGraphRouteHop(); i++)
-            {
-              if(rxDlHdr.GetGraphRouteHop(i) == m_address)
-                {
-                  addressMatch = true;
-                }
-            }
-        }
+//      if (m_isGraph)
+//        {
+////          NS_LOG_UNCOND("Hops "<<rxDlHdr.GetNumOfGraphRouteHop());
+//          for (int i = 0; i < rxDlHdr.GetNumOfGraphRouteHop(); i++)
+//            {
+////              if(rxDlHdr.GetGraphRouteHop(i) == m_address)
+////                addressMatch = true;
+//
+//              if(m_routingAlgorithm->NextNeighbor(rxDlHdr.GetGraphRouteHop(i)) != Mac16Address ("ff:ff"))
+//                addressMatch = true;
+//            }
+//        }
+//      else
+//        {
+//          if(rxDlHdr.GetShortDstAddr() == m_address)
+//            addressMatch = true;
+//        }
 
       if(!addressMatch)
         {
-          NS_LOG_DEBUG("Address doesn't match. Current: "<<m_address<<" Source: "<<rxDlHdr.GetDaddrSrcAddress ());
+          NS_LOG_UNCOND("Address doesn't match. Current: "<<m_address<<" Expected Dest: "<<rxDlHdr.GetShortDstAddr());
         }
+//      else
+//        {
+//          NS_LOG_UNCOND("Address matched. Current: "<<m_address<<" Expected dest: "<<rxDlHdr.GetShortDstAddr());
+//        }
       // Else check for an address match
       if(addressMatch)
         {
-          // Check if an ACK needs to be sent
-          if (m_ackEnabled && rxDlHdr.GetDhdrFrameControl ().ackReq == 1)
-            {
-              // Construct the ACK Packet
-              Ptr<Packet> ack = Create<Packet> (0);
-              Isa100DlAckHeader ackHdr;
-
-              // Set the destination address
-              ackHdr.SetShortDstAddr(rxDlHdr.GetShortSrcAddr());
-
-              // Use the DMIC of the packet as the unique identifier
-              ackHdr.SetDmic (rxDlHdr.GetDmic ());
-
-              ack->AddHeader (ackHdr);
-              NS_LOG_LOGIC (" ACK ready: " << *ack);
-              NS_LOG_LOGIC (" ACK Response: Node " << m_address << " received a data packet from " << rxDlHdr.GetShortSrcAddr () <<
-                            " and is responding to ACK request with DMIC " << ackHdr.GetDmic ());
-
-              m_dlTxTrace (m_address,ack);
-
-              // Add the ACK to the front of the queue and transmit it
-              TxQueueElement *txQElement = new TxQueueElement;
-              txQElement->m_packet = ack;
-              txQElement->m_txAttemptsRem = 1;            // Attempt to send the ack just once
-
-              m_txQueue.push_front (txQElement);
-
-              ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_TX_ON);
-
-//              return; - Rajith removed
-            }
-
           if (m_routingAlgorithm)
             {
 
@@ -1331,20 +1312,57 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               txQElement->m_packet = p;
               txQElement->m_txAttemptsRem = m_maxFrameRetries + 1;           // number of retries plus the initial tx attempt
 
-              m_txQueue.push_back (txQElement);
+//              m_txQueue.push_back (txQElement);
+              m_txQueue.push_front (txQElement);      // Rajith
 
               m_dlForwardTrace (m_address,p);
 
               NS_LOG_DEBUG("Packet Fwd: "<<std::to_string(dmic));
-              return;
+//              NS_LOG_UNCOND("Packet Fwd: "<<std::to_string(dmic));
+//              return;
 
             }
 
+          // Check if an ACK needs to be sent // Rajith moved ack after routing algorithm
+          if (m_ackEnabled && rxDlHdr.GetDhdrFrameControl ().ackReq == 1)
+            {
+              // Construct the ACK Packet
+              Ptr<Packet> ack = Create<Packet> (0);
+              Isa100DlAckHeader ackHdr;
+
+              // Set the destination address
+              ackHdr.SetShortDstAddr(rxDlHdr.GetShortSrcAddr());
+
+              // Use the DMIC of the packet as the unique identifier
+              ackHdr.SetDmic (rxDlHdr.GetDmic ());
+
+              ack->AddHeader (ackHdr);
+              NS_LOG_LOGIC (" ACK ready: " << *ack);
+              NS_LOG_LOGIC (" ACK Response: Node " << m_address << " received a data packet from " << rxDlHdr.GetShortSrcAddr () <<
+                            " and is responding to ACK request with DMIC " << ackHdr.GetDmic ());
+//              NS_LOG_UNCOND (" ACK Response: Node " << m_address << " received a data packet from " << rxDlHdr.GetShortSrcAddr () <<
+//                            " and is responding to ACK request with DMIC " << ackHdr.GetDmic ());
+
+              m_dlTxTrace (m_address,ack);
+
+              // Add the ACK to the front of the queue and transmit it
+              TxQueueElement *txQElement = new TxQueueElement;
+              txQElement->m_packet = ack;
+              txQElement->m_txAttemptsRem = 1;            // Attempt to send the ack just once
+
+              m_txQueue.push_front (txQElement);
+
+              ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_TX_ON);
+
+              if (forwardPacketOn)
+                return;   //Rajith removed
+            }
           // Accept any packet with a sequence number >= to what we're expecting.
 
           // GGM: Disabled this check because we need to handle the 8 bit wrap around (and really redesign this whole DL..)
 //          else if (1 || rxDlHdr.GetSeqNum () >= m_nextRxPacketSeqNum[srcNodeInd]) // Rajith changed
-          else
+//          else
+          if (!forwardPacketOn)
             {
 //              m_nextRxPacketSeqNum[srcNodeInd] = rxDlHdr.GetSeqNum () + 1; // Rajith Changed
               m_dlRxTrace (m_address,origPacket);
@@ -1363,6 +1381,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
               return;
             }
+
         }
 
       // At this point, we either didn't have an address match or the sequence number was wrong.
@@ -1585,7 +1604,7 @@ void Isa100Dl::SetTxPowersDbm (double * txPowers, uint8_t numNodes)
   NS_LOG_FUNCTION (this << txPowers << numNodes);
 
   // Indicate that we're using power control
-  m_usePowerCtrl = 1;
+  m_usePowerCtrl = 0;
 
   int8_t val;
 

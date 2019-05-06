@@ -154,7 +154,7 @@ Mac16Address Isa100DlHeader::GetGraphRouteHop(uint8_t hopNum)
 	Mac16Address nextAddr = m_routeAddresses[0];
 
 	if(m_numRouteAddresses > 1){
-	    nextAddr = m_routeAddresses[1];
+	    nextAddr = m_routeAddresses[hopNum];
 	}
 
 	return nextAddr;
@@ -163,7 +163,8 @@ Mac16Address Isa100DlHeader::GetGraphRouteHop(uint8_t hopNum)
 
 uint8_t Isa100DlHeader::GetNumOfGraphRouteHop()
 {
-  return sizeof(m_routeAddresses);
+//  return sizeof(m_routeAddresses);
+  return m_numRouteAddresses;       // Rajith Changed
 }
 
 

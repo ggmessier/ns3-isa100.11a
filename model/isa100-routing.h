@@ -34,6 +34,30 @@ class Packet;
 class Isa100NetDevice;
 class Isa100DlHeader;
 
+///** Next Hop information for the graph routing.
+// *
+// */
+//typedef struct{
+//  uint16_t nextGraphID;  ///< current graph ID
+//  Mac16Address nextNeighbor;  ///< neighbors for the next transmission
+//} NextHop;
+
+///** Current Hop information for the graph routing.
+// *
+// */
+//typedef struct{
+//  uint16_t GraphID;  ///< current graph ID
+//  bool primaryPath;   ///< flag to identify whether path is primary or back up
+//} CurrentHop;
+
+/** Indicates the routing method used
+ *
+ */
+typedef enum{
+  SOURCE,
+  GRAPH,
+  MINLOAD
+} RoutingMethod;
 
 class Isa100RoutingAlgorithm : public Object{
 public:
@@ -70,6 +94,18 @@ public:
   virtual Mac16Address AttemptAnotherLink(uint8_t destInd, std::vector<Mac16Address> attemptedLinks);
 
   virtual void DeleteTableEntry(Mac16Address nodeAddress) = 0; // Rajith
+
+//  virtual Mac16Address AddressMatch (std::vector<Mac16Address> graphList) = 0;
+
+//  RoutingMethod m_routingMethod;
+//
+//  void SetRoutingMethod(RoutingMethod routingMethod);
+
+  virtual void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> graphTable) = 0;
+
+  virtual Mac16Address NextGraphID (Mac16Address graphID) = 0;
+
+  virtual Mac16Address NextNeighbor (Mac16Address graphID) = 0;
 
 protected:
 
@@ -112,11 +148,18 @@ public:
 
   void DeleteTableEntry(Mac16Address nodeAddress); // Rajith
 
+  void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> graphTable);
+
+  Mac16Address NextGraphID (Mac16Address graphID);
+
+  Mac16Address NextNeighbor (Mac16Address graphID);
+
 private:
 
   Mac16Address **m_table;
   uint32_t m_numDests;
   uint32_t *m_numHops;
+  uint8_t m_nextSeqNum;
 
 };
 
@@ -158,10 +201,19 @@ public:
 
   void DeleteTableEntry(Mac16Address nodeAddress); // Rajith
 
+  void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> graphTable);
+
+  Mac16Address NextGraphID (Mac16Address graphID);
+
+  Mac16Address NextNeighbor (Mac16Address graphID);
+
 private:
 
-  std::map<uint32_t, std::vector<Mac16Address>> m_table;
+  std::map<uint32_t, std::vector<Mac16Address>> m_table;    ///<  map <destination ID, vector<graphIDs>>
+  ///< map <current graphID, NextHop(next graphID, next neighbor)>
+  std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> m_graphTable;
   uint8_t m_nextSeqNum;
+  uint32_t m_counter;
 //  Mac16Address **m_table;
 //  uint32_t m_numDests;
 //  uint32_t *m_numHops;

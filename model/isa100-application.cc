@@ -414,7 +414,7 @@ void Isa100BackboneNodeApplication::DlDataIndication (DlDataIndicationParams par
       NS_LOG_DEBUG("m_dataSeqNum: "<<std::to_string(params.m_dataSeqNum)<<"m_srcAddr: "<<params.m_srcAddr);
     }
 
-  NS_LOG_DEBUG("Received packet info m_dataSeqNum: "<<std::to_string(params.m_dataSeqNum)<<" m_srcAddr: "<<params.m_srcAddr);
+//  NS_LOG_UNCOND("Received packet info m_dataSeqNum: "<<std::to_string(params.m_dataSeqNum)<<" m_srcAddr: "<<params.m_srcAddr);
 }
 
 void Isa100BackboneNodeApplication::DlDataConfirm (DlDataConfirmParams params)
