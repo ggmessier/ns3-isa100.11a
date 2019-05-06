@@ -52,7 +52,7 @@ typedef struct{
 	int totalPackets; ///< Number of packets the node has to send.
 } ScheduleStruct;
 
-/** Used to contain the superframe schedule for a node.
+/** Used to contain the SUPERFRAME schedule for a node.
  *
  */
 typedef struct{
@@ -60,6 +60,24 @@ typedef struct{
 //	std::vector<uint8_t> channelSched;  ///< channel used for the communication
 	std::vector<DlLinkType> slotType;  ///< What the node is actually doing in those slots
 } NodeSchedule;
+
+/** Used to contain the node schedule information of a particular slot
+ *
+ */
+typedef struct{
+  uint8_t channelSched;  ///< channel used for the communication
+  DlLinkType slotType;  ///< TX/ RX or shared slot
+  Mac16Address graphID;  ///< current graph ID
+} NodeInfo;
+
+/** Used to contain the Table for a routing.
+ *
+ */
+typedef struct{
+  uint32_t destID;  ///< destination ID
+  Mac16Address nextGraphID;  ///< current graph ID
+  std::vector<Mac16Address> neighborList;  ///< neighbors for the next transmission
+} RoutingTable;
 
 /** Used to contain slot and frequency information
  *
@@ -272,7 +290,8 @@ public:
    * @param timeSlot earliest slot to be allocated
    * @param option link option whether exclusive or shared
    */
-  bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option);
+  bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option,
+                      uint16_t grpahID);
 
   /** Get next available channel offset and the time slot
    *
@@ -431,6 +450,12 @@ private:
    */
   void SetPhyAttributes (Ptr<ZigbeePhy> device);
 
+  /** Convert the graphIDs to match the current DROUT routing information
+   * @param graphID as 16bit (2 Byte) number
+   * @return graphID represent as a MacAddress
+   */
+  Mac16Address GraphIDConverter (uint16_t graphID);
+
   /** Trace source for number of hops in scheduled network.
    */
   TracedCallback< vector<int>  > m_hopTrace;
@@ -451,13 +476,16 @@ private:
   // slot -> channel -> TX/ RX -> node
   vector<vector<vector<uint32_t>>> m_mainSchedule;  ///< main schedule information (slot, channel index,  TX if 0 and TX if 1)
   // node -> slot -> (channel, TX/ RX/ Shared)
-  map<uint32_t, map<uint32_t, pair<uint8_t, DlLinkType>>> m_nodeScheduleN;    ///< schedule for each node of the network (map of node to NodeSchedule)
-  map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
+  map<uint32_t, map<uint32_t, NodeInfo>> m_nodeScheduleN;    ///< schedule for each node of the network (map of node to NodeSchedule)
+//  map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
+  ///< routing tables of each nodes (Node ID -> graphID -> routing table)
+  map<uint32_t, map<Mac16Address, RoutingTable>> m_tableList;
   map<uint32_t, map<uint32_t, vector<uint32_t>>> m_avgHopCount;  ///< average hop count of each node
   vector<vector<uint32_t>> m_repLength;   ///<repetition length of the slot and channel index
   vector<uint8_t> m_carriers;    ///< carriers used (channels)
   map<uint32_t, uint32_t> m_nextAvailableSlot;   ///< to track the next available time slot for schedule (current slot -> next)
   map<uint32_t, uint8_t> m_nextAvailableChIndex;   ///< to track the next available carrier for schedule (slot -> next channel index)
+  uint16_t m_grpahID;  ///< graph ID for the schedule creation
 
   map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
 
