@@ -480,6 +480,7 @@ private:
 //  map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
   ///< routing tables of each nodes (Node ID -> graphID -> routing table)
   map<uint32_t, map<Mac16Address, RoutingTable>> m_tableList;
+
   map<uint32_t, map<uint32_t, vector<uint32_t>>> m_avgHopCount;  ///< average hop count of each node
   vector<vector<uint32_t>> m_repLength;   ///<repetition length of the slot and channel index
   vector<uint8_t> m_carriers;    ///< carriers used (channels)
@@ -497,6 +498,14 @@ private:
 
   vector<pair<uint32_t,uint32_t>> m_edgeWeight;
   bool m_ResourceAvailable;     ///< whether frame size is sufficient to create the scheduling
+
+  uint16_t m_panID;
+  ///< routing tables of each nodes (Node ID -> destID -> graphID sequence)
+  map<uint32_t, map<uint32_t, vector<vector<Mac16Address>>>> m_tableList2;
+  map<uint32_t, vector<Mac16Address>> m_pathsMap;
+  map<uint16_t, vector<Mac16Address>> m_paths;
+//  vector<uint16_t> m_graphAllocation;
+//  uint16_t m_iter;  ///< graph ID for the schedule creation
 
 };
 
