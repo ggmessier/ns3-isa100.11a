@@ -85,6 +85,7 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph>
           if(v != gateway)
             {
               // Schedule primary and retry links for publishing data
+              m_paths.clear();
               m_panID = 0;
               if (m_grpahID > MAX_Uint16/2)
                 m_grpahID -= MAX_Uint16/2;
@@ -100,6 +101,7 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph>
                   vector<Mac16Address> path = it->second;
                   m_tableList2[v->GetId()][gateway->GetId()].push_back(path);
                 }
+              m_pathsMap.clear();
 //              for (map<uint16_t, vector<Mac16Address>>::const_iterator it = paths.begin ();
 //                         it != paths.end (); ++it)
 //                      {
@@ -118,7 +120,7 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph>
                                                     static_cast<uint16_t>(v->GetId()) + MAX_Uint16/2 + 1);
               if (!scheduleFound)
                 return INSUFFICIENT_SLOTS; // schedule FAIL
-              m_paths.clear();
+              m_pathsMap.clear();
               // Schedule primary and retry links for control data
 //              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, TRANSMIT,
 //                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/4 + 1);
@@ -163,10 +165,6 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
           successorsOfU.push_back(temp_graphNode.m_head);
     }
 
-  if (m_pathsMap.count(u->GetId()) != 0)
-    {
-      m_paths[m_panID] = m_pathsMap[u->GetId()];
-    }
   // node i in ALG 8
   Ptr<Node> next;
   Ptr<NetDevice> baseDevice_next;
@@ -217,6 +215,7 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
           scheduleInfo.slotType = RECEIVE;
           (this)->m_nodeScheduleN[next->GetId()][slot] = scheduleInfo;
           m_paths[m_panID].push_back(graphIDMac);
+          m_pathsMap[next->GetId()] = m_paths[m_panID];
 
           NS_LOG_UNCOND("1: slot: "<<slot<<" TX: "<<to_string(u->GetId())<<" RX: "<<to_string(next->GetId())<<
                         " Rep Len: "<<superframe<<" graphID "<<graphIDMac);
@@ -259,6 +258,7 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
               scheduleInfo.slotType = RECEIVE;
               (this)->m_nodeScheduleN[next->GetId()][slot] = scheduleInfo;
               m_paths[m_panID].push_back(graphIDMac);
+              m_pathsMap[next->GetId()] = m_paths[m_panID];
 
               NS_LOG_UNCOND("2: slot: "<<slot<<" TX: "<<to_string(u->GetId())<<" RX: "<<to_string(next->GetId())<<
                             " Rep Len: "<<superframeF_1<<" graphID "<<graphIDMac);
@@ -299,12 +299,23 @@ bool Isa100Helper::ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph,
               grpahID = m_grpahID;
               m_grpahID++;
               m_panID++;
+              while (!m_paths[m_panID].empty())
+                {
+                  m_panID++;
+                }
+
+              if (m_pathsMap.count(u->GetId()) != 0)
+                {
+//                  NS_LOG_UNCOND();
+                  m_paths[m_panID] = m_pathsMap[u->GetId()];
+                }
               Mac16Address graphIDMac = GraphIDConverter(grpahID);
               NodeInfo scheduleInfo = {m_carriers[chIndex], TRANSMIT, graphIDMac};
               (this)->m_nodeScheduleN[u->GetId()][slot] = scheduleInfo;
               scheduleInfo.slotType = RECEIVE;
               (this)->m_nodeScheduleN[next->GetId()][slot] = scheduleInfo;
               m_paths[m_panID].push_back(graphIDMac);
+              m_pathsMap[next->GetId()] = m_paths[m_panID];
 
               NS_LOG_UNCOND("3: slot: "<<slot<<" TX: "<<to_string(u->GetId())<<" RX: "<<to_string(next->GetId())<<
                             " Rep Len: "<<superframeF_1<<" graphID "<<graphIDMac);
@@ -453,6 +464,15 @@ Resource Isa100Helper::GetNextAvailableSlot(uint32_t u, uint32_t v, uint32_t tim
 void Isa100Helper::ResizeSchedule(uint32_t superframe)
 {
   NS_LOG_FUNCTION (this);
+  NS_LOG_UNCOND("m_panID "<<m_panID);
+  if (m_panID > 0)
+    {
+      for (uint16_t i = 0; i < m_panID; i ++)
+        {
+          NS_LOG_UNCOND("m_panID "<<m_panID<<" i "<<i);
+          m_paths[m_panID + i + 1] = m_paths[i];
+        }
+    }
   uint8_t numChannels = m_carriers.size();
   uint32_t initRepLength = (this)->m_repLength.size();
   if (superframe > (this)->m_mainSchedule.size())
@@ -460,6 +480,7 @@ void Isa100Helper::ResizeSchedule(uint32_t superframe)
       // resize the schedule to support new # of slots (SUPERFRAME)
       (this)->m_mainSchedule.resize(superframe, vector<vector <uint32_t>> (numChannels, vector <uint32_t> (2, 0xFFFF)));
       (this)->m_repLength.resize(superframe,vector<uint32_t> (numChannels));
+
     }
 
   if (superframe >= (this)->m_mainSchedule.size())
@@ -587,7 +608,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     NodeSchedule nodeSchedule;
     // this is to match with the routing table used in routing; map <destination ID, graph ID list> m_Table
     map<uint32_t, vector<Mac16Address>> table;
-    map<Mac16Address, pair<Mac16Address, Mac16Address>> graphTable; // graphID -> next graph ID, neighbor
+    map<Mac16Address, pair<Mac16Address, vector<Mac16Address>>> graphTable; // graphID -> next graph ID, neighbor
 
 //    NS_LOG_UNCOND("Here");
 //    for (map<Mac16Address, RoutingTable>::const_iterator it = m_tableList[nNode].begin ();
@@ -607,7 +628,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
     vector<uint8_t> hoppingPattern;
-    NS_LOG_DEBUG("nNode for Node schedule: "<<nNode);
+    NS_LOG_UNCOND("nNode for Node schedule: "<<nNode);
     for (map<uint32_t, NodeInfo>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
@@ -630,8 +651,11 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
               // populate the current graph -> next graph and next node MacAddress mapping
               NS_LOG_UNCOND("graphTable: cg "<<it->second.graphID<<" ng "<<m_tableList[nNode][it->second.graphID].nextGraphID<<" neigh: "
                             <<m_tableList[nNode][it->second.graphID].neighborList[0]);
-              graphTable[it->second.graphID].first = m_tableList[nNode][it->second.graphID].nextGraphID;
-              graphTable[it->second.graphID].second  = m_tableList[nNode][it->second.graphID].neighborList[0];
+              graphTable[it->second.graphID].first  = m_tableList[nNode][it->second.graphID].neighborList[0];
+              vector<Mac16Address> backUpGraphSequence;
+              backUpGraphSequence.push_back(m_tableList[nNode][it->second.graphID].nextGraphID);
+              graphTable[it->second.graphID].second = backUpGraphSequence;
+
             }
 
 
@@ -660,9 +684,11 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     if(!baseDevice || !netDevice)
       NS_FATAL_ERROR("Installing TDMA schedule on non-existent ISA100 net device.");
 
-    Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(table);
+//    Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(table);
+//    routingAlgorithm->SetGraphTable(graphTable);
+//    routingAlgorithm->SetTable(m_tableList2[nNode]);
+    Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm>(m_tableList2[nNode]);
     routingAlgorithm->SetGraphTable(graphTable);
-    routingAlgorithm->SetTable(m_tableList2[nNode]);
     netDevice->GetDl()->SetRoutingAlgorithm(routingAlgorithm);
 
     Mac16AddressValue address;
@@ -687,34 +713,16 @@ Mac16Address Isa100Helper::GraphIDConverter (uint16_t graphID)
 {
   NS_LOG_FUNCTION (this);
 
-//  int x;
-//  int INT_MAX = std::numeric_limits<int>::max();
-//  int INT_MIN = std::numeric_limits<int>::min();
-//  if (graphID <= INT_MAX)
-//    x = static_cast<int>(graphID);
-//  else if (graphID >= INT_MIN)
-//    x = static_cast<int>(graphID - INT_MIN) + INT_MIN;
-
   // convert the integer graphID to Hex value
   std::stringstream stream;
   stream << std::hex << static_cast<int>(graphID);
   string graphIDHexString = stream.str();
-//  NS_LOG_UNCOND("graphIDHexString "<<graphIDHexString);
+
   // 2 Byte Hex value is convertible to a maximum of size 4 array
   char * cstr = new char [4];
-//  cstr = "0000";
   std::strcpy (cstr, graphIDHexString.c_str());
-//  NS_LOG_UNCOND("cstr "<<cstr[0]<<" "<<cstr[1]<<" "<<cstr[2]<<" "<<cstr[3]);
-//  NS_LOG_UNCOND("HexString "<<graphIDHexString[0]<<" "<<graphIDHexString[1]<<" "<<graphIDHexString[2]<<" "<<graphIDHexString[3]);
-//  NS_LOG_UNCOND("graphIDHexString size: "<<graphIDHexString.size());
-//  NS_LOG_UNCOND("cstr size: "<<*cstr.size());
-//  NS_LOG_UNCOND();
 
-//  char * gAddr = new char [5];
-//  std::strcpy (cstr, graphIDHexString.c_str());
-//  gAddr = "00:00";
   char gAddr[5] = {'0','0',':','0','0'};
-//  gAddr[0] = '0'; gAddr[1] = '0'; gAddr[2] = ':'; gAddr[3] = '0'; gAddr[4] = '0';
 
   switch (graphIDHexString.size())
   {
@@ -723,32 +731,6 @@ Mac16Address Isa100Helper::GraphIDConverter (uint16_t graphID)
      case 3: gAddr[1] = cstr[0]; gAddr[3] = cstr[1]; gAddr[4] = cstr[2]; break;
      case 4: gAddr[0] = cstr[0]; gAddr[1] = cstr[1]; gAddr[3] = cstr[2]; gAddr[4] = cstr[3]; break;
   }
-
-//    NS_LOG_UNCOND("gAddr size: "<<to_string(sizeof(gAddr)));
-//  char * gAddr = new char [5];
-//  gAddr[0] = '0'; gAddr[1] = '0'; gAddr[2] = ':'; gAddr[3] = '0'; gAddr[4] = '0';
-//
-//  // Hexadecimal value representation algorithm
-//  int temp = static_cast<int>(graphID);
-//  int rem = 0;  // remainder after divided by 16
-//  int i = 4;    // maximum number of Hex digits for 2 Byte address
-//  while (temp != 0)
-//  {
-//      if (i == 2)
-//        {
-//          i--;
-//          continue;
-//        }
-//      rem = temp % 16;
-//      if (rem < 10)
-//          gAddr[i--] = rem + 48;
-//      else
-//          gAddr[i--] = rem + 55;
-//      temp = temp / 16;
-//  }
-//  NS_LOG_UNCOND(gAddr.size());
-
-//  NS_LOG_UNCOND("graphIDConverter "<<graphID<<" "<<gAddr<<" "<<Mac16Address(gAddr));
   return Mac16Address(gAddr);
 }
 
