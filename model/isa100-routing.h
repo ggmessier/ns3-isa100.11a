@@ -101,11 +101,11 @@ public:
 //
 //  void SetRoutingMethod(RoutingMethod routingMethod);
 
-  virtual void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> graphTable) = 0;
+  virtual void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, std::vector<Mac16Address>>> graphTable) = 0;
 
-  virtual void SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table) = 0;
+//  virtual void SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table) = 0;
 
-  virtual Mac16Address NextGraphID (Mac16Address graphID) = 0;
+  virtual std::vector<Mac16Address> BackUpGraphSequence (Mac16Address graphID) = 0;
 
   virtual Mac16Address NextNeighbor (Mac16Address graphID) = 0;
 
@@ -150,11 +150,11 @@ public:
 
   void DeleteTableEntry(Mac16Address nodeAddress); // Rajith
 
-  void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> graphTable);
+  void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, std::vector<Mac16Address>>> graphTable);
 
-  void SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table);
+//  void SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table);
 
-  Mac16Address NextGraphID (Mac16Address graphID);
+  std::vector<Mac16Address> BackUpGraphSequence (Mac16Address graphID);
 
   Mac16Address NextNeighbor (Mac16Address graphID);
 
@@ -181,7 +181,8 @@ public:
    * @param initNumDests The number of destinations the node can reach using source routing.
    * @param initTable Array of strings containing the multi-hop paths to reach each destination.  Each address is a string in XX:XX format.
    */
-  Isa100GraphRoutingAlgorithm(std::map<uint32_t, std::vector<Mac16Address>> initTable);
+//  Isa100GraphRoutingAlgorithm(std::map<uint32_t, std::vector<Mac16Address>> initTable);
+  Isa100GraphRoutingAlgorithm(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> initTable);
 
   ~Isa100GraphRoutingAlgorithm();
 
@@ -205,20 +206,20 @@ public:
 
   void DeleteTableEntry(Mac16Address nodeAddress); // Rajith
 
-  void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> graphTable);
+  void SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, std::vector<Mac16Address>>> graphTable);
 
-  void SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table);
+//  void SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table);
 
-  Mac16Address NextGraphID (Mac16Address graphID);
+  std::vector<Mac16Address> BackUpGraphSequence (Mac16Address graphID);
 
   Mac16Address NextNeighbor (Mac16Address graphID);
 
 private:
 
-  std::map<uint32_t, std::vector<Mac16Address>> m_table;    ///<  map <destination ID, vector<graphIDs>>
-  std::map<uint32_t, std::vector<std::vector<Mac16Address>>> m_table2;    ///<  map <destination ID, vector<graphIDs>>
-  ///< map <current graphID, NextHop(next graphID, next neighbor)>
-  std::map<Mac16Address, std::pair<Mac16Address, Mac16Address>> m_graphTable;
+//  std::map<uint32_t, std::vector<Mac16Address>> m_table;    ///<  map <destination ID, vector<graphIDs>>
+  std::map<uint32_t, std::vector<std::vector<Mac16Address>>> m_table;    ///<  map <destination ID, vector<vector<graphIDs>>
+  ///< map <current graphID, NextHop(next neighbor, back up graphID sequence)>
+  std::map<Mac16Address, std::pair<Mac16Address, std::vector<Mac16Address>>> m_graphTable;
   uint8_t m_nextSeqNum;
   uint32_t m_counter;
 //  Mac16Address **m_table;

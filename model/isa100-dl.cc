@@ -663,7 +663,7 @@ void Isa100Dl::PlmeCcaConfirm (ZigbeePhyEnumeration status)
 
 void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 {
-  NS_LOG_FUNCTION (this << m_address << Simulator::Now ().GetSeconds () << status);
+  NS_LOG_UNCOND (this << m_address << Simulator::Now ().GetSeconds () << status);
 
   // If the transmitter has been switched on, we have a packet to send.
   if (status == IEEE_802_15_4_PHY_TX_ON)
@@ -700,7 +700,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
             }
           std::string msgTemp = ssTemp.str ();
-          NS_LOG_DEBUG(msgTemp);
+          NS_LOG_UNCOND(msgTemp);
         }
 
       Mac16Address nextNodeAddr;
@@ -727,76 +727,77 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       nextNodeAddr.CopyTo (buffer.byte);
       nextNodeInd = buffer.byte[1];
 
-      if(m_isGraph && m_usePowerCtrl)
-        {
-          int8_t txPowerTemp;
-          if(!ACK)
-            {
-              Isa100DlHeader headerTemp;
-              txQElement->m_packet->PeekHeader (headerTemp);
-              Mac16Address nextNodeAddrTemp;
-              uTwoBytes_t bufferTemp;
-              //Temporary code to set the power // Rajith
-              txPowerTemp = m_txPowerDbm[nextNodeInd];
-
-              uint8_t nextNodeIndTemp;
-
-              for (int i = 0; i < headerTemp.GetNumOfGraphRouteHop(); i++)
-                {
-//                  nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
-
-                  nextNodeAddrTemp = m_routingAlgorithm->NextNeighbor(headerTemp.GetGraphRouteHop(i));
-                  nextNodeAddrTemp.CopyTo (bufferTemp.byte);
-                  nextNodeIndTemp = bufferTemp.byte[1];
-
-                  if(m_txPowerDbm[nextNodeIndTemp] > txPowerTemp)
-                    txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
-                }
-
-              ZigbeePibAttributeIdentifier id = phyTransmitPower;
-              ZigbeePhyPIBAttributes attribute;
-
-              attribute.phyTransmitPower = txPowerTemp;
-
+//      if(m_isGraph && m_usePowerCtrl)
+//        {
+//          int8_t txPowerTemp;
+//          if(!ACK)
+//            {
+//              Isa100DlHeader headerTemp;
+//              txQElement->m_packet->PeekHeader (headerTemp);
+//              Mac16Address nextNodeAddrTemp;
+//              uTwoBytes_t bufferTemp;
+//              //Temporary code to set the power // Rajith
+//              txPowerTemp = m_txPowerDbm[nextNodeInd];
+//
+//              uint8_t nextNodeIndTemp;
+//
+//              for (int i = 0; i < headerTemp.GetNumOfGraphRouteHop(); i++)
+//                {
+////                  nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
+//
+//                  nextNodeAddrTemp = m_routingAlgorithm->NextNeighbor(headerTemp.GetGraphRouteHop(i));
+//                  nextNodeAddrTemp.CopyTo (bufferTemp.byte);
+//                  nextNodeIndTemp = bufferTemp.byte[1];
+//
+//                  if(m_txPowerDbm[nextNodeIndTemp] > txPowerTemp)
+//                    txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
+//                }
+//
+//              ZigbeePibAttributeIdentifier id = phyTransmitPower;
+//              ZigbeePhyPIBAttributes attribute;
+//
+//              attribute.phyTransmitPower = txPowerTemp;
+//
+////              NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPowerTemp << "dBm");
+//
+//              // Set the tx power attribute
+//              if (!m_plmeSetAttribute.IsNull ())
+//                {
+//                  m_plmeSetAttribute (id,&attribute);
+//                }
+//              else
+//                {
+//                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
+//                }
+//              NS_LOG_DEBUG("not ACK packet TXpwr: "<<to_string(txPowerTemp));
+//              //end of new code // rajith
+//            }
+//          else
+//            {
+//              // Obtain and format tx power for PHY layer
+//              txPowerTemp = m_txPowerDbm[nextNodeInd];
+//
+//              ZigbeePibAttributeIdentifier id = phyTransmitPower;
+//              ZigbeePhyPIBAttributes attribute;
+//
+//              attribute.phyTransmitPower = txPowerTemp;
+//
 //              NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPowerTemp << "dBm");
-
-              // Set the tx power attribute
-              if (!m_plmeSetAttribute.IsNull ())
-                {
-                  m_plmeSetAttribute (id,&attribute);
-                }
-              else
-                {
-                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
-                }
-              NS_LOG_DEBUG("not ACK packet TXpwr: "<<to_string(txPowerTemp));
-              //end of new code // rajith
-            }
-          else
-            {
-              // Obtain and format tx power for PHY layer
-              txPowerTemp = m_txPowerDbm[nextNodeInd];
-
-              ZigbeePibAttributeIdentifier id = phyTransmitPower;
-              ZigbeePhyPIBAttributes attribute;
-
-              attribute.phyTransmitPower = txPowerTemp;
-
-              NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPowerTemp << "dBm");
-
-              // Set the tx power attribute
-              if (!m_plmeSetAttribute.IsNull ())
-                {
-                  m_plmeSetAttribute (id,&attribute);
-                }
-              else
-                {
-                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
-                }
-              NS_LOG_DEBUG("ACK packet TXpwr: "<<to_string(txPowerTemp));
-            }
-        }
-      else if (m_usePowerCtrl)
+//
+//              // Set the tx power attribute
+//              if (!m_plmeSetAttribute.IsNull ())
+//                {
+//                  m_plmeSetAttribute (id,&attribute);
+//                }
+//              else
+//                {
+//                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
+//                }
+//              NS_LOG_DEBUG("ACK packet TXpwr: "<<to_string(txPowerTemp));
+//            }
+//        }
+//      else
+      if (m_usePowerCtrl)
         {
 
           // Obtain and format tx power for PHY layer
@@ -938,7 +939,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       // This is a retransmission attempt of a data packet
       else if (m_ackEnabled && !IsAckPacket (txQElement->m_packet))
         {
-          NS_LOG_DEBUG(" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
+          NS_LOG_UNCOND(" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
 
           // Indicate a retransmission is happening
           m_retrxTrace (m_address);
@@ -1283,9 +1284,9 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               NS_LOG_DEBUG("TX: " <<rxDlHdr.GetDaddrSrcAddress ()<<" Rx: "<<m_address<<" Txpwr:"<< to_string(m_txPowerDbm[srcNodeInd])<<" Loss: "<<to_string(chLossDb)<<" Rxpwr "<<rxPowDbm);
 
 //              if (m_isGraph)
-//                SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
+                SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
 //              else
-                SetTxPowerDbm (chLossDb - 101, srcNodeInd);
+//                SetTxPowerDbm (chLossDb - 101, srcNodeInd);
 
               // Process the rx packet
               m_routingAlgorithm->ProcessRxPacket (p,forwardPacketOn);
@@ -1355,7 +1356,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_TX_ON);
 
               if (forwardPacketOn)
-                return;   //Rajith removed
+                return;
             }
           // Accept any packet with a sequence number >= to what we're expecting.
 
@@ -1604,7 +1605,7 @@ void Isa100Dl::SetTxPowersDbm (double * txPowers, uint8_t numNodes)
   NS_LOG_FUNCTION (this << txPowers << numNodes);
 
   // Indicate that we're using power control
-  m_usePowerCtrl = 0;
+  m_usePowerCtrl = 1;
 
   int8_t val;
 
