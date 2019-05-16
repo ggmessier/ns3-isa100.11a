@@ -171,7 +171,7 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
   double txPower = 0;
   double txPower_Wu = 0;
   double PRR = 0.9;
-  double rxPower = (zigbeePhy->GetTrxCurrents()->GetBusyTxCurrentA(m_maxTxPowerDbm) + procActiveCurr) *
+  double rxPower = (zigbeePhy->GetTrxCurrents()->GetBusyRxCurrentA() + procActiveCurr) *
       zigbeePhy->GetSupplyVoltage();
   double tsMaxPacket = 4256*1e-6;   //-> need to send to helper class as attribute
   double tsRxWait = 2200*1e-6;    //-> need to send to helper class as attribute

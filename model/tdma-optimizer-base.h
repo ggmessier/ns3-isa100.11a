@@ -88,7 +88,7 @@ public:
 
   // Attributes for Wu's Algorithm
   std::vector<std::vector<uint32_t>> m_ULEx;  //< UL paths vector; Exclusive; vector< path source -> destination >
-  std::vector<std::vector<uint32_t>> m_ULSh;  //< UL paths vector; Shared; vector< path source -> destination >
+  std::vector<std::vector<std::vector<uint32_t>>> m_ULSh;  //< UL paths vector; Shared; vector< path source -> destination >
   std::vector<std::vector<uint32_t>> m_DLEx;  //< DL paths vector; Exclusive; vector< path source -> destination >
   std::vector<std::vector<uint32_t>> m_DLSh;  //< DL paths vector; Shared; vector< path source -> destination >
 //  // size of UL DL EX SHARED slots for Wu's ALGO

@@ -288,7 +288,7 @@ Isa100Dl::Isa100Dl ()
       m_txPowerDbm[i] = 100;           // set to an invalid transmit power level
     }
   m_usePowerCtrl = 0;
-  m_txPowerLevelMarginDb = 3;
+  m_txPowerLevelMarginDb = 0;
 
   m_address = Mac16Address::Allocate ();
 
@@ -663,7 +663,7 @@ void Isa100Dl::PlmeCcaConfirm (ZigbeePhyEnumeration status)
 
 void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 {
-  NS_LOG_UNCOND (this << m_address << Simulator::Now ().GetSeconds () << status);
+  NS_LOG_FUNCTION (this << m_address << Simulator::Now ().GetSeconds () << status);
 
   // If the transmitter has been switched on, we have a packet to send.
   if (status == IEEE_802_15_4_PHY_TX_ON)
@@ -700,20 +700,20 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
             }
           std::string msgTemp = ssTemp.str ();
-          NS_LOG_UNCOND(msgTemp);
+          NS_LOG_DEBUG(msgTemp);
         }
 
       Mac16Address nextNodeAddr;
       uTwoBytes_t buffer;
       uint8_t nextNodeInd;
-      bool ACK = false; //Rajith new temporary
+//      bool ACK = false; //Rajith new temporary
 
       if (IsAckPacket (txQElement->m_packet))
         {
           Isa100DlAckHeader ackHdr;
           txQElement->m_packet->PeekHeader (ackHdr);
           nextNodeAddr = ackHdr.GetShortDstAddr ();
-          ACK = true;
+//          ACK = true;
         }
       else
         {
@@ -802,6 +802,9 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
           // Obtain and format tx power for PHY layer
           int8_t txPower = m_txPowerDbm[nextNodeInd];
+
+          if (txQElement->m_txAttemptsRem <= m_maxFrameRetries)
+            txPower += 3;
 
           ZigbeePibAttributeIdentifier id = phyTransmitPower;
           ZigbeePhyPIBAttributes attribute;
@@ -939,7 +942,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       // This is a retransmission attempt of a data packet
       else if (m_ackEnabled && !IsAckPacket (txQElement->m_packet))
         {
-          NS_LOG_UNCOND(" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
+          NS_LOG_DEBUG(" Data packet retransmission attempt. " << txQElement->m_txAttemptsRem << " retries remaining.");
 
           // Indicate a retransmission is happening
           m_retrxTrace (m_address);
