@@ -89,8 +89,6 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph>
               m_panID = 0;
               if (m_grpahID > MAX_Uint16/2)
                 m_grpahID -= MAX_Uint16/2;
-//              m_grpahID = G->GetNumofNodes();
-//              m_iter = v->GetId() + G->GetNumofNodes();
 
               scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, 0, TRANSMIT,
                                                     static_cast<uint16_t>(v->GetId()));
@@ -102,22 +100,12 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph>
                   m_tableList2[v->GetId()][gateway->GetId()].push_back(path);
                 }
               m_pathsMap.clear();
-//              for (map<uint16_t, vector<Mac16Address>>::const_iterator it = paths.begin ();
-//                         it != paths.end (); ++it)
-//                      {
-//
-//                      }
-//              for (map<uint16_t, vector<Mac16Address>>::const_iterator it = paths.begin(); it != paths.end(); ++it)
-//                {
-//                  vector<Mac16Address> path = it->second;
-//                  m_tableList2[v->GetId()][gateway->GetId()].push_back(path);
-//                }
 
-//              vector<vector<Mac16Address>> paths;
-//              m_panID = 0;
-//              m_grpahID = G->GetNumofNodes() + MAX_Uint16/2 + 1;
+//              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED,
+//                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/2 + 1);
+              m_paths.clear();
               scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED,
-                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/2 + 1);
+                                                    static_cast<uint16_t>(v->GetId()));
               if (!scheduleFound)
                 return INSUFFICIENT_SLOTS; // schedule FAIL
               m_pathsMap.clear();
@@ -607,20 +595,20 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
   {
     NodeSchedule nodeSchedule;
     // this is to match with the routing table used in routing; map <destination ID, graph ID list> m_Table
-    map<uint32_t, vector<Mac16Address>> table;
+//    map<uint32_t, vector<Mac16Address>> table;
     map<Mac16Address, pair<Mac16Address, vector<Mac16Address>>> graphTable; // graphID -> next graph ID, neighbor
 
-//    NS_LOG_UNCOND("Here");
-//    for (map<Mac16Address, RoutingTable>::const_iterator it = m_tableList[nNode].begin ();
-//               it != m_tableList[nNode].end (); ++it)
-//        {
-//          RoutingTable rt = it->second;
-//          for(int j = 0; j < rt.neighborList.size(); j++)
-//            {
-//              NS_LOG_UNCOND("****** node: "<<nNode<<" dst: "<<rt.destID<<" cg: "<<it->first
-//                               <<" ng: "<<rt.nextGraphID<<" neighbor: "<<rt.neighborList[j]);
-//            }
-//        }
+    NS_LOG_UNCOND("Here");
+    for (map<Mac16Address, RoutingTable>::const_iterator it = m_tableList[nNode].begin ();
+               it != m_tableList[nNode].end (); ++it)
+        {
+          RoutingTable rt = it->second;
+          for(int j = 0; j < rt.neighborList.size(); j++)
+            {
+              NS_LOG_UNCOND("****** node: "<<nNode<<" dst: "<<rt.destID<<" cg: "<<it->first
+                               <<" ng: "<<rt.nextGraphID<<" neighbor: "<<rt.neighborList[j]);
+            }
+        }
 
 //    NS_LOG_UNCOND("ScheduleAndRouteTDMAgraph");
     // Assign schedule to DL
@@ -628,7 +616,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
     Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
     vector<uint8_t> hoppingPattern;
-    NS_LOG_UNCOND("nNode for Node schedule: "<<nNode);
+//    NS_LOG_UNCOND("nNode for Node schedule: "<<nNode);
     for (map<uint32_t, NodeInfo>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
@@ -637,8 +625,8 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
           hoppingPattern.push_back(it->second.channelSched);
 
           uint32_t dstID = m_tableList[nNode][it->second.graphID].destID;
-          if (count(table[dstID].begin(), table[dstID].end(),it->second.graphID) == 0)
-            table[dstID].push_back(it->second.graphID);
+//          if (count(table[dstID].begin(), table[dstID].end(),it->second.graphID) == 0)
+//            table[dstID].push_back(it->second.graphID);
 //          table = m_tableList2;
 
 //          NS_LOG_UNCOND("nNode: "<<nNode<<" dstID: "<<dstID);

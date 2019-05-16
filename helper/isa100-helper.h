@@ -337,7 +337,7 @@ public:
    *
    * @return Result of scheduling attempt.
    */
-  SchedulingResult ConstructDataCommunicationScheduleMinLoad(vector< vector<uint32_t>> UL_Ex, vector< vector<uint32_t>> UL_Sh,
+  SchedulingResult ConstructDataCommunicationScheduleMinLoad(vector< vector<uint32_t>> UL_Ex, vector<vector< vector<uint32_t>>> UL_Sh,
                                                vector< vector<uint32_t>> DL_Ex, vector< vector<uint32_t>> DL_Sh, int frameSize);
 
   bool ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int frameSize, uint32_t timeSlot, DlLinkType option);
