@@ -43,37 +43,37 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector<
   uint32_t rxNode;
   int br = -1;
 
-//  cout<< br <<" "<< br<<" "<<br<<" "<<br<<endl;
-  for(uint32_t i = 0; i < UL_Ex.size(); i++)
-    {
-      for(uint32_t j = 0; j < UL_Ex[i].size() -1; j++)
-        {
-          txNode = UL_Ex[i][j];
-          rxNode = UL_Ex[i][j + 1];
-//            cout<< i <<" "<< j<<" "<<txNode<<" "<<rxNode<<endl;
-          NS_LOG_UNCOND(j<<" "<<txNode<<" "<<rxNode<<" "<<0);
-//          m_scheduleTrace(j,txNode,rxNode,(this)->m_carriers[0]);
-          m_scheduleTrace(j,txNode,rxNode,0);
-        }
-      for(uint32_t k = 0; k < UL_Sh[i].size()-1; k++)
-        {
-//            cout<< br <<" "<< br<<" "<<0<<" "<<0<<endl;
-          NS_LOG_UNCOND(br<<" "<<br<<" "<<0<<" "<<k);
-          m_scheduleTrace(br,br,0,0);
-          for(uint32_t m = 0; m < UL_Sh[i][k].size()-1; m++)
-              {
-                  txNode = UL_Sh[i][k][m];
-                  rxNode = UL_Sh[i][k][m + 1];
-//                      cout<< i <<" "<< k <<" "<<txNode<<" "<<rxNode<<endl;
-                  NS_LOG_UNCOND(i<<" "<<txNode<<" "<<rxNode<<" "<<0);
-                  m_scheduleTrace(i,txNode,rxNode,0);
-              }
-        }
-      NS_LOG_UNCOND(br<<" "<<br<<" "<<br<<" "<<0);
-      m_scheduleTrace(br,br,br,0);
-//      cout<< br <<" "<< br<<" "<<br<<" "<<0<<endl;
-    }
-    // end of temporary schedule
+////  cout<< br <<" "<< br<<" "<<br<<" "<<br<<endl;
+//  for(uint32_t i = 0; i < UL_Ex.size(); i++)
+//    {
+//      for(uint32_t j = 0; j < UL_Ex[i].size() -1; j++)
+//        {
+//          txNode = UL_Ex[i][j];
+//          rxNode = UL_Ex[i][j + 1];
+////            cout<< i <<" "<< j<<" "<<txNode<<" "<<rxNode<<endl;
+//          NS_LOG_UNCOND(j<<" "<<txNode<<" "<<rxNode<<" "<<0);
+////          m_scheduleTrace(j,txNode,rxNode,(this)->m_carriers[0]);
+//          m_scheduleTrace(j,txNode,rxNode,0);
+//        }
+//      for(uint32_t k = 0; k < UL_Sh[i].size()-1; k++)
+//        {
+////            cout<< br <<" "<< br<<" "<<0<<" "<<0<<endl;
+//          NS_LOG_UNCOND(br<<" "<<br<<" "<<0<<" "<<k);
+//          m_scheduleTrace(br,br,0,0);
+//          for(uint32_t m = 0; m < UL_Sh[i][k].size()-1; m++)
+//              {
+//                  txNode = UL_Sh[i][k][m];
+//                  rxNode = UL_Sh[i][k][m + 1];
+////                      cout<< i <<" "<< k <<" "<<txNode<<" "<<rxNode<<endl;
+//                  NS_LOG_UNCOND(i<<" "<<txNode<<" "<<rxNode<<" "<<0);
+//                  m_scheduleTrace(i,txNode,rxNode,0);
+//              }
+//        }
+//      NS_LOG_UNCOND(br<<" "<<br<<" "<<br<<" "<<0);
+//      m_scheduleTrace(br,br,br,0);
+////      cout<< br <<" "<< br<<" "<<br<<" "<<0<<endl;
+//    }
+//    // end of temporary schedule
 
   uint8_t numChannels = m_carriers.size();
   (this)->m_mainSchedule.resize(frameSize, vector<vector <uint32_t>> (numChannels, vector <uint32_t> (2, 65535)));
@@ -84,17 +84,17 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector<
   scheduleFound = ScheduleLinksMinLoad(UL_Ex, frameSize, 0, TRANSMIT);
   if (!scheduleFound)
     return INSUFFICIENT_SLOTS;  // schedule FAIL
-  m_panID++;
-  scheduleFound = ScheduleLinksMinLoad(UL_Ex, frameSize, 0, TRANSMIT);
-  if (!scheduleFound)
-    return INSUFFICIENT_SLOTS;  // schedule FAIL
-  m_panID++;
-  for(uint32_t i = 0; i < UL_Sh.size(); i++)
-      {
-        scheduleFound = ScheduleLinksMinLoad(UL_Sh[i], frameSize, frameSize/4, SHARED);
-        if (!scheduleFound)
-          return INSUFFICIENT_SLOTS;  // schedule FAIL
-      }
+//  m_panID++;
+//  scheduleFound = ScheduleLinksMinLoad(UL_Ex, frameSize, 0, TRANSMIT);
+//  if (!scheduleFound)
+//    return INSUFFICIENT_SLOTS;  // schedule FAIL
+//  m_panID++;
+//  for(uint32_t i = 0; i < UL_Sh.size(); i++)
+//      {
+//        scheduleFound = ScheduleLinksMinLoad(UL_Sh[i], frameSize, frameSize/2, SHARED);
+//        if (!scheduleFound)
+//          return INSUFFICIENT_SLOTS;  // schedule FAIL
+//      }
 
 
   // scheduling for DOWNLINK need to add here.
@@ -180,14 +180,17 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
           if (option == TRANSMIT)
             {
               NS_LOG_UNCOND("TRANSMIT next addr"<<address_next.Get());
+              uint32_t initNodePrimaryPath = flows[i][0];
+//              if (m_panID < m_tableList2[txNode][dstNode].size() && j == 0)
               if (m_panID < m_tableList2[txNode][dstNode].size() && j == 0)
                 m_tableList2[txNode][dstNode][m_panID].push_back(macGraphID);
               else if (j == 0)
                 m_tableList2[txNode][dstNode].push_back({macGraphID});
+              else
+                m_tableList2[initNodePrimaryPath][dstNode][m_panID].push_back(macGraphID);
 
               if (m_panID > 0)
                 {
-                  uint32_t initNodePrimaryPath = flows[i][0];
                   Mac16Address primaryMacGraph = m_tableList2[initNodePrimaryPath][dstNode][0].back();
                   m_tableList[txNode][primaryMacGraph].nextGraphID = macGraphID;
                 }
@@ -200,7 +203,7 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
           else if (option == SHARED)
             {
               uint32_t initNodePrimaryPath = flows[0][0];
-              Mac16Address primaryMacGraph = m_tableList2[initNodePrimaryPath][dstNode][1].back();
+              Mac16Address primaryMacGraph = m_tableList2[initNodePrimaryPath][dstNode][m_panID].back();
               m_tableList[txNode][primaryMacGraph].nextGraphID = macGraphID;
               NS_LOG_UNCOND("SHARED next addr"<<address_next.Get());
               NS_LOG_UNCOND("backup graph "<<macGraphID);

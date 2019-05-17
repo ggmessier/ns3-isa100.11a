@@ -103,12 +103,12 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph>
 
 //              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED,
 //                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/2 + 1);
-              m_paths.clear();
-              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED,
-                                                    static_cast<uint16_t>(v->GetId()));
-              if (!scheduleFound)
-                return INSUFFICIENT_SLOTS; // schedule FAIL
-              m_pathsMap.clear();
+//              m_paths.clear();
+//              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED,
+//                                                    static_cast<uint16_t>(v->GetId()));
+//              if (!scheduleFound)
+//                return INSUFFICIENT_SLOTS; // schedule FAIL
+//              m_pathsMap.clear();
               // Schedule primary and retry links for control data
 //              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, TRANSMIT,
 //                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/4 + 1);
@@ -556,40 +556,40 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 
 //  map<uint32_t, map<uint32_t, vector<vector<Mac16Address>>>> m_tableList2;
 
-  for(uint32_t nNode=0; nNode < numNodes; nNode++)
-  {
-    NS_LOG_UNCOND("Here");
-    for (map<uint32_t, vector<vector<Mac16Address>>>::const_iterator it = m_tableList2[nNode].begin ();
-               it != m_tableList2[nNode].end (); ++it)
-        {
-          NS_LOG_UNCOND("Here Table 2");
-          NS_LOG_UNCOND("Table List 2 ****** node: "<<nNode<<" dst: "<<it->first);
-          for(int j = 0; j < it->second.size(); j++)
-            {
-              vector<Mac16Address> path = it->second[j];
-              NS_LOG_UNCOND(" panID: "<<j);
-              for(int k = 0; k < path.size(); k++)
-                {
-                  NS_LOG_UNCOND(path[k]);
-                }
-            }
-        }
-  }
-
-  for(uint32_t nNode=0; nNode < numNodes; nNode++)
-  {
-    NS_LOG_UNCOND("Here");
-    for (map<Mac16Address, RoutingTable>::const_iterator it = m_tableList[nNode].begin ();
-               it != m_tableList[nNode].end (); ++it)
-        {
-          RoutingTable rt = it->second;
-          for(int j = 0; j < rt.neighborList.size(); j++)
-            {
-              NS_LOG_UNCOND("Table List 1 ****** node: "<<nNode<<" dst: "<<rt.destID<<" cg: "<<it->first
-                               <<" ng: "<<rt.nextGraphID<<" neighbor: "<<rt.neighborList[j]);
-            }
-        }
-  }
+//  for(uint32_t nNode=0; nNode < numNodes; nNode++)
+//  {
+//    NS_LOG_UNCOND("Here");
+//    for (map<uint32_t, vector<vector<Mac16Address>>>::const_iterator it = m_tableList2[nNode].begin ();
+//               it != m_tableList2[nNode].end (); ++it)
+//        {
+//          NS_LOG_UNCOND("Here Table 2");
+//          NS_LOG_UNCOND("Table List 2 ****** node: "<<nNode<<" dst: "<<it->first);
+//          for(int j = 0; j < it->second.size(); j++)
+//            {
+//              vector<Mac16Address> path = it->second[j];
+//              NS_LOG_UNCOND(" panID: "<<j);
+//              for(int k = 0; k < path.size(); k++)
+//                {
+//                  NS_LOG_UNCOND(path[k]);
+//                }
+//            }
+//        }
+//  }
+//
+//  for(uint32_t nNode=0; nNode < numNodes; nNode++)
+//  {
+//    NS_LOG_UNCOND("Here");
+//    for (map<Mac16Address, RoutingTable>::const_iterator it = m_tableList[nNode].begin ();
+//               it != m_tableList[nNode].end (); ++it)
+//        {
+//          RoutingTable rt = it->second;
+//          for(int j = 0; j < rt.neighborList.size(); j++)
+//            {
+//              NS_LOG_UNCOND("Table List 1 ****** node: "<<nNode<<" dst: "<<rt.destID<<" cg: "<<it->first
+//                               <<" ng: "<<rt.nextGraphID<<" neighbor: "<<rt.neighborList[j]);
+//            }
+//        }
+//  }
 
   for(uint32_t nNode=0; nNode < numNodes; nNode++)
   {
@@ -598,17 +598,17 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph()
 //    map<uint32_t, vector<Mac16Address>> table;
     map<Mac16Address, pair<Mac16Address, vector<Mac16Address>>> graphTable; // graphID -> next graph ID, neighbor
 
-    NS_LOG_UNCOND("Here");
-    for (map<Mac16Address, RoutingTable>::const_iterator it = m_tableList[nNode].begin ();
-               it != m_tableList[nNode].end (); ++it)
-        {
-          RoutingTable rt = it->second;
-          for(int j = 0; j < rt.neighborList.size(); j++)
-            {
-              NS_LOG_UNCOND("****** node: "<<nNode<<" dst: "<<rt.destID<<" cg: "<<it->first
-                               <<" ng: "<<rt.nextGraphID<<" neighbor: "<<rt.neighborList[j]);
-            }
-        }
+//    NS_LOG_UNCOND("Here");
+//    for (map<Mac16Address, RoutingTable>::const_iterator it = m_tableList[nNode].begin ();
+//               it != m_tableList[nNode].end (); ++it)
+//        {
+//          RoutingTable rt = it->second;
+//          for(int j = 0; j < rt.neighborList.size(); j++)
+//            {
+//              NS_LOG_UNCOND("****** node: "<<nNode<<" dst: "<<rt.destID<<" cg: "<<it->first
+//                               <<" ng: "<<rt.nextGraphID<<" neighbor: "<<rt.neighborList[j]);
+//            }
+//        }
 
 //    NS_LOG_UNCOND("ScheduleAndRouteTDMAgraph");
     // Assign schedule to DL
