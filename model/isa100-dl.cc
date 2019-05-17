@@ -893,9 +893,9 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
               m_dlDataConfirmCallback (params);
             }
 
-          if(m_routingAlgorithm && m_isGraph){
+/*          if(m_routingAlgorithm && m_isGraph){
               m_routingAlgorithm->DeleteTableEntry(nextNodeAddr);
-          }
+          }*/
 
           return;
         }

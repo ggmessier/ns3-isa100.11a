@@ -247,17 +247,6 @@ TypeId Isa100GraphRoutingAlgorithm::GetTypeId (void)
   return tid;
 }
 
-//Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm (std::map<uint32_t, std::vector<Mac16Address> > initTable)
-//  : Isa100RoutingAlgorithm ()
-//{
-//  NS_LOG_FUNCTION (this);
-//
-//  m_table = initTable;
-//  m_nextSeqNum = 0;
-//  m_counter = 1;
-//
-//}
-
 Isa100GraphRoutingAlgorithm::Isa100GraphRoutingAlgorithm (std::map<uint32_t, std::vector<std::vector<Mac16Address>>> initTable)
   : Isa100RoutingAlgorithm ()
 {
@@ -288,45 +277,17 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader (Isa100DlHeader &header)
 
   // Populate DROUT sub-header.
   uint8_t destNodeInd = buffer[1];
-//  NS_LOG_UNCOND (m_address<<" Sending to node " << static_cast<uint32_t> (destNodeInd));
 
-//  for(uint32_t iHop=0; iHop < m_table[destNodeInd].size(); iHop++){
-//      NS_LOG_UNCOND("***** m_table size: "<<m_table[destNodeInd].size()<<" cg: "<<m_table[destNodeInd][iHop]<<" nextNode: "<<NextNeighbor(m_table[destNodeInd][iHop]));
-////      NS_LOG_UNCOND("cg: "<<m_table[destNodeInd][iHop]);
-////      NS_LOG_UNCOND("nextNode: "<<NextNeighbor(m_table[destNodeInd][iHop]));
-//  }
+  if (m_table[destNodeInd].size() == 1)
+      m_counter = 0;
 
-//  int subCounter = m_counter;
-//  int iHop = 0;
-//  while (iHop < m_table[destNodeInd].size())
-//    {
-//      header.SetGraphRouteHop(iHop++,m_table[destNodeInd][subCounter]);
-////      NS_LOG_UNCOND("m_table size: "<<m_table[destNodeInd].size()<<" cg: "<<m_table[destNodeInd][subCounter]<<
-////                    " nextNode: "<<NextNeighbor(m_table[destNodeInd][subCounter])<<
-////                    " iHop "<<iHop);
-//      if(++subCounter >=  m_table[destNodeInd].size())
-//        subCounter = 0;
-//    }
   int subCounter = m_counter;
   int iHop = 0;
   while (iHop < m_table[destNodeInd][subCounter].size())
     {
-//      NS_LOG_UNCOND("iHop "<<iHop);
       header.SetGraphRouteHop(iHop,m_table[destNodeInd][subCounter][iHop]);
-//      NS_LOG_UNCOND("table2 graph route "<<m_table2[destNodeInd][subCounter][iHop]);
       iHop++;
     }
-//  for (unsigned int i = 0; i < m_table2[destNodeInd][subCounter].size(); i++)
-//    {
-//      header.SetGraphRouteHop(iHop++,m_table2[destNodeInd][subCounter][i]);
-//    }
-//      header.SetGraphRouteHop(iHop++,m_table[destNodeInd][subCounter]);
-//      NS_LOG_UNCOND("m_table size: "<<m_table[destNodeInd].size()<<" cg: "<<m_table[destNodeInd][subCounter]<<
-//                    " nextNode: "<<NextNeighbor(m_table[destNodeInd][subCounter])<<
-//                    " iHop "<<iHop);
-//      if(++subCounter >=  m_table2[destNodeInd].size())
-//        subCounter = 0;
-//    }
 
   bool initialPacket = (m_address == header.GetDaddrSrcAddress ());
   if (initialPacket)
@@ -339,9 +300,6 @@ void Isa100GraphRoutingAlgorithm::PrepTxPacketHeader (Isa100DlHeader &header)
   header.SetSrcAddrFields (0,m_address);
   header.SetDstAddrFields (0,NextNeighbor(header.GetGraphRouteHop(0)));
 
-//  NS_LOG_UNCOND("NextNeighbor(header.GetGraphRouteHop(0)  "<<NextNeighbor(header.GetGraphRouteHop(0)));
-
-//  m_counter += 2;
   m_counter ++;
   if(m_counter >= m_table[destNodeInd].size())
     m_counter = 0;
@@ -374,39 +332,10 @@ void Isa100GraphRoutingAlgorithm::ProcessRxPacket (Ptr<Packet> packet, bool &for
       uint8_t destNodeInd = buffer[1];
       NS_LOG_DEBUG ("RX -> TX SetSourceRouteHop to node " << static_cast<uint32_t> (destNodeInd));
 
-//      for(uint32_t iHop=0; iHop < m_table[destNodeInd].size(); iHop++)
-//        {
-//          NS_LOG_UNCOND("m_table size: "<<m_table[destNodeInd].size()<<" cg: "<<m_table[destNodeInd][iHop]<<" nextNode: "<<NextNeighbor(m_table[destNodeInd][iHop]));
-//          header.SetGraphRouteHop(iHop,m_table[destNodeInd][iHop]);
-//        }
-
-//      NS_LOG_UNCOND("RX counter: "<<m_counter);
-
-//          NS_LOG_UNCOND("RX header.GetGraphRouteHop: "<<header.GetGraphRouteHop(iHop));
-
-//      for(uint32_t iHop=0; iHop < header.GetNumOfGraphRouteHop(); iHop++)
-//        {
-//          NS_LOG_UNCOND("RX hops: "<<to_string(header.GetNumOfGraphRouteHop())<<" "<<header.GetGraphRouteHop(iHop));
-//        }
-
       Mac16Address nextHopGraph = header.PopNextSourceRoutingHop ();
-//      NS_LOG_UNCOND("nextHopGraph: "<<nextHopGraph);
-//      header.SetGraphRouteHop(header.GetNumOfGraphRouteHop()-1, nextHopGraph);
-
-//      if(m_counter < m_table[destNodeInd].size())
-//        m_counter++;
-//      else
-//        m_counter = 0;
 
       header.SetSrcAddrFields (0,m_address);
-//      header.SetDstAddrFields (0,NextNeighbor(m_table[destNodeInd][m_counter]));
-//      header.SetDstAddrFields (0,NextNeighbor(header.GetGraphRouteHop(0)));
       header.SetDstAddrFields (0,NextNeighbor(nextHopGraph));
-
-//      if(m_counter < m_table[destNodeInd].size())
-//        m_counter++;
-//      else
-//        m_counter = 0;
     }
 
   NS_LOG_DEBUG ("RX First Source Address Before AAdd Header: " << header.GetDaddrSrcAddress ());
@@ -445,33 +374,12 @@ void Isa100SourceRoutingAlgorithm::DeleteTableEntry (Mac16Address nodeAddress)
 
 }
 
-//void Isa100GraphRoutingAlgorithm::SetGraphTable(map<Mac16Address, pair<Mac16Address, Mac16Address>> graphTable)
-//{
-//  m_graphTable = graphTable;
-//}
 
 void Isa100GraphRoutingAlgorithm::SetGraphTable(std::map<Mac16Address, std::pair<Mac16Address, std::vector<Mac16Address>>> graphTable)
 {
   m_graphTable = graphTable;
 }
 
-//void Isa100GraphRoutingAlgorithm::SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table)
-//{
-//  m_table2 = table;
-//}
-
-//Mac16Address Isa100GraphRoutingAlgorithm::NextGraphID (Mac16Address graphID)
-//{
-//  NS_LOG_FUNCTION (this);
-//  Mac16Address graph = Mac16Address ("FF:FF");
-//
-//  if(m_graphTable.count(graphID))
-//    {
-//      graph = m_graphTable[graphID].first;
-//    }
-//
-//  return graph;
-//}
 
 vector<Mac16Address> Isa100GraphRoutingAlgorithm::BackUpGraphSequence (Mac16Address graphID)
 {
@@ -496,7 +404,6 @@ Mac16Address Isa100GraphRoutingAlgorithm::NextNeighbor (Mac16Address graphID)
       nodeAddr = m_graphTable[graphID].first;
     }
 
-//  NS_LOG_UNCOND("m_address: "<<m_address<<" cGraph: "<<graphID<<" nextNodeAddr: "<<nodeAddr);
   return nodeAddr;
 }
 
@@ -505,10 +412,6 @@ void Isa100SourceRoutingAlgorithm::SetGraphTable(std::map<Mac16Address, std::pai
 
 }
 
-//void Isa100SourceRoutingAlgorithm::SetTable(std::map<uint32_t, std::vector<std::vector<Mac16Address>>> table)
-//{
-//
-//}
 
 vector<Mac16Address> Isa100SourceRoutingAlgorithm::BackUpGraphSequence (Mac16Address graphID)
 {
