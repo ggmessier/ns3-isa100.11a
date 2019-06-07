@@ -161,6 +161,8 @@ protected:
   Mac16Address m_srcAddress;  ///< Address of the node hosting the application object.
   Time m_startTime; ///< Start time for the application.
 
+  bool m_workingStatus; //<Rajith added.
+
   DlDataRequestCallback m_dlDataRequest;  ///< Pointer to the ISA100 DL data request routine.
 };
 
@@ -239,6 +241,7 @@ public:
    */
   void SetProcessor(Ptr<Isa100Processor> processor);
 
+  void SetFault(void);
 
 private:
   /** Called automatically at m_startTime.
