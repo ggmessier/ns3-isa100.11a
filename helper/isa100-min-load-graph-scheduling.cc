@@ -89,12 +89,12 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector<
 //  if (!scheduleFound)
 //    return INSUFFICIENT_SLOTS;  // schedule FAIL
 //  m_panID++;
-//  for(uint32_t i = 0; i < UL_Sh.size(); i++)
-//      {
-//        scheduleFound = ScheduleLinksMinLoad(UL_Sh[i], frameSize, frameSize/2, SHARED);
-//        if (!scheduleFound)
-//          return INSUFFICIENT_SLOTS;  // schedule FAIL
-//      }
+  for(uint32_t i = 0; i < UL_Sh.size(); i++)
+      {
+        scheduleFound = ScheduleLinksMinLoad(UL_Sh[i], frameSize, frameSize/2, SHARED);
+        if (!scheduleFound)
+          return INSUFFICIENT_SLOTS;  // schedule FAIL
+      }
 
 
   // scheduling for DOWNLINK need to add here.
