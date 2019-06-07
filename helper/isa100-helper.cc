@@ -253,7 +253,7 @@ void Isa100Helper::InstallApplication(NodeContainer c, uint32_t nodeIndex, Ptr<I
   devPtr->GetDl()->SetDlDataConfirmCallback (MakeCallback (&Isa100Application::DlDataConfirm, app));
 
 
-  devPtr->AddApplication(app); //Rajith Added
+  //devPtr->AddApplication(app); //Rajith Added
 
 	Ptr<Node> node = c.Get(nodeIndex);
 
