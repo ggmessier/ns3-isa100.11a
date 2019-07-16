@@ -34,46 +34,7 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector<
                                                            vector< vector<uint32_t>> DL_Ex, vector< vector<uint32_t>> DL_Sh, int frameSize)
 {
   NS_LOG_FUNCTION (this);
-//  uint32_t numNodes = m_devices.GetN();
   SchedulingResult schedulingResult = NO_ROUTE;
-
-  // temporary Rajith to print the schedule
-//  NS_LOG_DEBUG("size: "<<(this)->m_mainSchedule.size());
-  uint32_t txNode;
-  uint32_t rxNode;
-  int br = -1;
-
-////  cout<< br <<" "<< br<<" "<<br<<" "<<br<<endl;
-//  for(uint32_t i = 0; i < UL_Ex.size(); i++)
-//    {
-//      for(uint32_t j = 0; j < UL_Ex[i].size() -1; j++)
-//        {
-//          txNode = UL_Ex[i][j];
-//          rxNode = UL_Ex[i][j + 1];
-////            cout<< i <<" "<< j<<" "<<txNode<<" "<<rxNode<<endl;
-//          NS_LOG_UNCOND(j<<" "<<txNode<<" "<<rxNode<<" "<<0);
-////          m_scheduleTrace(j,txNode,rxNode,(this)->m_carriers[0]);
-//          m_scheduleTrace(j,txNode,rxNode,0);
-//        }
-//      for(uint32_t k = 0; k < UL_Sh[i].size()-1; k++)
-//        {
-////            cout<< br <<" "<< br<<" "<<0<<" "<<0<<endl;
-//          NS_LOG_UNCOND(br<<" "<<br<<" "<<0<<" "<<k);
-//          m_scheduleTrace(br,br,0,0);
-//          for(uint32_t m = 0; m < UL_Sh[i][k].size()-1; m++)
-//              {
-//                  txNode = UL_Sh[i][k][m];
-//                  rxNode = UL_Sh[i][k][m + 1];
-////                      cout<< i <<" "<< k <<" "<<txNode<<" "<<rxNode<<endl;
-//                  NS_LOG_UNCOND(i<<" "<<txNode<<" "<<rxNode<<" "<<0);
-//                  m_scheduleTrace(i,txNode,rxNode,0);
-//              }
-//        }
-//      NS_LOG_UNCOND(br<<" "<<br<<" "<<br<<" "<<0);
-//      m_scheduleTrace(br,br,br,0);
-////      cout<< br <<" "<< br<<" "<<br<<" "<<0<<endl;
-//    }
-//    // end of temporary schedule
 
   uint8_t numChannels = m_carriers.size();
   (this)->m_mainSchedule.resize(frameSize, vector<vector <uint32_t>> (numChannels, vector <uint32_t> (2, 65535)));
@@ -89,12 +50,12 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector<
 //  if (!scheduleFound)
 //    return INSUFFICIENT_SLOTS;  // schedule FAIL
 //  m_panID++;
-  for(uint32_t i = 0; i < UL_Sh.size(); i++)
-      {
-        scheduleFound = ScheduleLinksMinLoad(UL_Sh[i], frameSize, frameSize/2, SHARED);
-        if (!scheduleFound)
-          return INSUFFICIENT_SLOTS;  // schedule FAIL
-      }
+//  for(uint32_t i = 0; i < UL_Sh.size(); i++)
+//      {
+//        scheduleFound = ScheduleLinksMinLoad(UL_Sh[i], frameSize, frameSize/2, SHARED);
+//        if (!scheduleFound)
+//          return INSUFFICIENT_SLOTS;  // schedule FAIL
+//      }
 
 
   // scheduling for DOWNLINK need to add here.
@@ -122,25 +83,9 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
   Mac16AddressValue address_next;
 
   NS_LOG_UNCOND("ScheduleLinksMinLoad ******************");
-//
-//  for(uint32_t i = 0; i < flows.size(); i++)
-//      {
-//        dstNode = flows[i][flows[i].size()-1];
-//        //      NS_LOG_UNCOND("dstNode: "<<dstNode);
-//        txNode = flows[i][0];
-//        rxNode = flows[i][1];
-//
-//        baseDevice_next = m_devices.Get(rxNode);
-//        netDevice_next = baseDevice_next->GetObject<Isa100NetDevice>();
-//        netDevice_next->GetDl()->GetAttribute("Address",address_next);
-//
-//        m_tableList[txNode][dstNode].push_back(address_next.Get());   //update the routing tables
-//
-//      }
 
   for(uint32_t i = 0; i < flows.size(); i++)
     {
-//      vector<uint32_t> tempFlow = flows[i];
       NS_LOG_UNCOND("flows: "<<i<<" "<<flows.size());
       if (flows[i].empty())
         return true;
@@ -211,8 +156,8 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
               m_tableList[txNode][macGraphID].nextGraphID = macGraphID;
               m_tableList[txNode][macGraphID].neighborList.push_back(address_next.Get());
             }
-
-          NS_LOG_UNCOND("Here::");
+//
+//          NS_LOG_UNCOND("Here::");
 //          map<uint32_t, map<uint32_t, vector<vector<Mac16Address>>>> m_tableList2;
 //          if(count(m_tableList[txNode][dstNode].begin(),m_tableList[txNode][dstNode].end(),address_next.Get()) == 0)
 //            {
