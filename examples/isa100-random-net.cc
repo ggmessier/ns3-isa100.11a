@@ -457,7 +457,7 @@ int main (int argc, char *argv[])
   std::string filePath = "/home/rajith/NS30712/Results/";
 	ss.str( std::string() );
 	ss.clear();
-	ss << filePath << "N" << numSensorNodes << "_" << optString << "_";
+	ss << filePath << "N" << numSensorNodes << "_" << optString << "_"<<factor<<"_";
   std::string filePrefix = ss.str();
 
   uint16_t numNodes = 1 + numSensorNodes;
