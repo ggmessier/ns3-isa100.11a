@@ -1031,6 +1031,7 @@ ZigbeePhy::PlmeSetAttributeRequest (ZigbeePibAttributeIdentifier id,
         if (attribute->phyTransmitPower > 0xbf)
           {
             status = IEEE_802_15_4_PHY_INVALID_PARAMETER;
+            NS_LOG_LOGIC(" status = IEEE_802_15_4_PHY_INVALID_PARAMETER "<<to_string(attribute->phyTransmitPower));
           }
         else
           {
@@ -1050,6 +1051,7 @@ ZigbeePhy::PlmeSetAttributeRequest (ZigbeePibAttributeIdentifier id,
             m_phyTaskTrace(Mac16Address::ConvertFrom(m_device->GetAddress()), msg);
 
             m_currentDraws->UpdateTxCurrent(txPower);
+            NS_LOG_LOGIC("txPower in Zigbee-Phy: "<<to_string(txPower));
             UpdateBattery();
 
           }
@@ -1269,6 +1271,7 @@ ZigbeePhy::UpdateBattery (void)
   	m_batteryDecrementCallback(m_energyCategory,energyConsumed);
 
   NS_LOG_LOGIC("Consumed: " << energyConsumed << " uJ over " << duration.GetSeconds() << " s (" << m_current << " A, " << m_supplyVoltage << " V) (NxtState: " << m_trxState << ")");
+  NS_LOG_LOGIC("Energy Consumed category: "<< m_energyCategory <<" time ns "<<duration.GetNanoSeconds ());
 
   // Update the current power consumption values.
   m_lastUpdateTime = Simulator::Now();

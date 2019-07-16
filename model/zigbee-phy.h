@@ -136,7 +136,7 @@ typedef struct
 {
   uint8_t phyCurrentChannel;  ///< 27 LSB in 32 bit word indicating which of 27 channels are active.
   uint32_t phyChannelsSupported[32]; ///< Array of supported channels (5 MSB for channel page, 27 LSB for channels within page).
-  uint8_t phyTransmitPower;   ///< Tolerance of tx power accuracy.
+  int8_t phyTransmitPower;   ///< Tolerance of tx power accuracy.
   uint8_t phyCCAMode;         ///< Energy above threshold, carrier sense only or both.
   uint32_t phyCurrentPage;    ///< Current channel page.
   uint32_t phyMaxFrameDuration; ///< phySHRDuration + ceil(maxPHYPacketSize+1)*phySymbolsPerOctet

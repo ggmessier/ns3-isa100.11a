@@ -242,41 +242,8 @@ void MinLoadGraphTdmaOptimzer::GraphCreation(NodeContainer c)
                 {
                   if (!load[i].empty())
                     tempVertex[primaryPath[i][k]].m_normalizedLoad += load[i][primaryPath[i][k]];
-
-    //              NS_LOG_UNCOND("tempVertex[primaryPath[i][k]].m_normalizedLoad: "<<tempVertex[primaryPath[i][k]].m_normalizedLoad);
                 }
             }
-//          while (vertex[i].m_normalizedLoad != INF_DOUBLE)
-//            {
-//              tempPrimaryPath[i].push_back(hop);
-//              NS_LOG_UNCOND(hop);
-//
-////              NS_LOG_UNCOND("vertex[hop].m_normalizedLoad: "<<vertex[hop].m_normalizedLoad);
-////              NS_LOG_UNCOND("pre tempVertex[hop].m_normalizedLoad: "<<tempVertex[hop].m_normalizedLoad);
-//              // track the load incremented
-//              load[i][hop] = vertex[hop].m_normalizedLoad - tempVertex[hop].m_normalizedLoad;
-//
-//              tempVertex[hop].m_normalizedLoad = vertex[hop].m_normalizedLoad;
-////              NS_LOG_UNCOND("Normalized Load: "<<tempVertex[hop].m_normalizedLoad);
-//
-//              tempBackupPath[i].push_back(vertex[hop].m_backupPath);
-//
-//              if (hop == gwID)
-//                break;
-//              hop = vertex[hop].m_lastHop;
-//
-//              primaryPath[i] = tempPrimaryPath[i];
-//              backupPath[i] = tempBackupPath[i];
-//              if(tempVertex[i].m_normalizedLoad > maxLoad)
-//                maxLoad = tempVertex[i].m_normalizedLoad;
-//            }
-//
-//          if(vertex[i].m_normalizedLoad != INF_DOUBLE)
-//            {
-//
-//            }
-//          else
-//            tempVertex = m_vertexVector;
         }
 
       preMaxLoad = maxLoad;
@@ -294,6 +261,7 @@ void MinLoadGraphTdmaOptimzer::GraphCreation(NodeContainer c)
       NS_LOG_UNCOND("Max Load: "<<maxLoad<<" Pre Max: "<<preMaxLoad);
 //      NS_LOG_UNCOND("Max totLoad: "<<totLoad<<" Pre tot: "<<preTotLoad);
       double diff = maxLoad - preMaxLoad;
+      NS_LOG_UNCOND("diff: "<<diff);
 
       if (diff == 0)
         countEq++;

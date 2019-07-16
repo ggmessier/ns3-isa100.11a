@@ -727,84 +727,14 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       nextNodeAddr.CopyTo (buffer.byte);
       nextNodeInd = buffer.byte[1];
 
-//      if(m_isGraph && m_usePowerCtrl)
-//        {
-//          int8_t txPowerTemp;
-//          if(!ACK)
-//            {
-//              Isa100DlHeader headerTemp;
-//              txQElement->m_packet->PeekHeader (headerTemp);
-//              Mac16Address nextNodeAddrTemp;
-//              uTwoBytes_t bufferTemp;
-//              //Temporary code to set the power // Rajith
-//              txPowerTemp = m_txPowerDbm[nextNodeInd];
-//
-//              uint8_t nextNodeIndTemp;
-//
-//              for (int i = 0; i < headerTemp.GetNumOfGraphRouteHop(); i++)
-//                {
-////                  nextNodeAddrTemp = headerTemp.GetGraphRouteHop(i);
-//
-//                  nextNodeAddrTemp = m_routingAlgorithm->NextNeighbor(headerTemp.GetGraphRouteHop(i));
-//                  nextNodeAddrTemp.CopyTo (bufferTemp.byte);
-//                  nextNodeIndTemp = bufferTemp.byte[1];
-//
-//                  if(m_txPowerDbm[nextNodeIndTemp] > txPowerTemp)
-//                    txPowerTemp = m_txPowerDbm[nextNodeIndTemp];
-//                }
-//
-//              ZigbeePibAttributeIdentifier id = phyTransmitPower;
-//              ZigbeePhyPIBAttributes attribute;
-//
-//              attribute.phyTransmitPower = txPowerTemp;
-//
-////              NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPowerTemp << "dBm");
-//
-//              // Set the tx power attribute
-//              if (!m_plmeSetAttribute.IsNull ())
-//                {
-//                  m_plmeSetAttribute (id,&attribute);
-//                }
-//              else
-//                {
-//                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
-//                }
-//              NS_LOG_DEBUG("not ACK packet TXpwr: "<<to_string(txPowerTemp));
-//              //end of new code // rajith
-//            }
-//          else
-//            {
-//              // Obtain and format tx power for PHY layer
-//              txPowerTemp = m_txPowerDbm[nextNodeInd];
-//
-//              ZigbeePibAttributeIdentifier id = phyTransmitPower;
-//              ZigbeePhyPIBAttributes attribute;
-//
-//              attribute.phyTransmitPower = txPowerTemp;
-//
-//              NS_LOG_DEBUG (" Tx Power Control " << m_address << " -> " << nextNodeAddr << "(" << (int)nextNodeInd << "): " << (int)txPowerTemp << "dBm");
-//
-//              // Set the tx power attribute
-//              if (!m_plmeSetAttribute.IsNull ())
-//                {
-//                  m_plmeSetAttribute (id,&attribute);
-//                }
-//              else
-//                {
-//                  NS_FATAL_ERROR ("m_plmeSetAttribute null.");
-//                }
-//              NS_LOG_DEBUG("ACK packet TXpwr: "<<to_string(txPowerTemp));
-//            }
-//        }
-//      else
       if (m_usePowerCtrl)
         {
 
           // Obtain and format tx power for PHY layer
           int8_t txPower = m_txPowerDbm[nextNodeInd];
 
-          if (txQElement->m_txAttemptsRem <= m_maxFrameRetries)
-            txPower += 3;
+//          if (txQElement->m_txAttemptsRem <= m_maxFrameRetries)
+//            txPower += 3;
 
           ZigbeePibAttributeIdentifier id = phyTransmitPower;
           ZigbeePhyPIBAttributes attribute;
@@ -858,8 +788,6 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
 
       // GGM: I'm not sure I agree with this.  If we're in ARQ backoff and shouldn't do anything then why did we let the transceiver
       // turn on.  Shouldn't this be done in ProcessLink?
-
-
       if (m_expArqBackoffCounter > 0 && !IsAckPacket (txQElement->m_packet))
         {
           m_expArqBackoffCounter--;
