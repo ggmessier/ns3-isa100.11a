@@ -111,14 +111,10 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
 
 //          uint16_t grpahID = 0;       // TEMPORARY ***************************************
           Mac16Address macGraphID = GraphIDConverter(m_grpahID);
-          NodeInfo scheduleInfo = {m_carriers[chIndex], TRANSMIT, macGraphID};
+          NodeInfo scheduleInfo = {m_carriers[chIndex], TRANSMIT, macGraphID, m_panID, flows[i][0]};
           (this)->m_nodeScheduleN[txNode][slot] = scheduleInfo;
           scheduleInfo.slotType = RECEIVE;
           (this)->m_nodeScheduleN[rxNode][slot] = scheduleInfo;
-
-          baseDevice_next = m_devices.Get(rxNode);
-          netDevice_next = baseDevice_next->GetObject<Isa100NetDevice>();
-          netDevice_next->GetDl()->GetAttribute("Address",address_next);
 
           ///< routing tables of each nodes (Node ID -> destID -> graphID sequence)
           RoutingTable rt;
@@ -142,7 +138,7 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
 
               NS_LOG_UNCOND("m_tableList2 "<<txNode<<" "<<dstNode<<" "<<macGraphID);
               rt.destID = dstNode;
-              rt.neighborList.push_back(address_next.Get());
+              rt.neighborList.push_back(rxNode);
               m_tableList[txNode][macGraphID] = rt;
             }
           else if (option == SHARED)
@@ -154,7 +150,7 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
               NS_LOG_UNCOND("backup graph "<<macGraphID);
               m_tableList[txNode][macGraphID].destID = dstNode;
               m_tableList[txNode][macGraphID].nextGraphID = macGraphID;
-              m_tableList[txNode][macGraphID].neighborList.push_back(address_next.Get());
+              m_tableList[txNode][macGraphID].neighborList.push_back(rxNode);
             }
 //
 //          NS_LOG_UNCOND("Here::");

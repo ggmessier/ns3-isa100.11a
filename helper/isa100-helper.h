@@ -68,6 +68,8 @@ typedef struct{
   uint8_t channelSched;  ///< channel used for the communication
   DlLinkType slotType;  ///< TX/ RX or shared slot
   Mac16Address graphID;  ///< current graph ID
+  uint16_t localPathID;  ///< local path ID when multiple paths exist
+  uint32_t pathSource;  ///< source node of the path
 } NodeInfo;
 
 /** Used to contain the Table for a routing.
@@ -76,7 +78,7 @@ typedef struct{
 typedef struct{
   uint32_t destID;  ///< destination ID
   Mac16Address nextGraphID;  ///< current graph ID
-  std::vector<Mac16Address> neighborList;  ///< neighbors for the next transmission
+  std::vector<uint32_t> neighborList;  ///< neighbors for the next transmission
 } RoutingTable;
 
 /** Used to contain slot and frequency information
@@ -291,7 +293,7 @@ public:
    * @param option link option whether exclusive or shared
    */
   bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option,
-                      uint16_t grpahID);
+                      uint16_t grpahID, uint32_t source);
 
   /** Get next available channel offset and the time slot
    *
