@@ -37,6 +37,7 @@
 #include "ns3/packet.h"
 
 #include "ns3/isa100-net-device.h"
+#include "ns3/isa100-application.h" //Rajith Added
 
 NS_LOG_COMPONENT_DEFINE ("Isa100NetDevice");
 
@@ -432,6 +433,31 @@ Isa100NetDevice::SupportsSendFrom (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return false;
+}
+
+uint32_t
+Isa100NetDevice::AddApplication (Ptr<Isa100Application> application)
+{
+  NS_LOG_FUNCTION (this << application);
+  uint32_t index = m_applications.size ();
+  m_applications.push_back (application);
+  return index;
+}
+
+Ptr<Isa100Application>
+Isa100NetDevice::GetApplication (uint32_t index)
+{
+  NS_LOG_FUNCTION (this << index);
+  NS_ASSERT_MSG (index < m_applications.size (), "Application index " << index <<
+                 " is out of range (only have " << m_applications.size () << " applications).");
+  return m_applications[index];
+}
+
+uint32_t
+Isa100NetDevice::GetNApplications (void)
+{
+  NS_LOG_FUNCTION (this);
+  return m_applications.size ();
 }
 
 } // namespace ns3

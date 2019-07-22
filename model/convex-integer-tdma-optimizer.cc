@@ -107,7 +107,10 @@ std::vector< std::vector<int> > ConvexIntTdmaOptimizer::SolveTdma (void)
     if (m_currMultiFrame == 0)
     {
       for (uint8_t i = 0; i < m_numNodes; i ++){
-        m_frameInitEnergiesJ.push_back(m_initialEnergy);
+        if (i <= 2)
+          m_frameInitEnergiesJ.push_back(m_initialEnergy*1e300);
+        else
+          m_frameInitEnergiesJ.push_back(m_initialEnergy);
       }
     }
 

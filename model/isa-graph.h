@@ -151,11 +151,6 @@ public:
 
   void SetTimeSlots (uint32_t id, uint32_t timeSlots);
 
-  /** ~~~~~~~~~~~[Temporary]~~~~~~~~~~~ Print the graph
-   *
-   */
-  void PrintGraph ();
-
   /** Flip the edges of the graph
    * Direction of the edge will be flipped and parents and neighbors will be updated.
    * Average hop count will remain same.
@@ -230,7 +225,9 @@ private:
   map <uint32_t, GraphNode> m_graphNodeMap;       ///< Map of graph nodes with their node IDs.
   vector<uint32_t> m_accessPoints;          ///< Access point nodes of the graph
   uint32_t m_gateway;                       ///< gateway of the graph
-  uint32_t m_graphID;                       ///< graphID varies from 0 - 65535 (65535- broadcast, 0 - Uplink & others - downlink)
+  uint32_t m_graphID;                       ///< graphID varies from 0 - 65535 (65535- broadcast, 0 - UPLINK & others - DOWNLINK)
+
+  bool m_minLoadGraph;                    ///< attribute to identify minimum load graph
 
 };
 

@@ -23,21 +23,18 @@
 #define GRAPH_TDMA_OPTIMIZER
 
 #include "ns3/tdma-optimizer-base.h"
-//#include "ns3/isa-graph.h"
 #include "ns3/ptr.h"
 
 using namespace std;
 
 namespace ns3{
 
-//class IsaGraph;
-
 /**
  * \class GraphTdmaOptimzer
  *
- * \brief A minimum hop TDMA scheduler.
+ * \brief Han's Algorithm for TDMA scheduler.
  *
- * This class is based on a variant of the breadth first minimum hop search algorithm.
+ * This class is based on Han's (EMERSON) algorithm
  *
  */
 class GraphTdmaOptimzer : public TdmaOptimizerBase
@@ -54,7 +51,6 @@ public:
    *   @param c node container with all nodes
    *   @param propModel the propagation loss model
    */
-
   void SetupOptimization (NodeContainer c, Ptr<PropagationLossModel> propModel);
 
   /** Solve for the packet flows using a minimum hop breadth first search algorithm.
@@ -62,10 +58,11 @@ public:
    */
   virtual std::vector< std::vector< int > > SolveTdma (void);
 
-//  virtual std::map <uint32_t, Ptr<IsaGraph>> GetGraphMap(void);
-//  virtual Ptr<IsaGraph> GetGraph(void);
+  /** Set Edge Weights to Han's Graph Algorithms (Not Required)
+   *
+   * @param edgeWeight information of the edge. i.e., source and destination node ID pairs
+   */
   void SetEdgeWeights (vector<pair<uint32_t,uint32_t>> edgeWeight);
-//  vector<pair<uint32_t,uint32_t>> GetEdgeWeights ();
 
 private:
 
@@ -73,14 +70,10 @@ private:
      *
      * @param c node container with all nodes
      */
-  void GraphCreation(NodeContainer c); // Rajith
-
-//  std::map <uint32_t, Ptr<IsaGraph>> m_graphMap;
-//  Ptr<IsaGraph> m_graph;
-
+  void GraphCreation(NodeContainer c);
 
 };
 
 
 }
-#endif /* MINHOP_TMDA_OPTIMIZER */
+#endif /* GRAPH_TMDA_OPTIMIZER */

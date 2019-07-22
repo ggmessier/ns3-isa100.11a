@@ -1172,32 +1172,10 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       if(rxDlHdr.GetShortDstAddr() == m_address)
         addressMatch = true;
 
-//      if (m_isGraph)
-//        {
-////          NS_LOG_UNCOND("Hops "<<rxDlHdr.GetNumOfGraphRouteHop());
-//          for (int i = 0; i < rxDlHdr.GetNumOfGraphRouteHop(); i++)
-//            {
-////              if(rxDlHdr.GetGraphRouteHop(i) == m_address)
-////                addressMatch = true;
-//
-//              if(m_routingAlgorithm->NextNeighbor(rxDlHdr.GetGraphRouteHop(i)) != Mac16Address ("ff:ff"))
-//                addressMatch = true;
-//            }
-//        }
-//      else
-//        {
-//          if(rxDlHdr.GetShortDstAddr() == m_address)
-//            addressMatch = true;
-//        }
-
       if(!addressMatch)
         {
           NS_LOG_UNCOND("Address doesn't match. Current: "<<m_address<<" Expected Dest: "<<rxDlHdr.GetShortDstAddr());
         }
-//      else
-//        {
-//          NS_LOG_UNCOND("Address matched. Current: "<<m_address<<" Expected dest: "<<rxDlHdr.GetShortDstAddr());
-//        }
       // Else check for an address match
       if(addressMatch)
         {
@@ -1212,12 +1190,19 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
               // Update the tx power for this neighbour
               double chLossDb = trailer.GetDistrRoutingTxPower () - rxPowDbm;
+//              NS_LOG_UNCOND(trailer.GetDistrRoutingTxPower () );
               NS_LOG_DEBUG("TX: " <<rxDlHdr.GetDaddrSrcAddress ()<<" Rx: "<<m_address<<" Txpwr:"<< to_string(m_txPowerDbm[srcNodeInd])<<" Loss: "<<to_string(chLossDb)<<" Rxpwr "<<rxPowDbm);
 
 //              if (m_isGraph)
                 SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
 //              else
 //                SetTxPowerDbm (chLossDb - 101, srcNodeInd);
+
+              // ******** Rajith added
+              // Modify trailer
+              trailer.SetDistrRoutingTxPower (m_txPowerDbm[srcNodeInd]);
+              // Return the modified trailer to the packet.
+              p->AddTrailer (trailer);
 
               // Process the rx packet
               m_routingAlgorithm->ProcessRxPacket (p,forwardPacketOn);
@@ -1354,6 +1339,11 @@ void Isa100Dl::DlDataRequest (DlDataRequestParams params, Ptr<Packet> p)
 
   uTwoBytes_t buffer;
   params.m_destAddr.CopyTo (buffer.byte);
+
+  // Rajith
+  Isa100DlTrailer trailer;
+  trailer.SetDistrRoutingTxPower (m_txPowerDbm[buffer.byte[1]]);
+  p->AddTrailer (trailer);
 
   if ( m_ackEnabled )
     {

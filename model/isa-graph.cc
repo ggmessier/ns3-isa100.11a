@@ -56,6 +56,11 @@ TypeId IsaGraph::GetTypeId (void)
   static TypeId tid = TypeId ("ns3::IsaGraph")
     .SetParent<Object> ()
     .AddConstructor<IsaGraph> ()
+
+    .AddAttribute ("minLoad", "flag to identify whether minimum load or normal graph.",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&IsaGraph::m_minLoadGraph),
+                   MakeBooleanChecker ())
   ;
   return tid;
 }
@@ -63,15 +68,17 @@ TypeId IsaGraph::GetTypeId (void)
 IsaGraph::IsaGraph ()
 {
   NS_LOG_FUNCTION (this);
-  (this)->m_gateway = 0;
-  (this)->m_graphID = 0;
+  m_gateway = 0;
+  m_graphID = 0;
+//  m_minLoadGraph = false;
 }
 
 IsaGraph::IsaGraph (NodeContainer c)
 {
   NS_LOG_FUNCTION (this);
-  (this)->m_gateway = 0;
-  (this)->m_graphID = 0;
+  m_gateway = 0;
+  m_graphID = 0;
+
   for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
     {
       uint32_t nodeId = i->operator -> ()->GetId ();
@@ -271,34 +278,6 @@ void IsaGraph::SetTimeSlots (uint32_t id, uint32_t timeSlots)
 {
   NS_LOG_FUNCTION (this);
   (this)->m_graphNodeMap[id].m_numTimeSlots = timeSlots;
-}
-
-void IsaGraph::PrintGraph ()
-{
-  NS_LOG_FUNCTION (this);
-  for (map<uint32_t, GraphNode>::const_iterator it = (this)->m_graphNodeMap.begin ();
-       it != (this)->m_graphNodeMap.end (); ++it)
-    {
-      NS_LOG_UNCOND ("\n ****** Adjacency list of Vertex " << it->second.m_head->GetId ());
-      vector<Ptr<Node> > tempNodeList = it->second.m_neighbors;
-      NS_LOG_UNCOND ("\n Neighbors: ");
-
-      while (!tempNodeList.empty ())
-        {
-          NS_LOG_UNCOND (" -> " << tempNodeList.back ()->GetId ());
-          tempNodeList.pop_back ();
-        }
-      NS_LOG_UNCOND ("\n Parents: ");
-
-      tempNodeList = it->second.m_parents;
-
-      while (!tempNodeList.empty ())
-        {
-          NS_LOG_UNCOND (" -> " << tempNodeList.back ()->GetId ());
-          tempNodeList.pop_back ();
-        }
-//      NS_LOG_UNCOND ("\n");
-    }
 }
 
 Ptr<IsaGraph> IsaGraph::FlipEdge ()
