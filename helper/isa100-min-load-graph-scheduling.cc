@@ -30,21 +30,24 @@ using namespace std;
 
 namespace ns3 {
 
-SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector< vector<uint32_t>> UL_Ex, vector<vector< vector<uint32_t>>> UL_Sh,
-                                                           vector< vector<uint32_t>> DL_Ex, vector< vector<uint32_t>> DL_Sh, int frameSize)
+SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad (vector< vector<uint32_t> > UL_Ex, vector<vector< vector<uint32_t> > > UL_Sh,
+                                                                          vector< vector<uint32_t> > DL_Ex, vector< vector<uint32_t> > DL_Sh, int frameSize)
 {
   NS_LOG_FUNCTION (this);
   SchedulingResult schedulingResult = NO_ROUTE;
 
-  uint8_t numChannels = m_carriers.size();
-  (this)->m_mainSchedule.resize(frameSize, vector<vector <uint32_t>> (numChannels, vector <uint32_t> (2, 65535)));
+  uint8_t numChannels = m_carriers.size ();
+  (this)->m_mainSchedule.resize (frameSize, vector<vector <uint32_t> > (numChannels, vector <uint32_t> (2, 65535)));
 
   bool scheduleFound = true;
 
-  m_grpahID = 3; m_panID = 0;
-  scheduleFound = ScheduleLinksMinLoad(UL_Ex, frameSize, 0, TRANSMIT);
+  m_grpahID = 3;
+  m_panID = 0;
+  scheduleFound = ScheduleLinksMinLoad (UL_Ex, frameSize, 0, TRANSMIT);
   if (!scheduleFound)
-    return INSUFFICIENT_SLOTS;  // schedule FAIL
+    {
+      return INSUFFICIENT_SLOTS; // schedule FAIL
+    }
 //  m_panID++;
 //  scheduleFound = ScheduleLinksMinLoad(UL_Ex, frameSize, 0, TRANSMIT);
 //  if (!scheduleFound)
@@ -65,7 +68,7 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationScheduleMinLoad(vector<
   return schedulingResult;
 }
 
-bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int frameSize, uint32_t timeSlot, DlLinkType option)
+bool Isa100Helper::ScheduleLinksMinLoad (vector< vector<uint32_t> > flows, int frameSize, uint32_t timeSlot, DlLinkType option)
 {
   NS_LOG_FUNCTION (this);
 
@@ -82,35 +85,39 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
   Ptr<Isa100NetDevice> netDevice_next;
   Mac16AddressValue address_next;
 
-  NS_LOG_UNCOND("ScheduleLinksMinLoad ******************");
+  NS_LOG_UNCOND ("ScheduleLinksMinLoad ******************");
 
-  for(uint32_t i = 0; i < flows.size(); i++)
+  for (uint32_t i = 0; i < flows.size (); i++)
     {
-      NS_LOG_UNCOND("flows: "<<i<<" "<<flows.size());
-      if (flows[i].empty())
-        return true;
-      dstNode = flows[i][flows[i].size()-1];
-      NS_LOG_UNCOND("dstNode: "<<dstNode);
-      for(uint32_t j = 0; j < flows[i].size() - 1; j++)
+      NS_LOG_UNCOND ("flows: " << i << " " << flows.size ());
+      if (flows[i].empty ())
+        {
+          return true;
+        }
+      dstNode = flows[i][flows[i].size () - 1];
+      NS_LOG_UNCOND ("dstNode: " << dstNode);
+      for (uint32_t j = 0; j < flows[i].size () - 1; j++)
         {
           txNode = flows[i][j];
           rxNode = flows[i][j + 1];
 
-          NS_LOG_UNCOND("txNode: "<<txNode<<" rxNode: "<<rxNode);
+          NS_LOG_UNCOND ("txNode: " << txNode << " rxNode: " << rxNode);
           // identify the earliest slot from t with a channel c
-          resource = (this)->GetNextAvailableSlot(txNode, rxNode ,timeSlot, option, frameSize);
-          if(!m_ResourceAvailable)
-            return false;
+          resource = (this)->GetNextAvailableSlot (txNode, rxNode,timeSlot, option, frameSize);
+          if (!m_ResourceAvailable)
+            {
+              return false;
+            }
           slot = resource.timeSlot;
           chIndex = resource.channelIndex;
 
-          NS_LOG_UNCOND("slot: "<<slot<<" chIndex: "<<to_string(chIndex));
+          NS_LOG_UNCOND ("slot: " << slot << " chIndex: " << to_string (chIndex));
 
           (this)->m_mainSchedule[slot][chIndex][0] = txNode;
           (this)->m_mainSchedule[slot][chIndex][1] = rxNode;
 
 //          uint16_t grpahID = 0;       // TEMPORARY ***************************************
-          Mac16Address macGraphID = GraphIDConverter(m_grpahID);
+          Mac16Address macGraphID = GraphIDConverter (m_grpahID);
           NodeInfo scheduleInfo = {m_carriers[chIndex], TRANSMIT, macGraphID, m_panID, flows[i][0]};
           (this)->m_nodeScheduleN[txNode][slot] = scheduleInfo;
           scheduleInfo.slotType = RECEIVE;
@@ -120,37 +127,43 @@ bool Isa100Helper::ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int fra
           RoutingTable rt;
           if (option == TRANSMIT)
             {
-              NS_LOG_UNCOND("TRANSMIT next addr"<<address_next.Get());
+              NS_LOG_UNCOND ("TRANSMIT next addr" << address_next.Get ());
               uint32_t initNodePrimaryPath = flows[i][0];
 //              if (m_panID < m_tableList2[txNode][dstNode].size() && j == 0)
-              if (m_panID < m_tableList2[txNode][dstNode].size() && j == 0)
-                m_tableList2[txNode][dstNode][m_panID].push_back(macGraphID);
+              if (m_panID < m_tableList2[txNode][dstNode].size () && j == 0)
+                {
+                  m_tableList2[txNode][dstNode][m_panID].push_back (macGraphID);
+                }
               else if (j == 0)
-                m_tableList2[txNode][dstNode].push_back({macGraphID});
+                {
+                  m_tableList2[txNode][dstNode].push_back ({macGraphID});
+                }
               else
-                m_tableList2[initNodePrimaryPath][dstNode][m_panID].push_back(macGraphID);
+                {
+                  m_tableList2[initNodePrimaryPath][dstNode][m_panID].push_back (macGraphID);
+                }
 
               if (m_panID > 0)
                 {
-                  Mac16Address primaryMacGraph = m_tableList2[initNodePrimaryPath][dstNode][0].back();
+                  Mac16Address primaryMacGraph = m_tableList2[initNodePrimaryPath][dstNode][0].back ();
                   m_tableList[txNode][primaryMacGraph].nextGraphID = macGraphID;
                 }
 
-              NS_LOG_UNCOND("m_tableList2 "<<txNode<<" "<<dstNode<<" "<<macGraphID);
+              NS_LOG_UNCOND ("m_tableList2 " << txNode << " " << dstNode << " " << macGraphID);
               rt.destID = dstNode;
-              rt.neighborList.push_back(rxNode);
+              rt.neighborList.push_back (rxNode);
               m_tableList[txNode][macGraphID] = rt;
             }
           else if (option == SHARED)
             {
               uint32_t initNodePrimaryPath = flows[0][0];
-              Mac16Address primaryMacGraph = m_tableList2[initNodePrimaryPath][dstNode][m_panID].back();
+              Mac16Address primaryMacGraph = m_tableList2[initNodePrimaryPath][dstNode][m_panID].back ();
               m_tableList[txNode][primaryMacGraph].nextGraphID = macGraphID;
-              NS_LOG_UNCOND("SHARED next addr"<<address_next.Get());
-              NS_LOG_UNCOND("backup graph "<<macGraphID);
+              NS_LOG_UNCOND ("SHARED next addr" << address_next.Get ());
+              NS_LOG_UNCOND ("backup graph " << macGraphID);
               m_tableList[txNode][macGraphID].destID = dstNode;
               m_tableList[txNode][macGraphID].nextGraphID = macGraphID;
-              m_tableList[txNode][macGraphID].neighborList.push_back(rxNode);
+              m_tableList[txNode][macGraphID].neighborList.push_back (rxNode);
             }
 //
 //          NS_LOG_UNCOND("Here::");
