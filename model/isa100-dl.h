@@ -90,28 +90,30 @@ typedef enum
  */
 struct DlDataRequestParams
 {
-	Mac16Address m_srcAddr;
-	Mac16Address m_destAddr;
-	uint8_t m_dsduLength; ///< DPDU payload length (in octets)
-	uint8_t m_dsduHandle; ///< Identifier for this data request used by confirm callback.
+  Mac16Address m_srcAddr;
+  Mac16Address m_destAddr;
+  uint8_t m_dsduLength;       ///< DPDU payload length (in octets)
+  uint8_t m_dsduHandle;       ///< Identifier for this data request used by confirm callback.
 };
 
 /** Used by DL to indicate status of a transmission request.
  * - DL-DATA.confirm
  * - Implements Table 105
  */
-typedef enum{
-	SUCCESS,
-	FAILURE
+typedef enum
+{
+  SUCCESS,
+  FAILURE
 } DlDataRequestStatus;
 
 /** Used by DL to indicate status of a transmission request.
  * - DL-DATA.confirm
  * - Implements Table 105
  */
-struct DlDataConfirmParams{
-	uint8_t m_dsduHandle;  ///< Matches the value used in the request being confirmed.
-	DlDataRequestStatus m_status;  ///< Indicates result of data send request.
+struct DlDataConfirmParams
+{
+  uint8_t m_dsduHandle;        ///< Matches the value used in the request being confirmed.
+  DlDataRequestStatus m_status;        ///< Indicates result of data send request.
 };
 
 
@@ -122,10 +124,10 @@ struct DlDataConfirmParams{
  */
 struct DlDataIndicationParams
 {
-	Mac16Address m_srcAddr;
-	Mac16Address m_destAddr;
-	uint8_t m_dsduLength; ///< DPDU payload length (in octets)
-	uint8_t m_dataSeqNum; ///< data sequence number information (DSN)
+  Mac16Address m_srcAddr;
+  Mac16Address m_destAddr;
+  uint8_t m_dsduLength;       ///< DPDU payload length (in octets)
+  uint8_t m_dataSeqNum;       ///< data sequence number information (DSN)
 };
 
 
@@ -188,10 +190,11 @@ typedef Callback< void, Time > PlmeSleepForCallback;
 
 /** Enum defining link activity types.
  */
-typedef enum{
-	TRANSMIT,
-	RECEIVE,
-	SHARED
+typedef enum
+{
+  TRANSMIT,
+  RECEIVE,
+  SHARED
 } DlLinkType;
 
 class Isa100Dl;
@@ -200,25 +203,16 @@ class Isa100Dl;
  * - Includes both channel hopping and time slot schedules.
  * - Supports multi-superframes
  */
-class Isa100DlSfSchedule : public Object{
-	friend class Isa100Dl;
+class Isa100DlSfSchedule : public Object
+{
+  friend class Isa100Dl;
 
 public:
-	Isa100DlSfSchedule();
+  Isa100DlSfSchedule ();
 
-	virtual ~Isa100DlSfSchedule();
+  virtual ~Isa100DlSfSchedule ();
 
-	static TypeId GetTypeId (void);
-
-  /** Set the schedule.
-   * - Note that this schedule is repeated over and over again.
-   * - The hopping pattern is changed on every timeslot, whether there is
-   *   link activity scheduled or not.
-   *
-   */
-	void SetSchedule(
-	      const uint8_t* startHop, uint32_t numHop,
-	      uint16_t* startSlotSched, DlLinkType* startSlotType, uint32_t numSlots);
+  static TypeId GetTypeId (void);
 
   /** Set the schedule.
    * - Note that this schedule is repeated over and over again.
@@ -226,33 +220,43 @@ public:
    *   link activity scheduled or not.
    *
    */
-	void SetSchedule(
-			vector<uint8_t> hoppingPattern,
-			vector<uint16_t> scheduleSlots,
-			vector<DlLinkType> scheduleTypes);
+  void SetSchedule (
+    const uint8_t* startHop, uint32_t numHop,
+    uint16_t* startSlotSched, DlLinkType* startSlotType, uint32_t numSlots);
+
+  /** Set the schedule.
+   * - Note that this schedule is repeated over and over again.
+   * - The hopping pattern is changed on every timeslot, whether there is
+   *   link activity scheduled or not.
+   *
+   */
+  void SetSchedule (
+    vector<uint8_t> hoppingPattern,
+    vector<uint16_t> scheduleSlots,
+    vector<DlLinkType> scheduleTypes);
 
 
-	/** Get the sf link slot schedule
-	 */
-	std::vector<uint16_t> *GetLinkSlotSchedule(void);
+  /** Get the sf link slot schedule
+   */
+  std::vector<uint16_t> * GetLinkSlotSchedule (void);
 
   /** Get the sf link slot types
    */
-	std::vector<DlLinkType> *GetLinkSlotTypes(void);
+  std::vector<DlLinkType> * GetLinkSlotTypes (void);
 
-	/* Get the frame boundaries for a multi-frame sf
-	 */
-	std::vector<uint16_t> *GetFrameBounds(void);
+  /* Get the frame boundaries for a multi-frame sf
+   */
+  std::vector<uint16_t> * GetFrameBounds (void);
 
 
 private:
-	std::vector<uint8_t> m_dlHoppingPattern;         ///< Channel hopping pattern (dlmo.Ch Table 160).
-	std::vector<uint16_t> m_dlLinkScheduleSlots;     ///< Slots where link activity is defined.
-	std::vector<DlLinkType> m_dlLinkScheduleTypes;   ///< Type of link activity in each slot.
-	std::vector<Mac16Address> m_dlLinkScheduleDests; ///< Destination of each link for a TDMA schedule
-	std::vector<uint16_t> m_multiFrameBounds;        ///< Indexes in the above vectors which represent a new Frame
-    std::vector<uint16_t> m_numPktsInSlot;           ///< The number of packets which are being sent during each slot
-	uint16_t m_currMultiFrameI;                      ///< Index of the current frame in a multiframe superframe
+  std::vector<uint8_t> m_dlHoppingPattern;               ///< Channel hopping pattern (dlmo.Ch Table 160).
+  std::vector<uint16_t> m_dlLinkScheduleSlots;           ///< Slots where link activity is defined.
+  std::vector<DlLinkType> m_dlLinkScheduleTypes;         ///< Type of link activity in each slot.
+  std::vector<Mac16Address> m_dlLinkScheduleDests;       ///< Destination of each link for a TDMA schedule
+  std::vector<uint16_t> m_multiFrameBounds;              ///< Indexes in the above vectors which represent a new Frame
+  std::vector<uint16_t> m_numPktsInSlot;             ///< The number of packets which are being sent during each slot
+  uint16_t m_currMultiFrameI;                            ///< Index of the current frame in a multiframe superframe
 };
 
 
@@ -273,25 +277,25 @@ public:
   /** Scheduled by ctor to execute at simulation time zero.
    *
    */
-  void Start();
+  void Start ();
 
   /** Set the superframe schedule.
    *
    * \param schedule Object storing schedule information.
    */
-  void SetDlSfSchedule(Ptr<Isa100DlSfSchedule> schedule);
+  void SetDlSfSchedule (Ptr<Isa100DlSfSchedule> schedule);
 
   /** Set the routing algorithm object.
    *
    * \param algorithm Pointer to the routing algorithm object.
    */
-  void SetRoutingAlgorithm(Ptr<Isa100RoutingAlgorithm> routingAlgorithm);
+  void SetRoutingAlgorithm (Ptr<Isa100RoutingAlgorithm> routingAlgorithm);
 
   /** Get the routing algorithm object.
    *
    * \return Pointer to the routing algorithm object.
    */
-  Ptr<Isa100RoutingAlgorithm> GetRoutingAlgorithm();
+  Ptr<Isa100RoutingAlgorithm> GetRoutingAlgorithm ();
 
   /** Set/Get the tx power level (dBm) for this node to reach all others.
    * Converts double values to 6-bit ints by rounding up (ceiling).
@@ -470,7 +474,7 @@ public:
    *
    * @param battery Pointer to processor.
    */
-  void SetProcessor(Ptr<Isa100Processor> processor);
+  void SetProcessor (Ptr<Isa100Processor> processor);
 
 
 
@@ -504,7 +508,6 @@ public:
 
 
 private:
-
   // ------ Private Member Functions -------
 
   virtual void DoDispose (void);
@@ -515,31 +518,31 @@ private:
    *   different hopping algorithms (ie. slow or hybrid hopping) to be
    *   implemented via inheritance.
    */
-  void ChannelHop();
+  void ChannelHop ();
 
   /** Processes link activity.
    * - Recursively scheduled to execute on the active slots indicated
    *   by the superframe link schedule.
    */
-  void ProcessLink();
+  void ProcessLink ();
 
   /** Used for scheduling a PHY state change request.
    *
    * \param state Requested state.
    */
-  void ProcessTrxStateRequest(ZigbeePhyEnumeration state);
+  void ProcessTrxStateRequest (ZigbeePhyEnumeration state);
 
   /** Used for delaying the CCA request by m_xmitEarliest
    *
    */
-  void CallPlmeCcaRequest();
+  void CallPlmeCcaRequest ();
 
   /** Determines if given packet is an ACK
    *
    * \param p Packet to check
    * \returns true if packet is an ACK, otherwise return false
    */
-   bool IsAckPacket(Ptr<const Packet> p);
+  bool IsAckPacket (Ptr<const Packet> p);
 
 
   // ------- Trace Functions --------
@@ -567,7 +570,7 @@ private:
 
   /** Trace source for info about dropped packets.
    */
-  TracedCallback<Mac16Address, Ptr<const Packet> , std::string> m_infoDropTrace;
+  TracedCallback<Mac16Address, Ptr<const Packet>, std::string> m_infoDropTrace;
 
   /** Trace source for logging process link and each timeslot
    *  - Address, link type, tx queue size, backoff counter, arq backoff counter

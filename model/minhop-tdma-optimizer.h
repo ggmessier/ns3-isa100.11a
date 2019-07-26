@@ -38,7 +38,6 @@ using namespace std;
 class MinHopTdmaOptimizer : public TdmaOptimizerBase
 {
 public:
-
   static TypeId GetTypeId (void);
 
   MinHopTdmaOptimizer ();
@@ -58,20 +57,19 @@ public:
   virtual std::vector< std::vector< int > > SolveTdma (void);
 
 private:
-
   /** Finds the parent of node i with the lowest index.
    *
    * @param i Node index.
    * @param packetFlows Matrix of packet flows.
    */
-  int FindFirstParent(int i, vector< vector<int> > &packetFlows);
+  int FindFirstParent (int i, vector< vector<int> > &packetFlows);
 
   /** Determines if a node has been processed by the min hop algorithm as a potential parent.
    *
    * @param i Node index.
    * @param packetFlows Matrix of packet flows.
    */
-  int HasNotBeenProcessed(int i, vector< vector<int> > &packetFlows);
+  int HasNotBeenProcessed (int i, vector< vector<int> > &packetFlows);
 
   /** Perform a breadth first search to find a minimum number of hops network.
    *
@@ -80,7 +78,7 @@ private:
    * @param hopCount Vector indicating number of hops each node is from sink.
    * @param curTxPwr Current transmit power for each node to reach next hop.
    */
-  void BreadthFirstMinHopFlowSolver(int parent, vector< vector<int> > &packetFlows, vector<int> &hopCount, vector<double> &curTxPwr);
+  void BreadthFirstMinHopFlowSolver (int parent, vector< vector<int> > &packetFlows, vector<int> &hopCount, vector<double> &curTxPwr);
 
 
 

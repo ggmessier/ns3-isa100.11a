@@ -72,9 +72,10 @@ typedef  struct
 
 /** Structure for holding a packet and state indicating packet integrity.
  */
-typedef struct{
-	Ptr<Packet> m_packet;  ///< Pointer to packet.
-	bool m_isCorrupt;  ///< Indicates whether the packet has been corrupted by interference.
+typedef struct
+{
+  Ptr<Packet> m_packet;        ///< Pointer to packet.
+  bool m_isCorrupt;        ///< Indicates whether the packet has been corrupted by interference.
 } PacketAndStatus;
 
 
@@ -136,23 +137,23 @@ typedef struct
 {
   uint8_t phyCurrentChannel;  ///< 27 LSB in 32 bit word indicating which of 27 channels are active.
   uint32_t phyChannelsSupported[32]; ///< Array of supported channels (5 MSB for channel page, 27 LSB for channels within page).
-  uint8_t phyTransmitPower;   ///< Tolerance of tx power accuracy.
+  int8_t phyTransmitPower;   ///< Tolerance of tx power accuracy.
   uint8_t phyCCAMode;         ///< Energy above threshold, carrier sense only or both.
   uint32_t phyCurrentPage;    ///< Current channel page.
   uint32_t phyMaxFrameDuration; ///< phySHRDuration + ceil(maxPHYPacketSize+1)*phySymbolsPerOctet
   uint32_t phySHRDuration;      ///< Num symbols in sync frame.
   double phySymbolsPerOctet;    ///< Symbols per octet 0.4 for 20 bit spread spectrum/ASK, 1.6 for 5 bit spread spectrum/ASK,
-                                ///< 2 for 16-ary orthog mod with O-QPSK or 8 for BPSK.
+  ///< 2 for 16-ary orthog mod with O-QPSK or 8 for BPSK.
 } ZigbeePhyPIBAttributes;
 
 /** Enum to trace packet drops (FISH).
  */
 typedef enum
 {
-	phyDropRxHiddenNode = 0x00,
-	phyDropRxLowSNR = 0x01,
-	phyDropTx=0x02
-}ZigbeePhyDropSource;
+  phyDropRxHiddenNode = 0x00,
+  phyDropRxLowSNR = 0x01,
+  phyDropTx = 0x02
+} ZigbeePhyDropSource;
 
 /** Callback to transfer PHY service data unit (PSDU) to MAC layer.
  * - Denoted PD-DATA.indication in the standard.
@@ -247,7 +248,7 @@ class ZigbeePhy : public SpectrumPhy
 
 public:
   // The second is true if the first is flagged as error
- // typedef std::pair<Ptr<Packet>, bool>  PacketAndStatus;
+  // typedef std::pair<Ptr<Packet>, bool>  PacketAndStatus;
 
   static TypeId GetTypeId (void);
 
@@ -261,7 +262,7 @@ public:
    *
    * @param d the NetDevice instance
    */
-   void SetDevice (Ptr<NetDevice> d);
+  void SetDevice (Ptr<NetDevice> d);
 
   /** Get the NetDevice instance associated with this PHY.
    *
@@ -393,7 +394,7 @@ public:
    *
    * @param c Callback function.
    */
-  void SetBatteryCallback(BatteryDecrementCallback c);
+  void SetBatteryCallback (BatteryDecrementCallback c);
 
   /** Set the received data callback.
    * Callback occurs at the end of an RX as part of the
@@ -455,7 +456,7 @@ public:
    *
    * @param c Callback function.
    */
-  void SetPhyDropCallback(PhyDropCallback c);
+  void SetPhyDropCallback (PhyDropCallback c);
 
 
   /** Set the error model to use.
@@ -474,7 +475,7 @@ public:
    *
    * @return Vector of string names of the categories.
    */
-  vector<string>& GetEnergyCategories();
+  vector<string>& GetEnergyCategories ();
 
 
   /** Set the supply voltage in Volts
@@ -508,12 +509,10 @@ protected:
   static const ZigbeePhyPpduHeaderSymbolNumber ppduHeaderSymbolNumbers[7];
 
 private:
-
-
   /**
    * Update the how much energy the PHY transceiver has consumed from the battery. (GGM)
    */
-  void UpdateBattery();
+  void UpdateBattery ();
 
 
 
@@ -556,7 +555,7 @@ private:
   /** Decrement the number of active signals in the channel.
    *
    */
-  void DecrementChannelRxSignals();
+  void DecrementChannelRxSignals ();
 
   // State variables
   ZigbeePhyEnumeration m_trxState;  /// transceiver state

@@ -37,6 +37,7 @@
 #include "ns3/packet.h"
 
 #include "ns3/isa100-net-device.h"
+#include "ns3/isa100-application.h" //Rajith Added
 
 NS_LOG_COMPONENT_DEFINE ("Isa100NetDevice");
 
@@ -51,20 +52,20 @@ Isa100NetDevice::GetTypeId (void)
     .SetParent<NetDevice> ()
     .AddConstructor<Isa100NetDevice> ()
     .AddAttribute (
-    		"Channel", "The channel attached to this device",
-    		PointerValue (),
-				MakePointerAccessor (&Isa100NetDevice::DoGetChannel),
-				MakePointerChecker<SpectrumChannel> ())
+      "Channel", "The channel attached to this device",
+      PointerValue (),
+      MakePointerAccessor (&Isa100NetDevice::DoGetChannel),
+      MakePointerChecker<SpectrumChannel> ())
     .AddAttribute (
-    		"Phy", "The PHY layer attached to this device.",
-				PointerValue (),
-				MakePointerAccessor (&Isa100NetDevice::GetPhy,&Isa100NetDevice::SetPhy),
-				MakePointerChecker<ZigbeePhy> ())
-	  .AddAttribute (
-	  		"Dl", "The DL layer attached to this device.",
-				PointerValue (),
-				MakePointerAccessor (&Isa100NetDevice::GetDl,&Isa100NetDevice::SetDl),
-				MakePointerChecker<Isa100Dl> ())
+      "Phy", "The PHY layer attached to this device.",
+      PointerValue (),
+      MakePointerAccessor (&Isa100NetDevice::GetPhy,&Isa100NetDevice::SetPhy),
+      MakePointerChecker<ZigbeePhy> ())
+    .AddAttribute (
+      "Dl", "The DL layer attached to this device.",
+      PointerValue (),
+      MakePointerAccessor (&Isa100NetDevice::GetDl,&Isa100NetDevice::SetDl),
+      MakePointerChecker<Isa100Dl> ())
   ;
   return tid;
 }
@@ -95,10 +96,14 @@ Isa100NetDevice::DoDispose (void)
   NS_LOG_FUNCTION (this);
   m_dl->Dispose ();
   m_phy->Dispose ();
-  if(m_battery)
-  	m_battery->Dispose();
-  if(m_processor)
-  	m_processor->Dispose();
+  if (m_battery)
+    {
+      m_battery->Dispose ();
+    }
+  if (m_processor)
+    {
+      m_processor->Dispose ();
+    }
   m_phy = 0;
   m_dl = 0;
   m_battery = 0;
@@ -138,10 +143,10 @@ void Isa100NetDevice::CompleteConfig (void)
   m_phy->SetErrorModel (model);
 
   // Callbacks for DL to PHY communication.
-  m_dl->SetPdDataRequestCallback( MakeCallback(&ZigbeePhy::PdDataRequest, m_phy) );
-  m_dl->SetPlmeCcaRequestCallback( MakeCallback(&ZigbeePhy::PlmeCcaRequest, m_phy) );
-  m_dl->SetPlmeSetTrxStateRequestCallback( MakeCallback(&ZigbeePhy::PlmeSetTRXStateRequest, m_phy) );
-  m_dl->SetPlmeSetAttributeCallback( MakeCallback(&ZigbeePhy::PlmeSetAttributeRequest, m_phy) );
+  m_dl->SetPdDataRequestCallback ( MakeCallback (&ZigbeePhy::PdDataRequest, m_phy) );
+  m_dl->SetPlmeCcaRequestCallback ( MakeCallback (&ZigbeePhy::PlmeCcaRequest, m_phy) );
+  m_dl->SetPlmeSetTrxStateRequestCallback ( MakeCallback (&ZigbeePhy::PlmeSetTRXStateRequest, m_phy) );
+  m_dl->SetPlmeSetAttributeCallback ( MakeCallback (&ZigbeePhy::PlmeSetAttributeRequest, m_phy) );
 
 
   // Callbacks for PHY to DL communication.
@@ -271,7 +276,7 @@ void
 Isa100NetDevice::SetAddress (Address address)
 {
   NS_LOG_FUNCTION (this);
-  m_dl->SetAttribute("Address",Mac16AddressValue(Mac16Address::ConvertFrom (address)));
+  m_dl->SetAttribute ("Address",Mac16AddressValue (Mac16Address::ConvertFrom (address)));
 }
 
 Address
@@ -282,13 +287,13 @@ Isa100NetDevice::GetAddress (void) const
   Mac16AddressValue addressValue;
   m_dl->GetAttribute ("Address", addressValue);
 
-  return Address(addressValue.Get());
+  return Address (addressValue.Get ());
 }
 
 bool
 Isa100NetDevice::SetMtu (const uint16_t mtu)
 {
-	NS_ABORT_MSG ("Unsupported");
+  NS_ABORT_MSG ("Unsupported");
   return false;
 }
 
@@ -372,8 +377,8 @@ Isa100NetDevice::Send (Ptr<Packet> packet, const Address& dest, uint16_t protoco
   // inventing a fake ethertype and packet tag for McpsDataRequest
 
 
-	 NS_ABORT_MSG ("Isa100NetDevice::Send -> Unsupported; use McpsDataRequest instead");
-	 return false;
+  NS_ABORT_MSG ("Isa100NetDevice::Send -> Unsupported; use McpsDataRequest instead");
+  return false;
 }
 
 bool
@@ -432,6 +437,31 @@ Isa100NetDevice::SupportsSendFrom (void) const
 {
   NS_LOG_FUNCTION_NOARGS ();
   return false;
+}
+
+uint32_t
+Isa100NetDevice::AddApplication (Ptr<Isa100Application> application)
+{
+  NS_LOG_FUNCTION (this << application);
+  uint32_t index = m_applications.size ();
+  m_applications.push_back (application);
+  return index;
+}
+
+Ptr<Isa100Application>
+Isa100NetDevice::GetApplication (uint32_t index)
+{
+  NS_LOG_FUNCTION (this << index);
+  NS_ASSERT_MSG (index < m_applications.size (), "Application index " << index <<
+                 " is out of range (only have " << m_applications.size () << " applications).");
+  return m_applications[index];
+}
+
+uint32_t
+Isa100NetDevice::GetNApplications (void)
+{
+  NS_LOG_FUNCTION (this);
+  return m_applications.size ();
 }
 
 } // namespace ns3

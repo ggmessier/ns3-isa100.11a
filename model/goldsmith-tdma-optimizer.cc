@@ -37,11 +37,12 @@
 
 ILOSTLBEGIN
 
-NS_LOG_COMPONENT_DEFINE ("GoldsmithTdmaOptimizer");
+  NS_LOG_COMPONENT_DEFINE ("GoldsmithTdmaOptimizer");
 
 namespace ns3 {
 
-struct nodeElement {
+struct nodeElement
+{
   std::vector<NetworkLink *> inLinks;
   std::vector<NetworkLink *> outLinks;
 };
@@ -54,12 +55,12 @@ TypeId GoldsmithTdmaOptimizer::GetTypeId (void)
     .SetParent<TdmaOptimizerBase> ()
     .AddConstructor<GoldsmithTdmaOptimizer> ()
 
-    ;
+  ;
 
   return tid;
 }
 
-GoldsmithTdmaOptimizer::GoldsmithTdmaOptimizer () : TdmaOptimizerBase()
+GoldsmithTdmaOptimizer::GoldsmithTdmaOptimizer () : TdmaOptimizerBase ()
 {
   NS_LOG_FUNCTION (this);
 }
@@ -74,7 +75,7 @@ void GoldsmithTdmaOptimizer::SetupOptimization (NodeContainer c, Ptr<Propagation
   NS_LOG_FUNCTION (this);
 
   // Setup the common base properties
-  TdmaOptimizerBase::SetupOptimization(c, propModel);
+  TdmaOptimizerBase::SetupOptimization (c, propModel);
 
   // Indicate that optimization has been setup
   m_isSetup = true;
@@ -83,195 +84,208 @@ void GoldsmithTdmaOptimizer::SetupOptimization (NodeContainer c, Ptr<Propagation
 vector< vector<int> > GoldsmithTdmaOptimizer::SolveTdma (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_ASSERT_MSG(m_isSetup, "TDMA Optimizer: Must setup optimization before calling Solve!");
+  NS_ASSERT_MSG (m_isSetup, "TDMA Optimizer: Must setup optimization before calling Solve!");
 
   typedef IloArray<IloNumVarArray> NumVarMatrix;
 
   IloEnv env;
-  vector< vector<int> > flows(m_numNodes);
+  vector< vector<int> > flows (m_numNodes);
 
   try
-  {
-  	IloModel model (env);
+    {
+      IloModel model (env);
 
-  	// Variables for optimization
-  	// Packet flows and max energy
-  	NumVarMatrix bitFlowsVars (env, m_numNodes);
-  	IloNumVar maxNodeEnergyVar (env, 0.0, m_initialEnergy, "MaxEnergy"); // in seconds
+      // Variables for optimization
+      // Packet flows and max energy
+      NumVarMatrix bitFlowsVars (env, m_numNodes);
+      IloNumVar maxNodeEnergyVar (env, 0.0, m_initialEnergy, "MaxEnergy");   // in seconds
 
-  	char flowName[16];
+      char flowName[16];
 
-  	// Iterate through all combinations of nodes to create variables
-  	for(IloInt i = 0; i < m_numNodes; i++){
+      // Iterate through all combinations of nodes to create variables
+      for (IloInt i = 0; i < m_numNodes; i++)
+        {
 
-  		// Initialize ith row of flows array
-  		bitFlowsVars[i] = IloNumVarArray(env);
+          // Initialize ith row of flows array
+          bitFlowsVars[i] = IloNumVarArray (env);
 
-  		for(IloInt j = 0; j < m_numNodes; j++){
+          for (IloInt j = 0; j < m_numNodes; j++)
+            {
 
-  			sprintf(flowName, "W_%li_%li", i, j);
+              sprintf (flowName, "W_%li_%li", i, j);
 
-  			// Node doesn't transmit to itself
-  			if (i == j)
-  			{
-  				bitFlowsVars[i].add(IloNumVar(env, 0, 0, flowName));
-  			}
+              // Node doesn't transmit to itself
+              if (i == j)
+                {
+                  bitFlowsVars[i].add (IloNumVar (env, 0, 0, flowName));
+                }
 
-  			// Node transmits to a different one
-  			else
-  			{
-  				// Check if node is beyond range (cost to tx a bit is higher than allowed)
-  				if (m_txEnergyBit[i][j] > m_maxTxEnergyBit)
-  				{
-  					bitFlowsVars[i].add(IloNumVar(env, 0, 0, flowName));
-  				}
+              // Node transmits to a different one
+              else
+                {
+                  // Check if node is beyond range (cost to tx a bit is higher than allowed)
+                  if (m_txEnergyBit[i][j] > m_maxTxEnergyBit)
+                    {
+                      bitFlowsVars[i].add (IloNumVar (env, 0, 0, flowName));
+                    }
 
-  				else
-  				{
-  					// Sink node does not transmit
-  					if (i == m_sinkIndex)
-  					{
-  						bitFlowsVars[i].add(IloNumVar(env, 0, 0, flowName));
-  					}
+                  else
+                    {
+                      // Sink node does not transmit
+                      if (i == m_sinkIndex)
+                        {
+                          bitFlowsVars[i].add (IloNumVar (env, 0, 0, flowName));
+                        }
 
-  					else
-  					{
-  						bitFlowsVars[i].add(IloNumVar(env, 0, IloIntMax, flowName));
-  					}
-  				}
-  			}
-  		}
-  	}
+                      else
+                        {
+                          bitFlowsVars[i].add (IloNumVar (env, 0, IloIntMax, flowName));
+                        }
+                    }
+                }
+            }
+        }
 
-  	// Create constraints
-  	for (uint32_t i = 0; i < m_numNodes; i++)
-  	{
-  		IloExpr sumLinkTimes(env);
-  		IloExpr sumFlowsOut(env);
-  		IloExpr sumFlowsIn(env);
-  		IloExpr sumEnergyTx(env);
-  		IloExpr sumEnergyRx(env);
+      // Create constraints
+      for (uint32_t i = 0; i < m_numNodes; i++)
+        {
+          IloExpr sumLinkTimes (env);
+          IloExpr sumFlowsOut (env);
+          IloExpr sumFlowsIn (env);
+          IloExpr sumEnergyTx (env);
+          IloExpr sumEnergyRx (env);
 
-  		for (int j = 0; j < m_numNodes; j++)
-  		{
-  			// TDMA sum of assigned link times
-  			sumLinkTimes += bitFlowsVars[i][j] / m_bitRate;
+          for (int j = 0; j < m_numNodes; j++)
+            {
+              // TDMA sum of assigned link times
+              sumLinkTimes += bitFlowsVars[i][j] / m_bitRate;
 
-  			// Sum of flows
-  			sumFlowsOut += bitFlowsVars[i][j];
-  			sumFlowsIn  += bitFlowsVars[j][i];
+              // Sum of flows
+              sumFlowsOut += bitFlowsVars[i][j];
+              sumFlowsIn  += bitFlowsVars[j][i];
 
-  			// Energy
-  			sumEnergyTx += m_txEnergyBit[i][j] * bitFlowsVars[i][j];
-  			sumEnergyRx += m_rxEnergyBit * bitFlowsVars[j][i];
-  		}
+              // Energy
+              sumEnergyTx += m_txEnergyBit[i][j] * bitFlowsVars[i][j];
+              sumEnergyRx += m_rxEnergyBit * bitFlowsVars[j][i];
+            }
 
-  		if (i != m_sinkIndex)
-  		{
-  			// TDMA constraint
-  			model.add(sumLinkTimes <= m_usableSlotDuration.GetSeconds() * m_numTimeslots);
+          if (i != m_sinkIndex)
+            {
+              // TDMA constraint
+              model.add (sumLinkTimes <= m_usableSlotDuration.GetSeconds () * m_numTimeslots);
 
-  			// conservation of flow
-  			model.add (sumFlowsIn + m_numPktsNode * m_numBytesPkt * 8 == sumFlowsOut);
+              // conservation of flow
+              model.add (sumFlowsIn + m_numPktsNode * m_numBytesPkt * 8 == sumFlowsOut);
 
-  			// conservation of energy
-  			model.add (sumEnergyTx + sumEnergyRx <= m_initialEnergy);
-  			model.add (sumEnergyTx + sumEnergyRx <= maxNodeEnergyVar);
-  		}
-  	}
+              // conservation of energy
+              model.add (sumEnergyTx + sumEnergyRx <= m_initialEnergy);
+              model.add (sumEnergyTx + sumEnergyRx <= maxNodeEnergyVar);
+            }
+        }
 
-  	// Specify objective (minimize the maximum node's energy per frame)
-  	model.add (IloMinimize(env, maxNodeEnergyVar));
+      // Specify objective (minimize the maximum node's energy per frame)
+      model.add (IloMinimize (env, maxNodeEnergyVar));
 
-  	IloCplex cplex (model);
-
-
-  	// Might be nice to figure out how to integrate this output with NS_LOG levels
-  	// Exports the model. Can use LP, SAV or MPS format
-  	cplex.exportModel("scratch/optmodel.lp");
-
-  	//cplex.setParam(IloCplex::EpGap, 0.11);
-
-  	// Disable output, would be nice to integrate with ns3 logging as well if possible
-  	//cplex.setOut(env.getNullStream());
-
-  	// use the dual simplex, otherwise let cplex choose
-  	// cplex.setParam(IloCplex::RootAlg, IloCplex::Dual);
-
-  	cplex.setParam(IloCplex::TiLim, 60*5); // Max optimization time (in sec)
-
-  	// Solve the optimization
-  	if (!cplex.solve ()) {
-  		NS_FATAL_ERROR ("Failed to optimize LP: " << cplex.getStatus());
-  	}
-
-  	// Obtain results
-  	IloNumArray flowVals (env);
-  	IloNum objVal;
-  	std::vector<NetworkLink> linkList;
-  	std::vector<uint16_t> linksNumPkts;
-  	double lifetimeResult;
-
-  	NS_ASSERT_MSG(cplex.getStatus() == IloAlgorithm::Optimal, "Convex solver couldn't find optimal solution!");
-  	objVal = cplex.getObjValue();
-  	lifetimeResult = m_initialEnergy / objVal * m_slotDuration.GetSeconds() * m_numTimeslots;
-
-  	NS_LOG_DEBUG (" Solution status = " << cplex.getStatus());
-  	NS_LOG_DEBUG (" Solution value, Max Energy  = " << objVal);
-  	NS_LOG_UNCOND (std::fixed << std::setprecision (2) << " Calculated lifetime value   = " << lifetimeResult);
+      IloCplex cplex (model);
 
 
-  	for(int i=0; i < m_numNodes; i++)
-  		flows[i].assign(m_numNodes,0);
+      // Might be nice to figure out how to integrate this output with NS_LOG levels
+      // Exports the model. Can use LP, SAV or MPS format
+      cplex.exportModel ("scratch/optmodel.lp");
+
+      //cplex.setParam(IloCplex::EpGap, 0.11);
+
+      // Disable output, would be nice to integrate with ns3 logging as well if possible
+      //cplex.setOut(env.getNullStream());
+
+      // use the dual simplex, otherwise let cplex choose
+      // cplex.setParam(IloCplex::RootAlg, IloCplex::Dual);
+
+      cplex.setParam (IloCplex::TiLim, 60 * 5); // Max optimization time (in sec)
+
+      // Solve the optimization
+      if (!cplex.solve ())
+        {
+          NS_FATAL_ERROR ("Failed to optimize LP: " << cplex.getStatus ());
+        }
+
+      // Obtain results
+      IloNumArray flowVals (env);
+      IloNum objVal;
+      std::vector<NetworkLink> linkList;
+      std::vector<uint16_t> linksNumPkts;
+      double lifetimeResult;
+
+      NS_ASSERT_MSG (cplex.getStatus () == IloAlgorithm::Optimal, "Convex solver couldn't find optimal solution!");
+      objVal = cplex.getObjValue ();
+      lifetimeResult = m_initialEnergy / objVal * m_slotDuration.GetSeconds () * m_numTimeslots;
+
+      NS_LOG_DEBUG (" Solution status = " << cplex.getStatus ());
+      NS_LOG_DEBUG (" Solution value, Max Energy  = " << objVal);
+      NS_LOG_UNCOND (std::fixed << std::setprecision (2) << " Calculated lifetime value   = " << lifetimeResult);
 
 
-  	std::stringstream ss;
-
-  	for(int i=0; i < m_numNodes; i++) {
-
-  		if(i != 0 ){
-
-  			cplex.getValues (flowVals,bitFlowsVars[i]);
-  			//   NS_LOG_DEBUG(" Packet Flow Values for Node " << i << "  =  " << flowVals);
-
-  			ss.str( std::string() );
-  			ss << "Node " << i << ": ";
+      for (int i = 0; i < m_numNodes; i++)
+        {
+          flows[i].assign (m_numNodes,0);
+        }
 
 
-  			for(int j=0; j < m_numNodes; j++){
+      std::stringstream ss;
 
-  				int numPackets = ceil(flowVals[j] / (8*m_numBytesPkt));
+      for (int i = 0; i < m_numNodes; i++)
+        {
 
-  				if(flowVals[j] != 0)
-  					ss << j << "(" << flowVals[j] << "," << numPackets << ",";
+          if (i != 0 )
+            {
 
-  				int numSlots = ceil((double)numPackets / m_packetsPerSlot);
+              cplex.getValues (flowVals,bitFlowsVars[i]);
+              //   NS_LOG_DEBUG(" Packet Flow Values for Node " << i << "  =  " << flowVals);
 
-  				flows[i][j] = numSlots;
-
-  				if(flowVals[j] != 0)
-  					ss << flows[i][j] << "), ";
-  			}
-
-  			NS_LOG_DEBUG(ss.str());
-  		}
-  	}
+              ss.str ( std::string () );
+              ss << "Node " << i << ": ";
 
 
-  }
+              for (int j = 0; j < m_numNodes; j++)
+                {
+
+                  int numPackets = ceil (flowVals[j] / (8 * m_numBytesPkt));
+
+                  if (flowVals[j] != 0)
+                    {
+                      ss << j << "(" << flowVals[j] << "," << numPackets << ",";
+                    }
+
+                  int numSlots = ceil ((double)numPackets / m_packetsPerSlot);
+
+                  flows[i][j] = numSlots;
+
+                  if (flowVals[j] != 0)
+                    {
+                      ss << flows[i][j] << "), ";
+                    }
+                }
+
+              NS_LOG_DEBUG (ss.str ());
+            }
+        }
+
+
+    }
   catch (IloAlgorithm::CannotExtractException& e) {
     NS_LOG_UNCOND ("CannotExtractExpection: " << e);
-    IloExtractableArray failed = e.getExtractables();
-    for (IloInt i = 0; i < failed.getSize(); i++){
-      NS_LOG_UNCOND("\t" << failed[i]);
-    }
-    NS_FATAL_ERROR("Concert Fatal Error.");
+    IloExtractableArray failed = e.getExtractables ();
+    for (IloInt i = 0; i < failed.getSize (); i++)
+      {
+        NS_LOG_UNCOND ("\t" << failed[i]);
+      }
+    NS_FATAL_ERROR ("Concert Fatal Error.");
   }
   catch (IloException& e) {
-     NS_FATAL_ERROR ("Concert exception caught: " << e );
-  }
+      NS_FATAL_ERROR ("Concert exception caught: " << e );
+    }
   catch (...) {
-     NS_FATAL_ERROR ("Unknown exception caught");
+    NS_FATAL_ERROR ("Unknown exception caught");
   }
 
   env.end ();

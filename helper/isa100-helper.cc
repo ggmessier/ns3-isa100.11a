@@ -55,35 +55,35 @@ Isa100Helper::GetTypeId (void)
     .SetParent<Object> ()
     .AddConstructor<Isa100Helper> ()
 
-		.AddTraceSource("NodeLocations",
-				"Node locations.",
-				MakeTraceSourceAccessor (&Isa100Helper::m_locationTrace),
-				"ns3::TracedCallback::Location")
+    .AddTraceSource ("NodeLocations",
+                     "Node locations.",
+                     MakeTraceSourceAccessor (&Isa100Helper::m_locationTrace),
+                     "ns3::TracedCallback::Location")
 
-    .AddTraceSource("HopTrace",
-		    "Number of hops for each node.",
-        MakeTraceSourceAccessor (&Isa100Helper::m_hopTrace),
-				"ns3::TracedCallback::Hops")
+    .AddTraceSource ("HopTrace",
+                     "Number of hops for each node.",
+                     MakeTraceSourceAccessor (&Isa100Helper::m_hopTrace),
+                     "ns3::TracedCallback::Hops")
 
-    .AddTraceSource("Schedule",
-        "Main schedule for each slot.",
-        MakeTraceSourceAccessor (&Isa100Helper::m_scheduleTrace),
-        "ns3::TracedCallback::Schedule")
+    .AddTraceSource ("Schedule",
+                     "Main schedule for each slot.",
+                     MakeTraceSourceAccessor (&Isa100Helper::m_scheduleTrace),
+                     "ns3::TracedCallback::Schedule")
 
-    .AddTraceSource("TxPower",
-        "Tx power for each node.",
-        MakeTraceSourceAccessor (&Isa100Helper::m_txPowerTrace),
-        "ns3::TracedCallback::TxPower")
+    .AddTraceSource ("TxPower",
+                     "Tx power for each node.",
+                     MakeTraceSourceAccessor (&Isa100Helper::m_txPowerTrace),
+                     "ns3::TracedCallback::TxPower")
 
-    .AddTraceSource("avgHops",
-        "avg Hops for each node.",
-        MakeTraceSourceAccessor (&Isa100Helper::m_hopCountTrace),
-        "ns3::TracedCallback::avgHops")
+    .AddTraceSource ("avgHops",
+                     "avg Hops for each node.",
+                     MakeTraceSourceAccessor (&Isa100Helper::m_hopCountTrace),
+                     "ns3::TracedCallback::avgHops")
 
-	.AddTraceSource("printGraph",
-		"Print the graph",
-		MakeTraceSourceAccessor (&Isa100Helper::m_graphTrace),
-		"ns3::TracedCallback::printGraph")
+    .AddTraceSource ("printGraph",
+                     "Print the graph",
+                     MakeTraceSourceAccessor (&Isa100Helper::m_graphTrace),
+                     "ns3::TracedCallback::printGraph")
 
   ;
   return tid;
@@ -91,7 +91,7 @@ Isa100Helper::GetTypeId (void)
 
 
 
-Isa100Helper::Isa100Helper(void)
+Isa100Helper::Isa100Helper (void)
 {
   NS_LOG_FUNCTION (this);
 
@@ -100,13 +100,16 @@ Isa100Helper::Isa100Helper(void)
   m_ResourceAvailable = true;
 }
 
-Isa100Helper::~Isa100Helper(void)
+Isa100Helper::~Isa100Helper (void)
 {
-	if(m_txPwrDbm){
-		for(unsigned int i=0; i < m_devices.GetN(); i++)    //Rajith Changed
-  			delete[] m_txPwrDbm[i];
-		delete[] m_txPwrDbm;
-	}
+  if (m_txPwrDbm)
+    {
+      for (unsigned int i = 0; i < m_devices.GetN (); i++)          //Rajith Changed
+        {
+          delete[] m_txPwrDbm[i];
+        }
+      delete[] m_txPwrDbm;
+    }
 }
 
 
@@ -114,214 +117,235 @@ NetDeviceContainer Isa100Helper::Install (NodeContainer c, Ptr<SingleModelSpectr
 {
   NS_LOG_FUNCTION (this);
 
-	for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i){
+  for (NodeContainer::Iterator i = c.Begin (); i != c.End (); ++i)
+    {
 
-		Ptr<Node> node = *i;
-		Ptr<Isa100NetDevice> device = CreateObject<Isa100NetDevice>();
+      Ptr<Node> node = *i;
+      Ptr<Isa100NetDevice> device = CreateObject<Isa100NetDevice>();
 
-		SetDlAttributes(device);
-		SetPhyAttributes (device->GetPhy ());
-		device->GetPhy()->SetTrxCurrentAttributes(m_trxCurrentAttributes);
+      SetDlAttributes (device);
+      SetPhyAttributes (device->GetPhy ());
+      device->GetPhy ()->SetTrxCurrentAttributes (m_trxCurrentAttributes);
 
-		uint8_t addrBuffer[2];
-		addrBuffer[1] = 0xff & (node->GetId());
-		addrBuffer[0] = 0xff & (node->GetId() >> 8);
+      uint8_t addrBuffer[2];
+      addrBuffer[1] = 0xff & (node->GetId ());
+      addrBuffer[0] = 0xff & (node->GetId () >> 8);
 
-		Mac16Address address;
-		address.CopyFrom(addrBuffer);
+      Mac16Address address;
+      address.CopyFrom (addrBuffer);
 
-		device->GetDl()->SetAttribute("Address",Mac16AddressValue(address));
-		device->SetChannel(channel);
-		device->SetNode(node);
-		device->GetPhy()->SetDevice(device);
+      device->GetDl ()->SetAttribute ("Address",Mac16AddressValue (address));
+      device->SetChannel (channel);
+      device->SetNode (node);
+      device->GetPhy ()->SetDevice (device);
 
-    // Add the device to the node and the devices list
-		node->AddDevice (device);
-		m_devices.Add (device);
+      // Add the device to the node and the devices list
+      node->AddDevice (device);
+      m_devices.Add (device);
 
-	}
-	return m_devices;
+    }
+  return m_devices;
 }
 
 
 
-void Isa100Helper::SetSourceRoutingTable(uint32_t nodeInd, uint32_t numNodes,  std::string *routingTable)
+void Isa100Helper::SetSourceRoutingTable (uint32_t nodeInd, uint32_t numNodes,  std::string *routingTable)
 {
-	Ptr<NetDevice> baseDevice = m_devices.Get(nodeInd);
-	Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
+  Ptr<NetDevice> baseDevice = m_devices.Get (nodeInd);
+  Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
-	if(!baseDevice || !netDevice)
-		NS_FATAL_ERROR("Installing routing table on non-existent ISA100 net device.");
+  if (!baseDevice || !netDevice)
+    {
+      NS_FATAL_ERROR ("Installing routing table on non-existent ISA100 net device.");
+    }
 
-	Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100SourceRoutingAlgorithm>(numNodes,routingTable);
+  Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100SourceRoutingAlgorithm> (numNodes,routingTable);
 
-	netDevice->GetDl()->SetRoutingAlgorithm(routingAlgorithm);
+  netDevice->GetDl ()->SetRoutingAlgorithm (routingAlgorithm);
 
-	Mac16AddressValue address;
-	netDevice->GetDl()->GetAttribute("Address",address);
-	netDevice->GetDl()->GetRoutingAlgorithm()->SetAttribute("Address",address);
+  Mac16AddressValue address;
+  netDevice->GetDl ()->GetAttribute ("Address",address);
+  netDevice->GetDl ()->GetRoutingAlgorithm ()->SetAttribute ("Address",address);
 
 }
 
-void Isa100Helper::InstallBattery(uint32_t nodeIndex, Ptr<Isa100Battery> battery)
+void Isa100Helper::InstallBattery (uint32_t nodeIndex, Ptr<Isa100Battery> battery)
 {
 
   NS_LOG_FUNCTION (this);
 
-	Ptr<NetDevice> baseDevice = m_devices.Get(nodeIndex);
-	Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
+  Ptr<NetDevice> baseDevice = m_devices.Get (nodeIndex);
+  Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
 
-	if(!devPtr || !devPtr->GetDl() || !devPtr->GetPhy())
-		NS_FATAL_ERROR("Installing battery on a unconfigured net device or non-existent node.");
+  if (!devPtr || !devPtr->GetDl () || !devPtr->GetPhy ())
+    {
+      NS_FATAL_ERROR ("Installing battery on a unconfigured net device or non-existent node.");
+    }
 
-	battery->SetDevicePointer(devPtr);
+  battery->SetDevicePointer (devPtr);
 
-  devPtr->GetPhy()->SetBatteryCallback( MakeCallback(&Isa100Battery::DecrementEnergy, battery) );
-  battery->SetConsumptionCategories(devPtr->GetPhy()->GetEnergyCategories());
+  devPtr->GetPhy ()->SetBatteryCallback ( MakeCallback (&Isa100Battery::DecrementEnergy, battery) );
+  battery->SetConsumptionCategories (devPtr->GetPhy ()->GetEnergyCategories ());
 
-  if(devPtr->GetProcessor()){
-  	devPtr->GetProcessor()->SetBatteryCallback( MakeCallback(&Isa100Battery::DecrementEnergy, battery) );
-  	battery->SetConsumptionCategories(devPtr->GetProcessor()->GetEnergyCategories());
-  }
+  if (devPtr->GetProcessor ())
+    {
+      devPtr->GetProcessor ()->SetBatteryCallback ( MakeCallback (&Isa100Battery::DecrementEnergy, battery) );
+      battery->SetConsumptionCategories (devPtr->GetProcessor ()->GetEnergyCategories ());
+    }
 
-  if(devPtr->GetSensor()){
-  	devPtr->GetSensor()->SetBatteryCallback( MakeCallback(&Isa100Battery::DecrementEnergy, battery) );
-  	battery->SetConsumptionCategories(devPtr->GetSensor()->GetEnergyCategories());
-  }
+  if (devPtr->GetSensor ())
+    {
+      devPtr->GetSensor ()->SetBatteryCallback ( MakeCallback (&Isa100Battery::DecrementEnergy, battery) );
+      battery->SetConsumptionCategories (devPtr->GetSensor ()->GetEnergyCategories ());
+    }
 
-  devPtr->SetBattery(battery);
-
-}
-
-void Isa100Helper::InstallProcessor(uint32_t nodeIndex, Ptr<Isa100Processor> processor)
-{
-  NS_LOG_FUNCTION (this);
-
-	Ptr<NetDevice> baseDevice = m_devices.Get(nodeIndex);
-	Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
-
-	if(!devPtr || !devPtr->GetDl() || !devPtr->GetPhy())
-		NS_FATAL_ERROR("Installing processor on a unconfigured net device or non-existent node.");
-
-	devPtr->GetDl()->SetProcessor(processor);
-
-  if(devPtr->GetBattery()){
-  	processor->SetBatteryCallback( MakeCallback(&Isa100Battery::DecrementEnergy, devPtr->GetBattery()) );
-  	devPtr->GetBattery()->SetConsumptionCategories(processor->GetEnergyCategories());
-  }
-
-  devPtr->SetProcessor(processor);
+  devPtr->SetBattery (battery);
 
 }
 
-void Isa100Helper::InstallSensor(uint32_t nodeIndex, Ptr<Isa100Sensor> sensor)
+void Isa100Helper::InstallProcessor (uint32_t nodeIndex, Ptr<Isa100Processor> processor)
 {
   NS_LOG_FUNCTION (this);
 
-	Ptr<NetDevice> baseDevice = m_devices.Get(nodeIndex);
-	Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
+  Ptr<NetDevice> baseDevice = m_devices.Get (nodeIndex);
+  Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
 
-	if(!devPtr || !devPtr->GetDl() || !devPtr->GetPhy())
-		NS_FATAL_ERROR("Installing processor on a unconfigured net device or non-existent node.");
+  if (!devPtr || !devPtr->GetDl () || !devPtr->GetPhy ())
+    {
+      NS_FATAL_ERROR ("Installing processor on a unconfigured net device or non-existent node.");
+    }
 
-  if(devPtr->GetBattery()){
-  	sensor->SetBatteryCallback( MakeCallback(&Isa100Battery::DecrementEnergy, devPtr->GetBattery()) );
-  	devPtr->GetBattery()->SetConsumptionCategories(sensor->GetEnergyCategories());
-  }
+  devPtr->GetDl ()->SetProcessor (processor);
 
-  devPtr->SetSensor(sensor);
+  if (devPtr->GetBattery ())
+    {
+      processor->SetBatteryCallback ( MakeCallback (&Isa100Battery::DecrementEnergy, devPtr->GetBattery ()) );
+      devPtr->GetBattery ()->SetConsumptionCategories (processor->GetEnergyCategories ());
+    }
+
+  devPtr->SetProcessor (processor);
+
+}
+
+void Isa100Helper::InstallSensor (uint32_t nodeIndex, Ptr<Isa100Sensor> sensor)
+{
+  NS_LOG_FUNCTION (this);
+
+  Ptr<NetDevice> baseDevice = m_devices.Get (nodeIndex);
+  Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
+
+  if (!devPtr || !devPtr->GetDl () || !devPtr->GetPhy ())
+    {
+      NS_FATAL_ERROR ("Installing processor on a unconfigured net device or non-existent node.");
+    }
+
+  if (devPtr->GetBattery ())
+    {
+      sensor->SetBatteryCallback ( MakeCallback (&Isa100Battery::DecrementEnergy, devPtr->GetBattery ()) );
+      devPtr->GetBattery ()->SetConsumptionCategories (sensor->GetEnergyCategories ());
+    }
+
+  devPtr->SetSensor (sensor);
 
 }
 
 
 
-void Isa100Helper::InstallApplication(NodeContainer c, uint32_t nodeIndex, Ptr<Isa100Application> app)
+void Isa100Helper::InstallApplication (NodeContainer c, uint32_t nodeIndex, Ptr<Isa100Application> app)
 {
   NS_LOG_FUNCTION (this);
 
-	Ptr<NetDevice> baseDevice = m_devices.Get(nodeIndex);
-	Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
+  Ptr<NetDevice> baseDevice = m_devices.Get (nodeIndex);
+  Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
 
-	if(!devPtr)
-		NS_FATAL_ERROR("Installing ISA100 application on non-existent node.");
+  if (!devPtr)
+    {
+      NS_FATAL_ERROR ("Installing ISA100 application on non-existent node.");
+    }
 
-	// Callbacks for Application to Dl communication
-	app->SetDlDataRequestCallback(MakeCallback(&Isa100Dl::DlDataRequest,devPtr->GetDl()));
+  // Callbacks for Application to Dl communication
+  app->SetDlDataRequestCallback (MakeCallback (&Isa100Dl::DlDataRequest,devPtr->GetDl ()));
 
   // Callbacks for DL to Application layer communication
-  devPtr->GetDl()->SetDlDataIndicationCallback (MakeCallback (&Isa100Application::DlDataIndication, app));
-  devPtr->GetDl()->SetDlDataConfirmCallback (MakeCallback (&Isa100Application::DlDataConfirm, app));
+  devPtr->GetDl ()->SetDlDataIndicationCallback (MakeCallback (&Isa100Application::DlDataIndication, app));
+  devPtr->GetDl ()->SetDlDataConfirmCallback (MakeCallback (&Isa100Application::DlDataConfirm, app));
 
 
-  devPtr->AddApplication(app); //Rajith Added
+  //devPtr->AddApplication(app); //Rajith Added
 
-	Ptr<Node> node = c.Get(nodeIndex);
+  Ptr<Node> node = c.Get (nodeIndex);
 
-	if(!node)
-		NS_FATAL_ERROR("Installing ISA100 application on non-existent node.");
+  if (!node)
+    {
+      NS_FATAL_ERROR ("Installing ISA100 application on non-existent node.");
+    }
 
-	app->SetNode(node);
-	node->AddApplication(app);
+  app->SetNode (node);
+  node->AddApplication (app);
 
 }
 
 
-void Isa100Helper::SetDlAttribute(std::string n, const AttributeValue &v)
+void Isa100Helper::SetDlAttribute (std::string n, const AttributeValue &v)
 {
   NS_LOG_FUNCTION (this);
 
-	// Necessary?  If it's empty (ie. brand new) shouldn't it be cleared already?
-	if (m_dlAttributes.empty())
-		m_dlAttributes.clear();
+  // Necessary?  If it's empty (ie. brand new) shouldn't it be cleared already?
+  if (m_dlAttributes.empty ())
+    {
+      m_dlAttributes.clear ();
+    }
 
-	m_dlAttributes.insert ( std::pair< std::string, Ptr<AttributeValue> > (n,v.Copy()) );
+  m_dlAttributes.insert ( std::pair< std::string, Ptr<AttributeValue> > (n,v.Copy ()) );
 }
 
-void Isa100Helper::SetDlAttributes(Ptr<Isa100NetDevice> device)
+void Isa100Helper::SetDlAttributes (Ptr<Isa100NetDevice> device)
 {
   NS_LOG_FUNCTION (this);
 
   // Not all DL attributes have default values that will allow the simulation to operate.
-  if(!m_dlAttributes.size())
-  		NS_FATAL_ERROR("Installed ISA100 net device before configuring its attributes.");
+  if (!m_dlAttributes.size ())
+    {
+      NS_FATAL_ERROR ("Installed ISA100 net device before configuring its attributes.");
+    }
 
-	std::map<std::string,Ptr<AttributeValue> >::iterator it;
-	for (it=m_dlAttributes.begin(); it!=m_dlAttributes.end(); ++it)
-	{
-		std::string name = it->first;
-		if(!name.empty())
-		{
-			device->GetDl()->SetAttribute(it->first , *it->second);
-		}
-	}
+  std::map<std::string,Ptr<AttributeValue> >::iterator it;
+  for (it = m_dlAttributes.begin (); it != m_dlAttributes.end (); ++it)
+    {
+      std::string name = it->first;
+      if (!name.empty ())
+        {
+          device->GetDl ()->SetAttribute (it->first, *it->second);
+        }
+    }
 }
 
-void Isa100Helper::SetPhyAttribute(std::string n, const AttributeValue &v)
+void Isa100Helper::SetPhyAttribute (std::string n, const AttributeValue &v)
 {
   NS_LOG_FUNCTION (this);
 
-  m_phyAttributes.insert ( std::pair< std::string, Ptr<AttributeValue> > (n,v.Copy()) );
+  m_phyAttributes.insert ( std::pair< std::string, Ptr<AttributeValue> > (n,v.Copy ()) );
 }
 
-void Isa100Helper::SetPhyAttributes(Ptr<ZigbeePhy> phy)
+void Isa100Helper::SetPhyAttributes (Ptr<ZigbeePhy> phy)
 {
   NS_LOG_FUNCTION (this);
 
   std::map<std::string,Ptr<AttributeValue> >::iterator it;
-  for (it=m_phyAttributes.begin(); it!=m_phyAttributes.end(); ++it)
-  {
-    std::string name = it->first;
-    if(!name.empty())
+  for (it = m_phyAttributes.begin (); it != m_phyAttributes.end (); ++it)
     {
-      phy->SetAttribute(it->first , *it->second);
+      std::string name = it->first;
+      if (!name.empty ())
+        {
+          phy->SetAttribute (it->first, *it->second);
+        }
     }
-  }
 }
 
 
 
 
-void Isa100Helper::SetTrxCurrentAttribute(std::string n, const AttributeValue &v)
+void Isa100Helper::SetTrxCurrentAttribute (std::string n, const AttributeValue &v)
 {
   NS_LOG_FUNCTION (this);
 
@@ -332,7 +356,7 @@ void Isa100Helper::SetTrxCurrentAttribute(std::string n, const AttributeValue &v
 void Isa100Helper::AddEdgeWeights (std::pair<uint32_t,uint32_t> edge)
 {
   NS_LOG_FUNCTION (this);
-  (this)->m_edgeWeight.push_back(edge);
+  (this)->m_edgeWeight.push_back (edge);
 
 }
 

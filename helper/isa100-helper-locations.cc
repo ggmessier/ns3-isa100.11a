@@ -53,46 +53,46 @@ NS_LOG_COMPONENT_DEFINE ("Isa100HelperLocations");
 namespace ns3 {
 
 void
-Isa100Helper::SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc)
+Isa100Helper::SetDeviceConstantPosition (NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc)
 {
-	for (uint32_t i = 0; i < dc.GetN(); i++)
-	{
-		Ptr<ConstantPositionMobilityModel> senderMobility = CreateObject<ConstantPositionMobilityModel> ();
-		Vector v=positionAlloc->GetNext();
-		senderMobility->SetPosition (v); // Server
+  for (uint32_t i = 0; i < dc.GetN (); i++)
+    {
+      Ptr<ConstantPositionMobilityModel> senderMobility = CreateObject<ConstantPositionMobilityModel> ();
+      Vector v = positionAlloc->GetNext ();
+      senderMobility->SetPosition (v);           // Server
 
-		Ptr<NetDevice> baseDevice = m_devices.Get(i);
+      Ptr<NetDevice> baseDevice = m_devices.Get (i);
 
-		Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
-		netDevice->GetPhy ()->SetMobility (senderMobility);
-	}
+      Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
+      netDevice->GetPhy ()->SetMobility (senderMobility);
+    }
 }
 
 
 //void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength, double minNodeSpacing, Vector sinkLocation)
 //{   //Rajith removed
-void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength,
-		double minNodeSpacing, std::vector<Vector> coreNodeLocations, double factor)
+void Isa100Helper::GenerateLocationsFixedNumNodes (Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength,
+                                                   double minNodeSpacing, std::vector<Vector> coreNodeLocations, double factor)
 { //Rajith
   std::vector<Vector> nodeLocations;
 
   Ptr<UniformRandomVariable> randX = CreateObject<UniformRandomVariable> ();
-  randX->SetAttribute("Min", DoubleValue(0));
-  randX->SetAttribute("Max", DoubleValue(xLength));
+  randX->SetAttribute ("Min", DoubleValue (0));
+  randX->SetAttribute ("Max", DoubleValue (xLength));
 
   Ptr<UniformRandomVariable> randY = CreateObject<UniformRandomVariable> ();
-  randY->SetAttribute("Min", DoubleValue(0));
-  randY->SetAttribute("Max", DoubleValue(yLength));
+  randY->SetAttribute ("Min", DoubleValue (0));
+  randY->SetAttribute ("Max", DoubleValue (yLength));
 
   std::vector<Vector3D> checkDist;      //vector to keep the locations of the node to check the adherence to minimum distance spacing // Rajith
 
   // Sink node
-  for (unsigned int i = 0; i < coreNodeLocations.size(); i++)  //Rajith
+  for (unsigned int i = 0; i < coreNodeLocations.size (); i++)  //Rajith
     { //Rajith
-      positionAlloc->Add(coreNodeLocations[i]); //Rajith
-      m_locationTrace(i,coreNodeLocations[i].x*factor, coreNodeLocations[i].y*factor, coreNodeLocations[i].z*factor);  //Rajith
+      positionAlloc->Add (coreNodeLocations[i]); //Rajith
+      m_locationTrace (i,coreNodeLocations[i].x * factor, coreNodeLocations[i].y * factor, coreNodeLocations[i].z * factor);  //Rajith
 
-      checkDist.push_back(coreNodeLocations[i]);  //Rajith
+      checkDist.push_back (coreNodeLocations[i]);  //Rajith
     } //Rajith
 
 //  positionAlloc->Add(sinkLocation);  //Rajith removed
@@ -106,44 +106,45 @@ void Isa100Helper::GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> pos
   uint16_t count;
 
   for (int i = 3; i < numNodes; i++)  //Rajith changed initial condition to 3 from 1
-  {
-    // Generate x-coordinate
-    count = 0;
-    do
     {
-      NS_ASSERT_MSG(count < 10000, "Could not place nodes to satisfy minimum spacing requirement.");
-      x = randX->GetValue();
-      y = randY->GetValue();
-      conflict = false;
-
-      // Check minimum distance requirement
-      if (minNodeSpacing > 0)
-      {
-        for (std::vector<Vector3D>::iterator it = checkDist.begin(); it != checkDist.end(); ++it)
+      // Generate x-coordinate
+      count = 0;
+      do
         {
-          if (CalculateDistance(*it, Vector(x,y,0)) < minNodeSpacing)
-          {
-            conflict = true;
-            break;
-          }
+          NS_ASSERT_MSG (count < 10000, "Could not place nodes to satisfy minimum spacing requirement.");
+          x = randX->GetValue ();
+          y = randY->GetValue ();
+          conflict = false;
+
+          // Check minimum distance requirement
+          if (minNodeSpacing > 0)
+            {
+              for (std::vector<Vector3D>::iterator it = checkDist.begin (); it != checkDist.end (); ++it)
+                {
+                  if (CalculateDistance (*it, Vector (x,y,0)) < minNodeSpacing)
+                    {
+                      conflict = true;
+                      break;
+                    }
+                }
+            }
+          count++;
         }
-      }
-      count++;
-    } while (conflict);
+      while (conflict);
 
-    // At this point valid x,y coordinates have been generated
-    checkDist.push_back(Vector(x,y,0));
+      // At this point valid x,y coordinates have been generated
+      checkDist.push_back (Vector (x,y,0));
 
-    x = x * factor;
-    y = y * factor;
+      x = x * factor;
+      y = y * factor;
 
-    positionAlloc->Add(Vector(x,y,0));
+      positionAlloc->Add (Vector (x,y,0));
 
 
 
 
-    m_locationTrace(i,x,y,0.0);
-  }
+      m_locationTrace (i,x,y,0.0);
+    }
 
 
 

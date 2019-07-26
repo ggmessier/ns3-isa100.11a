@@ -53,59 +53,63 @@ namespace ns3 {
 
 // ... General Functions ...
 
-void Isa100Helper::SetSfSchedule(
-		uint32_t nodeInd, uint8_t *hopPattern, uint32_t numHop,
-		uint16_t *linkSched, DlLinkType *linkTypes, uint32_t numLink
-		)
+void Isa100Helper::SetSfSchedule (
+  uint32_t nodeInd, uint8_t *hopPattern, uint32_t numHop,
+  uint16_t *linkSched, DlLinkType *linkTypes, uint32_t numLink
+  )
 {
-	Ptr<NetDevice> baseDevice = m_devices.Get(nodeInd);
-	Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
+  Ptr<NetDevice> baseDevice = m_devices.Get (nodeInd);
+  Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
-	if(!netDevice)
-		NS_FATAL_ERROR("Installing schedule on non-existent ISA100 net device.");
+  if (!netDevice)
+    {
+      NS_FATAL_ERROR ("Installing schedule on non-existent ISA100 net device.");
+    }
 
-	Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
-	schedulePtr->SetSchedule(hopPattern,numHop,linkSched,linkTypes,numLink);
-	netDevice->GetDl()->SetDlSfSchedule(schedulePtr);
+  Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
+  schedulePtr->SetSchedule (hopPattern,numHop,linkSched,linkTypes,numLink);
+  netDevice->GetDl ()->SetDlSfSchedule (schedulePtr);
 
 }
 
 
-void Isa100Helper::SetTdmaOptAttribute(std::string n, const AttributeValue &v)
+void Isa100Helper::SetTdmaOptAttribute (std::string n, const AttributeValue &v)
 {
   NS_LOG_FUNCTION (this);
 
-  m_tdmaOptAttributes.insert ( std::pair< std::string, Ptr<AttributeValue> > (n,v.Copy()) );
+  m_tdmaOptAttributes.insert ( std::pair< std::string, Ptr<AttributeValue> > (n,v.Copy ()) );
 }
 
-void Isa100Helper::SetTdmaOptimizerAttributes(Ptr<TdmaOptimizerBase> optimizer)
+void Isa100Helper::SetTdmaOptimizerAttributes (Ptr<TdmaOptimizerBase> optimizer)
 {
   NS_LOG_FUNCTION (this);
 
-  if(!m_tdmaOptAttributes.size())
-    NS_FATAL_ERROR("Optimizer needs its attributes configured before solving.");
+  if (!m_tdmaOptAttributes.size ())
+    {
+      NS_FATAL_ERROR ("Optimizer needs its attributes configured before solving.");
+    }
 
   std::map<std::string,Ptr<AttributeValue> >::iterator it;
-  for (it=m_tdmaOptAttributes.begin(); it!=m_tdmaOptAttributes.end(); ++it)
-  {
-    std::string name = it->first;
-    if(!name.empty())
+  for (it = m_tdmaOptAttributes.begin (); it != m_tdmaOptAttributes.end (); ++it)
     {
-      optimizer->SetAttribute(it->first , *it->second);
+      std::string name = it->first;
+      if (!name.empty ())
+        {
+          optimizer->SetAttribute (it->first, *it->second);
+        }
     }
-  }
 }
 
 
 
-SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<PropagationLossModel> propModel,
-    vector<uint8_t> carriers, uint32_t numHop, OptimizerSelect optSelect, Ptr<OutputStreamWrapper> stream)
+SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr<PropagationLossModel> propModel,
+                                                            vector<uint8_t> carriers, uint32_t numHop, OptimizerSelect optSelect, Ptr<OutputStreamWrapper> stream)
 {
 
-  Ptr<Isa100NetDevice> devPtr = c.Get(1)->GetDevice(0)->GetObject<Isa100NetDevice>();
-	UintegerValue numSlotsV;
-  devPtr->GetDl()->GetAttribute("SuperFramePeriod", numSlotsV);
-  m_numTimeslots = numSlotsV.Get();
+  Ptr<Isa100NetDevice> devPtr = c.Get (1)->GetDevice (0)->GetObject<Isa100NetDevice>();
+  UintegerValue numSlotsV;
+  devPtr->GetDl ()->GetAttribute ("SuperFramePeriod", numSlotsV);
+  m_numTimeslots = numSlotsV.Get ();
   m_carriers = carriers;
 
 //  m_graphType = false;
@@ -114,211 +118,235 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<
   // Create the optimization solver
   Ptr<TdmaOptimizerBase> tdmaOptimizer;
 
-  switch(optSelect){
-  	case TDMA_MIN_HOP:
-  	{
-  		tdmaOptimizer = CreateObject<MinHopTdmaOptimizer>();
-  		break;
-  	}
-
-  	case TDMA_GOLDSMITH:
-  	{
-  		tdmaOptimizer = CreateObject<GoldsmithTdmaOptimizer> ();
-  		break;
-  	}
-
-  	case TDMA_CONVEX_INT:
-  	{
-  		tdmaOptimizer = CreateObject<ConvexIntTdmaOptimizer> ();
-  		break;
-  	}
-  	case TDMA_GRAPH:
+  switch (optSelect)
     {
-      tdmaOptimizer = CreateObject<GraphTdmaOptimzer> ();
-      devPtr->GetDl()->SetAttribute("IsGraph", BooleanValue (true));
+    case TDMA_MIN_HOP:
+      {
+        tdmaOptimizer = CreateObject<MinHopTdmaOptimizer>();
+        break;
+      }
+
+    case TDMA_GOLDSMITH:
+      {
+        tdmaOptimizer = CreateObject<GoldsmithTdmaOptimizer> ();
+        break;
+      }
+
+    case TDMA_CONVEX_INT:
+      {
+        tdmaOptimizer = CreateObject<ConvexIntTdmaOptimizer> ();
+        break;
+      }
+    case TDMA_GRAPH:
+      {
+        tdmaOptimizer = CreateObject<GraphTdmaOptimzer> ();
+        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
 //      m_graphType = true;
-      break;
-    }
+        break;
+      }
     case TDMA_MIN_LOAD:
-    {
-      tdmaOptimizer = CreateObject<MinLoadGraphTdmaOptimzer> ();
-      devPtr->GetDl()->SetAttribute("IsGraph", BooleanValue (true));
-      break;
+      {
+        tdmaOptimizer = CreateObject<MinLoadGraphTdmaOptimzer> ();
+        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
+        break;
+      }
+    default:
+      NS_FATAL_ERROR ("Invalid selection of optimizer!");
     }
-  	default:
-  		NS_FATAL_ERROR("Invalid selection of optimizer!");
-  }
 
   // Set the attributes
-  SetTdmaOptimizerAttributes(tdmaOptimizer);
+  SetTdmaOptimizerAttributes (tdmaOptimizer);
 
-  if(!(this)->m_edgeWeight.empty())
+  if (!(this)->m_edgeWeight.empty ())
     {
-      tdmaOptimizer->SetEdgeWeights((this)->m_edgeWeight);
+      tdmaOptimizer->SetEdgeWeights ((this)->m_edgeWeight);
     }
 
   // Pass network information to setup the optimizer
-  tdmaOptimizer->SetupOptimization(c, propModel);
+  tdmaOptimizer->SetupOptimization (c, propModel);
 
   // Configure the TDMA schedule and source routes.
-  CalculateTxPowers(c,propModel);
+  CalculateTxPowers (c,propModel);
 
   IntegerValue intV;
 
-  switch(optSelect){
+  switch (optSelect)
+    {
     case TDMA_MIN_HOP:
     case TDMA_GOLDSMITH:
     case TDMA_CONVEX_INT:
-    {
-      // Solve the optimization to create flow matrix
-      vector< vector<int> > slotFlows;
-      slotFlows = tdmaOptimizer->SolveTdma();
+      {
+        // Solve the optimization to create flow matrix
+        vector< vector<int> > slotFlows;
+        slotFlows = tdmaOptimizer->SolveTdma ();
 
-      tdmaOptimizer->GetAttribute("PacketsPerSlot", intV);
+        tdmaOptimizer->GetAttribute ("PacketsPerSlot", intV);
 
-      return ScheduleAndRouteTdma(slotFlows,intV.Get());
-    }
+        return ScheduleAndRouteTdma (slotFlows,intV.Get ());
+      }
     case TDMA_GRAPH:
-    {
-      schedResult = ConstructDataCommunicationSchedule (tdmaOptimizer->m_graph, tdmaOptimizer->m_graphMap);
+      {
+        schedResult = ConstructDataCommunicationSchedule (tdmaOptimizer->m_graph, tdmaOptimizer->m_graphMap);
 
-      if (schedResult == SCHEDULE_FOUND)
-        return ScheduleAndRouteTDMAgraph();
-      else
-        return schedResult;
-    }
+        if (schedResult == SCHEDULE_FOUND)
+          {
+            return ScheduleAndRouteTDMAgraph ();
+          }
+        else
+          {
+            return schedResult;
+          }
+      }
     case TDMA_MIN_LOAD:
-    {
-      schedResult =  ConstructDataCommunicationScheduleMinLoad(tdmaOptimizer->m_ULEx, tdmaOptimizer->m_ULSh
-                                                               , tdmaOptimizer->m_DLEx, tdmaOptimizer->m_DLSh, m_numTimeslots);
-      if (schedResult == SCHEDULE_FOUND)
-        return ScheduleAndRouteTDMAgraph();
-      else
-        return schedResult;
-    }
+      {
+        schedResult =  ConstructDataCommunicationScheduleMinLoad (tdmaOptimizer->m_ULEx, tdmaOptimizer->m_ULSh
+                                                                  , tdmaOptimizer->m_DLEx, tdmaOptimizer->m_DLSh, m_numTimeslots);
+        if (schedResult == SCHEDULE_FOUND)
+          {
+            return ScheduleAndRouteTDMAgraph ();
+          }
+        else
+          {
+            return schedResult;
+          }
+      }
     default:
-          NS_FATAL_ERROR("Invalid selection of optimizer!");
-  }
+      NS_FATAL_ERROR ("Invalid selection of optimizer!");
+    }
 
   return schedResult;
 }
 
 
-SchedulingResult Isa100Helper::ScheduleAndRouteTdma(vector< vector<int> > flows, int packetsPerSlot)
+SchedulingResult Isa100Helper::ScheduleAndRouteTdma (vector< vector<int> > flows, int packetsPerSlot)
 {
 
-	int numNodes = m_devices.GetN();
-	SchedulingResult schedulingResult = SCHEDULE_FOUND;
+  int numNodes = m_devices.GetN ();
+  SchedulingResult schedulingResult = SCHEDULE_FOUND;
 
-  vector<NodeSchedule> nodeSchedules(numNodes);
-  vector<std::string> routingStrings(numNodes,"No Route");
+  vector<NodeSchedule> nodeSchedules (numNodes);
+  vector<std::string> routingStrings (numNodes,"No Route");
   vector< vector<int> > scheduleSummary;
 
-  schedulingResult = FlowMatrixToTdmaSchedule(nodeSchedules,scheduleSummary,flows);
+//  schedulingResult = FlowMatrixToTdmaSchedule (nodeSchedules,scheduleSummary,flows);
+  schedulingResult = FlowMatrixToTdmaScheduleRevised (nodeSchedules,scheduleSummary,flows);
 
-  if(schedulingResult != SCHEDULE_FOUND)
-  	return schedulingResult;
-
-  schedulingResult = CalculateSourceRouteStrings(routingStrings,scheduleSummary);
-
-  if(schedulingResult != SCHEDULE_FOUND)
-  	return schedulingResult;
-
-  for(int nNode=0; nNode < numNodes; nNode++){
-
-    // Assign schedule to DL
-  	Ptr<NetDevice> baseDevice = m_devices.Get(nNode);
-  	Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
-
-    if(!baseDevice || !netDevice)
-      NS_FATAL_ERROR("Installing TDMA schedule on non-existent ISA100 net device.");
-
-    // Create routing object only for field nodes
-    // NOTE: This current implementation only allows for a single path from a field node to the sink.
-    if(nNode > 0)
+  if (schedulingResult != SCHEDULE_FOUND)
     {
-    	std::string routingTable[] = { routingStrings[ nNode ] };
-
-    	int numNodes = 1;
-
-    	Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100SourceRoutingAlgorithm>(numNodes,routingTable);
-    	netDevice->GetDl()->SetRoutingAlgorithm(routingAlgorithm);
-
-    	Mac16AddressValue address;
-    	netDevice->GetDl()->GetAttribute("Address",address);
-    	netDevice->GetDl()->GetRoutingAlgorithm()->SetAttribute("Address",address);
+      return schedulingResult;
     }
 
-    // Set the tx power levels in DL
-    netDevice->GetDl()->SetTxPowersDbm(m_txPwrDbm[nNode], numNodes);
+  schedulingResult = CalculateSourceRouteStrings (routingStrings,scheduleSummary);
 
-    // Set the sfSchedule
-    vector<uint8_t> hoppingPattern(1,11);  // Stay on channel 11.
+  if (schedulingResult != SCHEDULE_FOUND)
+    {
+      return schedulingResult;
+    }
 
-    Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
+  for (int nNode = 0; nNode < numNodes; nNode++)
+    {
 
-    schedulePtr->SetSchedule(hoppingPattern,nodeSchedules[nNode].slotSched,nodeSchedules[nNode].slotType);
+      // Assign schedule to DL
+      Ptr<NetDevice> baseDevice = m_devices.Get (nNode);
+      Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
-    netDevice->GetDl()->SetDlSfSchedule(schedulePtr);
-  }
+      if (!baseDevice || !netDevice)
+        {
+          NS_FATAL_ERROR ("Installing TDMA schedule on non-existent ISA100 net device.");
+        }
+
+      // Create routing object only for field nodes
+      // NOTE: This current implementation only allows for a single path from a field node to the sink.
+      if (nNode > 0)
+        {
+          std::string routingTable[] = { routingStrings[ nNode ] };
+
+          int numNodes = 1;
+
+          Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100SourceRoutingAlgorithm> (numNodes,routingTable);
+          netDevice->GetDl ()->SetRoutingAlgorithm (routingAlgorithm);
+
+          Mac16AddressValue address;
+          netDevice->GetDl ()->GetAttribute ("Address",address);
+          netDevice->GetDl ()->GetRoutingAlgorithm ()->SetAttribute ("Address",address);
+        }
+
+      // Set the tx power levels in DL
+      netDevice->GetDl ()->SetTxPowersDbm (m_txPwrDbm[nNode], numNodes);
+
+      // Set the sfSchedule
+      vector<uint8_t> hoppingPattern (1,11); // Stay on channel 11.
+
+      Ptr<Isa100DlSfSchedule> schedulePtr = CreateObject<Isa100DlSfSchedule>();
+
+      schedulePtr->SetSchedule (hoppingPattern,nodeSchedules[nNode].slotSched,nodeSchedules[nNode].slotType);
+
+      netDevice->GetDl ()->SetDlSfSchedule (schedulePtr);
+    }
 
   return schedulingResult;
 }
 
 
 // This power calculation is happening *everywhere* and should be centralized.
-void Isa100Helper::CalculateTxPowers(NodeContainer c, Ptr<PropagationLossModel> propModel)
+void Isa100Helper::CalculateTxPowers (NodeContainer c, Ptr<PropagationLossModel> propModel)
 {
-  const uint32_t numNodes = c.GetN();
+  const uint32_t numNodes = c.GetN ();
 
   // Obtain all node locations
   std::vector<Ptr<MobilityModel> > positions;
   for (uint32_t i = 0; i < numNodes; i++)
-  {
-  	Ptr<Node> node = c.Get(i);
-  	Ptr<NetDevice> baseDevice = node->GetDevice(0);
-  	Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
-  	positions.push_back(devPtr->GetPhy()->GetMobility());
-  }
+    {
+      Ptr<Node> node = c.Get (i);
+      Ptr<NetDevice> baseDevice = node->GetDevice (0);
+      Ptr<Isa100NetDevice> devPtr = baseDevice->GetObject<Isa100NetDevice>();
+      positions.push_back (devPtr->GetPhy ()->GetMobility ());
+    }
 
   // Determine attenuation between each link
-  Ptr<NetDevice> baseDevice = c.Get(1)->GetDevice(0);
+  Ptr<NetDevice> baseDevice = c.Get (1)->GetDevice (0);
   Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
   IntegerValue txPowerValue;
-  netDevice->GetDl()->GetAttribute("MaxTxPowerDbm",txPowerValue);
-  double maxTxPowerDbm = txPowerValue.Get();
+  netDevice->GetDl ()->GetAttribute ("MaxTxPowerDbm",txPowerValue);
+  double maxTxPowerDbm = txPowerValue.Get ();
 
   DoubleValue rxSensValue;
-  netDevice->GetPhy()->GetAttribute("SensitivityDbm",rxSensValue);
-  double rxSensitivityDbm = rxSensValue.Get();
+  netDevice->GetPhy ()->GetAttribute ("SensitivityDbm",rxSensValue);
+  double rxSensitivityDbm = rxSensValue.Get ();
 
 
   m_txPwrDbm = new double*[numNodes];
 
-  for(int iNode=0; iNode < numNodes; iNode++)
-  	m_txPwrDbm[iNode] = new double[numNodes];
+  for (int iNode = 0; iNode < numNodes; iNode++)
+    {
+      m_txPwrDbm[iNode] = new double[numNodes];
+    }
 
-  for(int iNode=0; iNode < numNodes; iNode++){
+  for (int iNode = 0; iNode < numNodes; iNode++)
+    {
 
-  	for(int jNode=iNode; jNode < numNodes; jNode++){
-  		if(iNode == jNode)
-  			m_txPwrDbm[iNode][jNode] = rxSensitivityDbm;
-  		else if((iNode == 0 && jNode != 1 && jNode != 2) || (jNode == 0 && iNode != 1 && iNode != 2))
-  		  {
-          //to prohibit the communication between gateway and field nodes (except APs)
-          m_txPwrDbm[iNode][jNode] = maxTxPowerDbm + 1;
-          m_txPwrDbm[jNode][iNode] = maxTxPowerDbm + 1;
-  		  }
-  		else
-  		{
-  			m_txPwrDbm[iNode][jNode] = -(propModel->CalcRxPower (0, positions[iNode], positions[jNode])) + rxSensitivityDbm;
-  			m_txPwrDbm[jNode][iNode] = m_txPwrDbm[iNode][jNode];
-  		}
-  		m_txPowerTrace(iNode, jNode, m_txPwrDbm[iNode][jNode]);
-  		m_txPowerTrace(jNode, iNode, m_txPwrDbm[jNode][iNode]);
-  	}
-  }
+      for (int jNode = iNode; jNode < numNodes; jNode++)
+        {
+          if (iNode == jNode)
+            {
+              m_txPwrDbm[iNode][jNode] = rxSensitivityDbm;
+            }
+          else if ((iNode == 0 && jNode != 1 && jNode != 2) || (jNode == 0 && iNode != 1 && iNode != 2))
+            {
+              //to prohibit the communication between gateway and field nodes (except APs)
+              m_txPwrDbm[iNode][jNode] = maxTxPowerDbm + 1;
+              m_txPwrDbm[jNode][iNode] = maxTxPowerDbm + 1;
+            }
+          else
+            {
+              m_txPwrDbm[iNode][jNode] = -(propModel->CalcRxPower (0, positions[iNode], positions[jNode])) + rxSensitivityDbm;
+              m_txPwrDbm[jNode][iNode] = m_txPwrDbm[iNode][jNode];
+            }
+          m_txPowerTrace (iNode, jNode, m_txPwrDbm[iNode][jNode]);
+          m_txPowerTrace (jNode, iNode, m_txPwrDbm[jNode][iNode]);
+        }
+    }
 
 }
 
@@ -327,235 +355,373 @@ void Isa100Helper::CalculateTxPowers(NodeContainer c, Ptr<PropagationLossModel> 
 
 
 #define NS_LOG_DEBUG_VECTOR_DUMP(mstr,v) { \
-	std::stringstream sss; \
-	sss << mstr << ": "; \
-	for(int z=0; z<v.size();z++) \
-		sss << v[z] << " "; \
-	NS_LOG_DEBUG(sss.str()); \
+    std::stringstream sss; \
+    sss << mstr << ": "; \
+    for (int z = 0; z < v.size (); z++) { \
+        sss << v[z] << " ";} \
+    NS_LOG_DEBUG (sss.str ()); \
 }
 
-SchedulingResult Isa100Helper::FlowMatrixToTdmaSchedule(vector<NodeSchedule> &lAll, vector< vector<int> > &scheduleSummary, vector< vector<int> > packetFlows)
+SchedulingResult Isa100Helper::FlowMatrixToTdmaSchedule (vector<NodeSchedule> &lAll, vector< vector<int> > &scheduleSummary, vector< vector<int> > packetFlows)
 {
 
-	NS_LOG_DEBUG("Flow Scheduler:");
+  NS_LOG_DEBUG ("Flow Scheduler:");
 
-	int numNodes = packetFlows.size();
+  int numNodes = packetFlows.size ();
 
-	// Uses the scheduling algorithm from Cui, Madan and Goldsmith
+  // Uses the scheduling algorithm from Cui, Madan and Goldsmith
 
-	// Init q with all nodes that can reach the sink directly.
-	vector<int> q;
-	for(int i=0; i<numNodes; i++)
-		if(packetFlows[i][0])
-			q.push_back(i);
+  // Init q with all nodes that can reach the sink directly.
+  vector<int> q;
+  for (int i = 0; i < numNodes; i++)
+    {
+      if (packetFlows[i][0])
+        {
+          q.push_back (i);
+        }
+    }
 
 
-	// Determine the maximum slot index
-	int nSlot = -1;
-	for(int i=0; i < numNodes; i++)
-		for(int j=0; j < numNodes; j++)
-			nSlot += packetFlows[i][j];
+  // Determine the maximum slot index
+  int nSlot = -1;
+  for (int i = 0; i < numNodes; i++)
+    {
+      for (int j = 0; j < numNodes; j++)
+        {
+          nSlot += packetFlows[i][j];
+        }
+    }
 
-	NS_LOG_UNCOND(" Scheduling " << nSlot << " slots.");
-	if(nSlot > m_numTimeslots)
-		return INSUFFICIENT_SLOTS;
+  NS_LOG_UNCOND (" Scheduling " << nSlot << " slots.");
+  if (nSlot > m_numTimeslots)
+    {
+      return INSUFFICIENT_SLOTS;
+    }
 
-	scheduleSummary.resize(nSlot+1);
-	for(int iInit=0; iInit <= nSlot; iInit++)
-		scheduleSummary[iInit].assign(2,0);
+  scheduleSummary.resize (nSlot + 1);
+  for (int iInit = 0; iInit <= nSlot; iInit++)
+    {
+      scheduleSummary[iInit].assign (2,0);
+    }
 
-	// Schedule all the direct transmissions.
-	for(int qInd=0; qInd < q.size(); qInd++){
-		PopulateNodeSchedule(q[qInd],0,packetFlows[ q[qInd] ][0],lAll,nSlot,scheduleSummary);
-		packetFlows[ q[qInd] ][0] = -1;  // Indicate this edge has been scheduled.
-	}
+  // Schedule all the direct transmissions.
+  for (int qInd = 0; qInd < q.size (); qInd++)
+    {
+      PopulateNodeSchedule (q[qInd],0,packetFlows[ q[qInd] ][0],lAll,nSlot,scheduleSummary);
+      packetFlows[ q[qInd] ][0] = -1;            // Indicate this edge has been scheduled.
+    }
 
-	int qInd = 0;
-	vector<int> q0 = q;
+  int qInd = 0;
+  vector<int> q0 = q;
 
-	while( q0.size() ){
+  while ( q0.size () )
+    {
 
-		q0.clear();
-		while( q.size() ){
+      q0.clear ();
+      while ( q.size () )
+        {
 
-			NS_LOG_DEBUG_VECTOR_DUMP("q",q);
-			NS_LOG_DEBUG_VECTOR_DUMP("q0",q0);
+          NS_LOG_DEBUG_VECTOR_DUMP ("q",q);
+          NS_LOG_DEBUG_VECTOR_DUMP ("q0",q0);
 
-			// Leaf nodes have already been scheduled when their parents were processed.
-			if( IsLeaf(q[qInd],packetFlows) ){
-				NS_LOG_DEBUG("Erasing " << q[qInd]);
-				q.erase(q.begin()+qInd);
-			}
+          // Leaf nodes have already been scheduled when their parents were processed.
+          if ( IsLeaf (q[qInd],packetFlows) )
+            {
+              NS_LOG_DEBUG ("Erasing " << q[qInd]);
+              q.erase (q.begin () + qInd);
+            }
 
-			// Current node can only accept input links if all its output links are scheduled.
-			// Otherwise, it won't be able to get rid of all its incoming links.
-			else if( q.size() && AllOutlinksScheduled( q[qInd], packetFlows) ){
+          // Current node can only accept input links if all its output links are scheduled.
+          // Otherwise, it won't be able to get rid of all its incoming links.
+          else if ( q.size () && AllOutlinksScheduled ( q[qInd], packetFlows) )
+            {
 
-				// Determine all nodes that can reach this non-leaf node
-				vector <int> nI;
-				for(int i=0; i < numNodes; i++)
-					if(packetFlows[i][ q[qInd] ])
-						nI.push_back(i);
+              // Determine all nodes that can reach this non-leaf node
+              vector <int> nI;
+              for (int i = 0; i < numNodes; i++)
+                {
+                  if (packetFlows[i][ q[qInd] ])
+                    {
+                      nI.push_back (i);
+                    }
+                }
 
-				for(int nIInd=0; nIInd < nI.size(); nIInd++){
+              for (int nIInd = 0; nIInd < nI.size (); nIInd++)
+                {
 
-					PushBackNoDuplicates(nI[nIInd], q0);
-					PopulateNodeSchedule(nI[nIInd],q[qInd],packetFlows[ nI[nIInd] ][ q[qInd] ],lAll,nSlot,scheduleSummary);
-					packetFlows[ nI[nIInd] ][ q[qInd] ] = -1;
-				}
+                  PushBackNoDuplicates (nI[nIInd], q0);
+                  PopulateNodeSchedule (nI[nIInd],q[qInd],packetFlows[ nI[nIInd] ][ q[qInd] ],lAll,nSlot,scheduleSummary);
+                  packetFlows[ nI[nIInd] ][ q[qInd] ] = -1;
+                }
 
-				q.erase(q.begin()+qInd);
-				NS_LOG_DEBUG("Erasing " << q[qInd]);
+              q.erase (q.begin () + qInd);
+              NS_LOG_DEBUG ("Erasing " << q[qInd]);
 
-			}
+            }
 
-			// If the current node does not have its outlinks scheduled but it also does not have a parent in q,
-			// delete since its parent is at a level we're not processing yet.  The deleted node will get added
-			// back when we finally reach its parent.
-			else if( q.size() && !AllOutlinksScheduled( q[qInd], packetFlows) && NoParentInQ(q[qInd],q,packetFlows)){
+          // If the current node does not have its outlinks scheduled but it also does not have a parent in q,
+          // delete since its parent is at a level we're not processing yet.  The deleted node will get added
+          // back when we finally reach its parent.
+          else if ( q.size () && !AllOutlinksScheduled ( q[qInd], packetFlows) && NoParentInQ (q[qInd],q,packetFlows))
+            {
 
-				q.erase(q.begin()+qInd);
-				NS_LOG_DEBUG("Erasing " << q[qInd]);
+              q.erase (q.begin () + qInd);
+              NS_LOG_DEBUG ("Erasing " << q[qInd]);
 
-			}
+            }
 
-			if(q.size())
-				qInd = (qInd+1) % q.size();
-		}
+          if (q.size ())
+            {
+              qInd = (qInd + 1) % q.size ();
+            }
+        }
 
-		q = q0;
-		qInd = 0;
-	}
+      q = q0;
+      qInd = 0;
+    }
 
-	return SCHEDULE_FOUND;
-
-}
-
-void Isa100Helper::PopulateNodeSchedule(int src, int dst, int weight, vector<NodeSchedule> &schedules, int &nSlot, vector< vector<int> > &scheduleSummary)
-{
-	for(int nPacket=0; nPacket < weight; nPacket++){
-
-		schedules[src].slotSched.insert(schedules[src].slotSched.begin(), nSlot);
-		schedules[src].slotType.insert(schedules[src].slotType.begin(), TRANSMIT);
-
-		scheduleSummary[nSlot][0] = src;
-		scheduleSummary[nSlot][1] = dst;
-
-		schedules[dst].slotSched.insert(schedules[dst].slotSched.begin(), nSlot--);
-		schedules[dst].slotType.insert(schedules[dst].slotType.begin(), RECEIVE);
-
-		int carrier = 11; //Rajith Temporary
-		m_scheduleTrace(nSlot+1,src,dst,carrier);
-
-		NS_LOG_DEBUG( " (" << src << ")->(" << dst << ") in slot " << (nSlot+1) );
-	}
-
-}
-
-int Isa100Helper::AllOutlinksScheduled(int node, vector< vector<int> > &packetFlows)
-{
-	for(int j=0; j < packetFlows[node].size(); j++)
-		if( packetFlows[node][j] > 0 )
-			return 0;
-	return 1;
-}
-
-void Isa100Helper::PushBackNoDuplicates(int node, vector<int> &q0)
-{
-	for(int qInd=0; qInd < q0.size(); qInd++)
-		if(q0[qInd] == node)
-			return;
-
-	q0.push_back(node);
+  return SCHEDULE_FOUND;
 
 }
 
-bool Isa100Helper::IsLeaf(int node, vector< vector<int> > packetFlows)
+void Isa100Helper::PopulateNodeSchedule (int src, int dst, int weight, vector<NodeSchedule> &schedules, int &nSlot, vector< vector<int> > &scheduleSummary)
 {
-	// A node is a leaf if nothing transmits to it
-	int i;
-	for(i=0; i < packetFlows[node].size() && !packetFlows[i][node]; i++) ;
+  for (int nPacket = 0; nPacket < weight; nPacket++)
+    {
 
-	return (i == packetFlows[node].size());
+      schedules[src].slotSched.insert (schedules[src].slotSched.begin (), nSlot);
+      schedules[src].slotType.insert (schedules[src].slotType.begin (), TRANSMIT);
+
+      scheduleSummary[nSlot][0] = src;
+      scheduleSummary[nSlot][1] = dst;
+
+      schedules[dst].slotSched.insert (schedules[dst].slotSched.begin (), nSlot--);
+      schedules[dst].slotType.insert (schedules[dst].slotType.begin (), RECEIVE);
+
+      int carrier = 11;           //Rajith Temporary
+      m_scheduleTrace (nSlot + 1,src,dst,carrier);
+
+      NS_LOG_DEBUG ( " (" << src << ")->(" << dst << ") in slot " << (nSlot + 1) );
+    }
 
 }
 
-bool Isa100Helper::NoParentInQ(int node, vector<int> q, vector< vector<int> > &packetFlows)
+int Isa100Helper::AllOutlinksScheduled (int node, vector< vector<int> > &packetFlows)
 {
-	for(int j=0; j < packetFlows[node].size(); j++)
-		if( packetFlows[node][j] > 0 )
-			for(int qInd=0; qInd < q.size(); qInd++)
-				if(q[qInd] == j)
-					return false;
+  for (int j = 0; j < packetFlows[node].size (); j++)
+    {
+      if ( packetFlows[node][j] > 0 )
+        {
+          return 0;
+        }
+    }
+  return 1;
+}
 
-	return true;
+void Isa100Helper::PushBackNoDuplicates (int node, vector<int> &q0)
+{
+  for (int qInd = 0; qInd < q0.size (); qInd++)
+    {
+      if (q0[qInd] == node)
+        {
+          return;
+        }
+    }
+
+  q0.push_back (node);
+
+}
+
+bool Isa100Helper::IsLeaf (int node, vector< vector<int> > packetFlows)
+{
+  // A node is a leaf if nothing transmits to it
+  int i;
+  for (i = 0; i < packetFlows[node].size () && !packetFlows[i][node]; i++)
+    {
+    }
+
+  return (i == packetFlows[node].size ());
+
+}
+
+bool Isa100Helper::NoParentInQ (int node, vector<int> q, vector< vector<int> > &packetFlows)
+{
+  for (int j = 0; j < packetFlows[node].size (); j++)
+    {
+      if ( packetFlows[node][j] > 0 )
+        {
+          for (int qInd = 0; qInd < q.size (); qInd++)
+            {
+              if (q[qInd] == j)
+                {
+                  return false;
+                }
+            }
+        }
+    }
+
+  return true;
 }
 
 // ... Source Routing List Generation ...
 
-SchedulingResult Isa100Helper::CalculateSourceRouteStrings(vector<std::string> &routingStrings, vector< vector<int> > schedule)
+SchedulingResult Isa100Helper::CalculateSourceRouteStrings (vector<std::string> &routingStrings, vector< vector<int> > schedule)
 {
-	NS_LOG_DEBUG("Routing Strings: ");
+  NS_LOG_DEBUG ("Routing Strings: ");
 
-	vector<int> hopCount;
+  vector<int> hopCount;
 
-	vector<int> slotUsed(schedule.size(),0);
+  vector<int> slotUsed (schedule.size (),0);
 
-	for(int nSlot=0; nSlot < schedule.size(); nSlot++){
+  for (int nSlot = 0; nSlot < schedule.size (); nSlot++)
+    {
 
-		unsigned int curNode = schedule[nSlot][0];
-		unsigned int nextNode = schedule[nSlot][1];
-		unsigned int startNode = curNode;
+      unsigned int curNode = schedule[nSlot][0];
+      unsigned int nextNode = schedule[nSlot][1];
+      unsigned int startNode = curNode;
 
-		if(routingStrings[startNode] == "No Route" && slotUsed[nSlot] == 0){
+      if (routingStrings[startNode] == "No Route" && slotUsed[nSlot] == 0)
+        {
 
-			// Follow the path to the sink taking the lowest node index when the path branches.
-			std::stringstream ss;
-			bool firstEntry = true;
-			int numHops = 0;
-			while(curNode != 0)
-			  {
-          unsigned int upperByte = (nextNode & 0xff00) >> 8;
-          unsigned int lowerByte = (nextNode & 0xff);
-
-          if(firstEntry)
-            firstEntry = false;
-          else
-            ss << " ";
-
-          ss << std::setfill('0') << std::setw(2) << std::hex << upperByte;
-          ss << ":";
-          ss << std::setfill('0') << std::setw(2) << std::hex << lowerByte;
-
-          curNode = nextNode;
-          if(curNode != 0)
+          // Follow the path to the sink taking the lowest node index when the path branches.
+          std::stringstream ss;
+          bool firstEntry = true;
+          int numHops = 0;
+          while (curNode != 0)
             {
-              int iNext = nSlot + 1;
-              for(; schedule[iNext][0] != curNode && iNext < schedule.size(); iNext++) ;
+              unsigned int upperByte = (nextNode & 0xff00) >> 8;
+              unsigned int lowerByte = (nextNode & 0xff);
 
-              if(iNext == schedule.size())
-                return NO_ROUTE;
+              if (firstEntry)
+                {
+                  firstEntry = false;
+                }
+              else
+                {
+                  ss << " ";
+                }
 
-              nextNode = schedule[iNext][1];
-              slotUsed[iNext] = 1;
+              ss << std::setfill ('0') << std::setw (2) << std::hex << upperByte;
+              ss << ":";
+              ss << std::setfill ('0') << std::setw (2) << std::hex << lowerByte;
+
+              curNode = nextNode;
+              if (curNode != 0)
+                {
+                  int iNext = nSlot + 1;
+                  for (; schedule[iNext][0] != curNode && iNext < schedule.size (); iNext++)
+                    {
+                    }
+
+                  if (iNext == schedule.size ())
+                    {
+                      return NO_ROUTE;
+                    }
+
+                  nextNode = schedule[iNext][1];
+                  slotUsed[iNext] = 1;
+                }
+              numHops++;
             }
-          numHops++;
-			  }
 
-			NS_LOG_DEBUG(" Node " << startNode << ": " << ss.str());
+          NS_LOG_DEBUG(" Node " << startNode << ": " << ss.str ());
 
-			routingStrings[ startNode ] = ss.str();
-			hopCount.push_back(numHops);
+          routingStrings[ startNode ] = ss.str ();
+          hopCount.push_back (numHops);
 
-			m_hopCountTrace(startNode,numHops);
-		}
-	}
+          m_hopCountTrace (startNode,numHops);
+        }
+    }
 
-	m_hopTrace(hopCount);
+  m_hopTrace (hopCount);
 
-	return SCHEDULE_FOUND;
+  return SCHEDULE_FOUND;
 
 
 }
+
+SchedulingResult Isa100Helper::FlowMatrixToTdmaScheduleRevised (vector<NodeSchedule> &schedules, vector< vector<int> > &scheduleSummary, vector< vector<int> > packetFlows)
+{
+  int numNodes = packetFlows.size ();
+
+  int slot = 0;
+  int totSlots = 0;
+  map<int, int> txSum;
+  vector<vector<int>> rxNodes (numNodes);
+//  vector<vector<int>> flows = packetFlows;
+
+  for (int i = 0; i < numNodes; i++)
+    {
+      txSum[i] = 0;
+      for (int j = 0; j < numNodes; j++)
+        {
+          if (packetFlows[i][j] > 0)
+            {
+              txSum[i] += packetFlows[i][j];
+              rxNodes[i].push_back(j);
+            }
+        }
+      totSlots += txSum[i];
+      NS_LOG_DEBUG(" txSum: "<<i<<" "<<txSum[i]);
+    }
+
+  scheduleSummary.resize (totSlots + 1);
+  for (int iInit = 0; iInit <= totSlots; iInit++)
+    {
+      scheduleSummary[iInit].assign (2,0);
+    }
+
+  int txSumZeroCount = 0;
+  while (txSumZeroCount < numNodes)
+    {
+      for (int i = 0; i < numNodes; i++)
+        {
+          if (txSum[i] == 1)
+            {
+              int dst = -1;
+              int src = i;
+              while (dst != 0)
+                {
+                  dst = rxNodes[src].back();
+                  schedules[src].slotSched.push_back(slot);
+                  schedules[src].slotType.push_back(TRANSMIT);
+
+                  scheduleSummary[slot][0] = src;
+                  scheduleSummary[slot][1] = dst;
+
+                  schedules[dst].slotSched.push_back(slot);
+                  schedules[dst].slotType.push_back(RECEIVE);
+
+                  int carrier = 11;           //Rajith Temporary
+                  NS_LOG_DEBUG("Slot "<<slot<<" src "<<src<<" dst "<<dst);
+                  m_scheduleTrace (slot,src,dst,carrier);
+
+                  packetFlows[src][dst]--;            // Indicate this edge has been scheduled
+
+                  txSum[src]--;
+                  if (packetFlows[src][dst] == 0)
+                    rxNodes[src].pop_back();
+
+                  src = dst;
+                  slot++;
+                  txSumZeroCount = 0;
+                }
+            }
+          else if (txSum[i] == 0)
+            {
+              txSumZeroCount++;
+            }
+        }
+    }
+
+  if (slot > m_numTimeslots)
+    {
+      return INSUFFICIENT_SLOTS;
+    }
+
+  return SCHEDULE_FOUND;
+}
+
+
 
 }

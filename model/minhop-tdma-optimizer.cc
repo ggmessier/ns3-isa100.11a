@@ -41,7 +41,8 @@ NS_LOG_COMPONENT_DEFINE ("MinHopTdmaOptimizer");
 using namespace ns3;
 using namespace std;
 
-struct nodeElement {
+struct nodeElement
+{
   std::vector<NetworkLink *> inLinks;
   std::vector<NetworkLink *> outLinks;
 };
@@ -54,12 +55,12 @@ TypeId MinHopTdmaOptimizer::GetTypeId (void)
     .SetParent<TdmaOptimizerBase> ()
     .AddConstructor<MinHopTdmaOptimizer> ()
 
-    ;
+  ;
 
   return tid;
 }
 
-MinHopTdmaOptimizer::MinHopTdmaOptimizer () : TdmaOptimizerBase()
+MinHopTdmaOptimizer::MinHopTdmaOptimizer () : TdmaOptimizerBase ()
 {
   NS_LOG_FUNCTION (this);
   m_numNodes = 0;
@@ -76,7 +77,7 @@ void MinHopTdmaOptimizer::SetupOptimization (NodeContainer c, Ptr<PropagationLos
   NS_LOG_FUNCTION (this);
 
   // Setup the common base properties
-  TdmaOptimizerBase::SetupOptimization(c, propModel);
+  TdmaOptimizerBase::SetupOptimization (c, propModel);
 
 }
 
@@ -85,34 +86,40 @@ vector< vector<int> > MinHopTdmaOptimizer::SolveTdma (void)
   NS_LOG_FUNCTION (this);
 
   // Solve for packet flows
-  vector<int> hopCount(m_numNodes,9999999);
+  vector<int> hopCount (m_numNodes,9999999);
   hopCount[0] = 0;
-  vector<double> curTxPwr(m_numNodes,1e300);
-  vector< vector<int> > flows(m_numNodes);
-  for(int i=0; i < m_numNodes; i++)
-  	flows[i].assign(m_numNodes,0);
+  vector<double> curTxPwr (m_numNodes,1e300);
+  vector< vector<int> > flows (m_numNodes);
+  for (int i = 0; i < m_numNodes; i++)
+    {
+      flows[i].assign (m_numNodes,0);
+    }
 
-  BreadthFirstMinHopFlowSolver(0,flows,hopCount,curTxPwr);
+  BreadthFirstMinHopFlowSolver (0,flows,hopCount,curTxPwr);
 
-	NS_LOG_DEBUG(" Flow matrix:");
-	std::stringstream ss;
+  NS_LOG_DEBUG (" Flow matrix:");
+  std::stringstream ss;
 
-	for(int i=0; i < m_numNodes; i++){
+  for (int i = 0; i < m_numNodes; i++)
+    {
 
-		ss.str( std::string() );
-		ss << "Node " << i << ": ";
+      ss.str ( std::string () );
+      ss << "Node " << i << ": ";
 
-		for(int j=0; j < m_numNodes; j++){
+      for (int j = 0; j < m_numNodes; j++)
+        {
 
-			// Determine number of packets per slot for each link.
-			flows[i][j] = ceil((double)flows[i][j] / m_packetsPerSlot);
+          // Determine number of packets per slot for each link.
+          flows[i][j] = ceil ((double)flows[i][j] / m_packetsPerSlot);
 
-			if(flows[i][j])
-				ss << j << "(" << flows[i][j] << "), ";
-		}
+          if (flows[i][j])
+            {
+              ss << j << "(" << flows[i][j] << "), ";
+            }
+        }
 
-		NS_LOG_DEBUG( ss.str() );
-	}
+      NS_LOG_DEBUG ( ss.str () );
+    }
 
   return flows;
 
@@ -120,64 +127,76 @@ vector< vector<int> > MinHopTdmaOptimizer::SolveTdma (void)
 
 
 
-int MinHopTdmaOptimizer::FindFirstParent(int i, vector< vector<int> > &packetFlows)
+int MinHopTdmaOptimizer::FindFirstParent (int i, vector< vector<int> > &packetFlows)
 {
-	// Determine which node that node i transmits to.
-	int j;
-	for(j=0; j < packetFlows[i].size() && !packetFlows[i][j]; j++);
+  // Determine which node that node i transmits to.
+  int j;
+  for (j = 0; j < packetFlows[i].size () && !packetFlows[i][j]; j++)
+    {
+    }
 
-	NS_ASSERT(j < packetFlows[i].size());
+  NS_ASSERT (j < packetFlows[i].size ());
 
-	return j;
+  return j;
 }
 
-int MinHopTdmaOptimizer::HasNotBeenProcessed(int i, vector< vector<int> > &packetFlows)
+int MinHopTdmaOptimizer::HasNotBeenProcessed (int i, vector< vector<int> > &packetFlows)
 {
-	// Node hasn't been processed yet if it's not connected to anything.
-	int j;
-	for(j=0; j < packetFlows[i].size() && !packetFlows[i][j]; j++);
+  // Node hasn't been processed yet if it's not connected to anything.
+  int j;
+  for (j = 0; j < packetFlows[i].size () && !packetFlows[i][j]; j++)
+    {
+    }
 
-	return (j == packetFlows[i].size());
+  return (j == packetFlows[i].size ());
 }
 
-void MinHopTdmaOptimizer::BreadthFirstMinHopFlowSolver(int parent, vector< vector<int> > &packetFlows, vector<int> &hopCount, vector<double> &curTxPwr)
+void MinHopTdmaOptimizer::BreadthFirstMinHopFlowSolver (int parent, vector< vector<int> > &packetFlows, vector<int> &hopCount, vector<double> &curTxPwr)
 {
-	vector<int> nextNodeLayer;
+  vector<int> nextNodeLayer;
 
-	NS_LOG_DEBUG("Breadth First Flow Solver, Parent: " << parent);
+  NS_LOG_DEBUG ("Breadth First Flow Solver, Parent: " << parent);
 
-	// Check for new links
-	for(int nNode=0; nNode < m_numNodes; nNode++){
+  // Check for new links
+  for (int nNode = 0; nNode < m_numNodes; nNode++)
+    {
 
-		if(m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm
-				&& (hopCount[nNode] > hopCount[parent]+1
-						|| (hopCount[nNode] == hopCount[parent]+1 && m_txPowerDbm[parent][nNode] < curTxPwr[nNode]) ) ){
+      if (m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm
+          && (hopCount[nNode] > hopCount[parent] + 1
+              || (hopCount[nNode] == hopCount[parent] + 1 && m_txPowerDbm[parent][nNode] < curTxPwr[nNode]) ) )
+        {
 
-			if(HasNotBeenProcessed(nNode,packetFlows)){
-				nextNodeLayer.push_back(nNode);
+          if (HasNotBeenProcessed (nNode,packetFlows))
+            {
+              nextNodeLayer.push_back (nNode);
 
-				NS_LOG_DEBUG(" New route neighbour: " << nNode);
+              NS_LOG_DEBUG (" New route neighbour: " << nNode);
 
-				// Update hops and transmit power for this node.
-				hopCount[nNode] = hopCount[parent] + 1;
-				curTxPwr[nNode] = m_txPowerDbm[parent][nNode];
+              // Update hops and transmit power for this node.
+              hopCount[nNode] = hopCount[parent] + 1;
+              curTxPwr[nNode] = m_txPowerDbm[parent][nNode];
 
-				// Update the graph to reflect the new node addition.
-				int i=nNode, j=parent;
-				while(i!=0){
-					packetFlows[i][j]++;
-					i = j;
-					if(j !=0 )
-						j = FindFirstParent(i,packetFlows);
-				}
+              // Update the graph to reflect the new node addition.
+              int i = nNode, j = parent;
+              while (i != 0)
+                {
+                  packetFlows[i][j]++;
+                  i = j;
+                  if (j != 0 )
+                    {
+                      j = FindFirstParent (i,packetFlows);
+                    }
+                }
 
-			}
-		}
-	}
+            }
+        }
+    }
 
-	// Perform the search for the next layer of nodes
-	for(int iNext=0; iNext < nextNodeLayer.size(); iNext++)
-		BreadthFirstMinHopFlowSolver(nextNodeLayer[iNext],packetFlows,hopCount,curTxPwr);
+  // Perform the search for the next layer of nodes
+  for (int iNext = 0; iNext < nextNodeLayer.size (); iNext++)
+    {
+      BreadthFirstMinHopFlowSolver (nextNodeLayer[iNext],packetFlows,hopCount,curTxPwr);
+    }
 
 
 }

@@ -64,52 +64,51 @@ typedef TracedCallback<Mac16Address, std::string, double, double, double> Batter
 class Isa100Battery : public Object
 {
 public:
-
   static TypeId GetTypeId (void);
 
-  Isa100Battery();
-  virtual ~Isa100Battery();
+  Isa100Battery ();
+  virtual ~Isa100Battery ();
 
   /** Set the initial battery energy.
    *
    * @param initEnergy Initial energy.
    */
-  void SetInitEnergy(double initEnergy);
+  void SetInitEnergy (double initEnergy);
 
   /** Define a category that identifies a type of energy consumption.
    *
    * @param category String identifying the energy consumption category.
    */
-  void SetConsumptionCategories(vector<string> &categories);
+  void SetConsumptionCategories (vector<string> &categories);
 
   /** Decrement battery energy.
    *
    * @param category The energy consumption category.
    * @param amount Amount of energy to decrement in uJ.
    */
-  void DecrementEnergy(string category, double amount);
+  void DecrementEnergy (string category, double amount);
 
   /** Get amount of energy in the battery.
    *
    */
-  double GetEnergy() const;
+  double GetEnergy () const;
 
   /** Get the initial amount of energy in the battery.
    *
    */
-  double GetInitialEnergy() const;
+  double GetInitialEnergy () const;
 
   /** Set the net device pointer.
    *
    * @param device Pointer to the net device.
    */
-  void SetDevicePointer(Ptr<NetDevice> device);
+  void SetDevicePointer (Ptr<NetDevice> device);
 
   /** Sets the battery depletion callback function.
    *
    * @param c Callback function.
    */
-  void SetBatteryDepletionCallback(BatteryDepletionCallback c);
+  void SetBatteryDepletionCallback (BatteryDepletionCallback c);
 
   /** Prints an energy consumption breakdown.
    *
@@ -120,11 +119,10 @@ public:
   /** Resets energy consumption categories to zero.
    *
    */
-  void ZeroConsumptionCategories();
+  void ZeroConsumptionCategories ();
 
 
 private:
-
   double m_energy; /// Energy left in battery (uJ).
   double m_initEnergy; /// Initial energy.
   map<string,double> m_energyBreakdown; /// Breaks out battery energy consumption into different categories.

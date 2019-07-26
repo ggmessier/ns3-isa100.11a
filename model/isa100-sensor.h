@@ -38,9 +38,10 @@ using namespace std;
 
 /** Enum for indexing processor states.
  */
-typedef enum{
-	SENSOR_ACTIVE,
-	SENSOR_IDLE
+typedef enum
+{
+  SENSOR_ACTIVE,
+  SENSOR_IDLE
 } Isa100SensorState;
 
 /** Callback used when sensing operation completes.
@@ -52,10 +53,9 @@ typedef Callback< void, double > SensingCallback;
 class Isa100Sensor : public Object
 {
 public:
-
   static TypeId GetTypeId (void);
 
-  Isa100Sensor();
+  Isa100Sensor ();
 
   virtual ~Isa100Sensor ();
 
@@ -63,63 +63,62 @@ public:
    *
    * @return Vector of string names of the categories.
    */
-  vector<string>& GetEnergyCategories();
+  vector<string>& GetEnergyCategories ();
 
   /** Set the callback function to decrement battery energy.
    *
    * @param c Callback function.
    */
-  void SetBatteryCallback(BatteryDecrementCallback c);
+  void SetBatteryCallback (BatteryDecrementCallback c);
 
   /** Set active current.
    *
    * @param current Current (A).
    */
-  void SetActiveCurrent(double current);
+  void SetActiveCurrent (double current);
 
   /** Set sleep current.
    *
    * @param current Current (A).
    */
-  void SetSleepCurrent(double current);
+  void SetSleepCurrent (double current);
 
   /** Set supply voltage.
    *
    * @param voltage Voltage value (V).
    */
-  void SetSupplyVoltage(double voltage);
+  void SetSupplyVoltage (double voltage);
 
 
   /** Set sensing callback.
    *
    * @param c Callback function.
    */
-  void SetSensingCallback(SensingCallback c);
+  void SetSensingCallback (SensingCallback c);
 
   /** Start the sensing operation.
    *
    */
-  void StartSensing();
+  void StartSensing ();
 
 
 private:
-
   /** Set sensor state.
    *
    * @param state New state value.
    */
-  void SetState(Isa100SensorState state);
+  void SetState (Isa100SensorState state);
 
   /** Called at the end of the sensing operation.
    *
    */
-  void EndSensing();
+  void EndSensing ();
 
   vector<string> m_energyCategories; /// Energy consumption categories.
 
   BatteryDecrementCallback m_batteryDecrementCallback;  /// Callback function used to decrement battery energy.
 
-	Isa100SensorState m_state; /// Sensor state.
+  Isa100SensorState m_state;       /// Sensor state.
 
   double m_current; /// Current current (A).
   double m_currentActive; /// Active current (A).

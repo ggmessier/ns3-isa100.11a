@@ -43,7 +43,6 @@ namespace ns3 {
 class ConvexIntTdmaOptimizer : public TdmaOptimizerBase
 {
 public:
-
   static TypeId GetTypeId (void);
 
   ConvexIntTdmaOptimizer ();
@@ -64,7 +63,6 @@ public:
   virtual std::vector< std::vector<int> > SolveTdma (void);
 
 private:
-
   typedef std::vector<double> row_t;
   typedef std::vector<row_t> matrix_t;
 

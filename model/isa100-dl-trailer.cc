@@ -27,9 +27,9 @@ NS_OBJECT_ENSURE_REGISTERED (Isa100DlTrailer);
 
 Isa100DlTrailer::Isa100DlTrailer ()
 {
-  m_cost = std::numeric_limits<uint32_t>::max();
-  m_remainingJoules = std::numeric_limits<uint32_t>::max();
-  m_txPowDbm.sign = std::numeric_limits<int8_t>::min();
+  m_cost = std::numeric_limits<uint32_t>::max ();
+  m_remainingJoules = std::numeric_limits<uint32_t>::max ();
+  m_txPowDbm.sign = std::numeric_limits<int8_t>::min ();
 }
 
 Isa100DlTrailer::~Isa100DlTrailer ()
@@ -75,7 +75,7 @@ uint32_t Isa100DlTrailer::GetSerializedSize (void) const
 void Isa100DlTrailer::Serialize (Buffer::Iterator start) const
 {
   Buffer::Iterator i = start;
-  i.Prev (GetSerializedSize());
+  i.Prev (GetSerializedSize ());
 
   // Distributed Routing data
   i.WriteHtolsbU32 (m_cost);
@@ -87,14 +87,14 @@ void Isa100DlTrailer::Serialize (Buffer::Iterator start) const
 uint32_t Isa100DlTrailer::Deserialize (Buffer::Iterator start)
 {
   Buffer::Iterator i = start;
-  i.Prev (GetSerializedSize());
+  i.Prev (GetSerializedSize ());
 
   // Distributed Routing data
-  m_cost = i.ReadLsbtohU32();
-  m_remainingJoules = i.ReadLsbtohU32();
-  m_txPowDbm.unsign = i.ReadU8();
+  m_cost = i.ReadLsbtohU32 ();
+  m_remainingJoules = i.ReadLsbtohU32 ();
+  m_txPowDbm.unsign = i.ReadU8 ();
 
-  return GetSerializedSize();
+  return GetSerializedSize ();
 }
 
 uint32_t Isa100DlTrailer::GetDistrRoutingCost (void) const

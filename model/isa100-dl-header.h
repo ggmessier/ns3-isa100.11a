@@ -55,12 +55,12 @@ typedef union
     uint8_t ackReq     : 1;    ///< Frame Control Bit 5
     uint8_t panIdComp  : 1;    ///< Frame Control Bit 6      = 0 - no compression, 1 - using only DstPanId for both Src and DstPanId
     uint8_t reserved   : 3;    ///< Frame Control Bit 7-9
-    uint8_t dstAddrMode: 2;    ///< Frame Control Bit 10-11  = 0 - No DstAddr, 2 - ShtDstAddr, 3 - ExtDstAddr
+    uint8_t dstAddrMode : 2;    ///< Frame Control Bit 10-11  = 0 - No DstAddr, 2 - ShtDstAddr, 3 - ExtDstAddr
     uint8_t frameVer   : 2;    ///< Frame Control Bit 12-13
-    uint8_t srcAddrMode: 2;    ///< Frame Control Bit 14-15  = 0 - No DstAddr, 2 - ShtDstAddr, 3 - ExtDstAddr
+    uint8_t srcAddrMode : 2;    ///< Frame Control Bit 14-15  = 0 - No DstAddr, 2 - ShtDstAddr, 3 - ExtDstAddr
   };
   uint16_t bothOctets;
-}MhrFrameControl;
+} MhrFrameControl;
 
 // Allow padding again
 #pragma pack(pop)
@@ -79,7 +79,7 @@ typedef union
     uint8_t ackReq    : 1;      ///< DHDR Frame Control Bit 7   = Is an ack/nack required?
   };
   uint8_t octet;
-}DhdrFrameControl;
+} DhdrFrameControl;
 
 // DHR Frame Control
 typedef union
@@ -93,15 +93,14 @@ typedef union
     uint8_t clkCorr   : 1;    ///< DHR Frame Control Bit 7   = Include clock correction?
   };
   uint8_t octet;
-}DhrFrameControl;
+} DhrFrameControl;
 
 
 class Isa100DlHeader : public Header
 {
 
 public:
-
-	Isa100DlHeader (void);
+  Isa100DlHeader (void);
 
   virtual ~Isa100DlHeader (void);
 
@@ -222,37 +221,37 @@ public:
    *
    * \param addr Source address.
    */
-  void SetDaddrSrcAddress(Mac16Address addr);
+  void SetDaddrSrcAddress (Mac16Address addr);
 
   /** Get DADDR source address.
    *
    * \return Source address.
    */
-  Mac16Address GetDaddrSrcAddress();
+  Mac16Address GetDaddrSrcAddress ();
 
   /** Set DADDR destination address.
    *
    * \param addr Destination address.
    */
-  void SetDaddrDestAddress(Mac16Address addr);
+  void SetDaddrDestAddress (Mac16Address addr);
 
   /** Get DADDR destination address.
    *
    * \return Destination address.
    */
-  Mac16Address GetDaddrDestAddress();
+  Mac16Address GetDaddrDestAddress ();
 
   /* Set the DMIC for this header
    *
    * \param dmic the DMIC for this header
    */
-  void SetDmic(uint32_t dmic);
+  void SetDmic (uint32_t dmic);
 
   /* Get the DMIC
    *
    * \return DMIC
    */
-  uint32_t GetDmic(void) const;
+  uint32_t GetDmic (void) const;
 
 
 
@@ -263,23 +262,23 @@ public:
    * @param hopNum  Index indicating the hop position in the path.
    * @param addr Destination node for the hop.
    */
-  void SetGraphRouteHop(uint8_t hopNum, Mac16Address addr);
+  void SetGraphRouteHop (uint8_t hopNum, Mac16Address addr);
 
   /** Set network hop.
    *
    * @param hopNum  Index indicating the hop position in the path.
    * @param addr Destination node for the hop.
    */
-  Mac16Address GetGraphRouteHop(uint8_t hopNum);
+  Mac16Address GetGraphRouteHop (uint8_t hopNum);
 
-  uint8_t GetNumOfGraphRouteHop();
+  uint8_t GetNumOfGraphRouteHop ();
 
   /** Set network hop.
    *
    * @param hopNum  Index indicating the hop position in the path.
    * @param addr Destination node for the hop.
    */
-  void SetSourceRouteHop(uint8_t hopNum, Mac16Address addr);
+  void SetSourceRouteHop (uint8_t hopNum, Mac16Address addr);
 
 
   /** Get next address along a multi-hop path and remove from header.
@@ -287,7 +286,7 @@ public:
    *
    * \return Address.
    */
-  Mac16Address PopNextSourceRoutingHop();
+  Mac16Address PopNextSourceRoutingHop ();
 
   /* Set the time when the packet was generated
    *
@@ -306,7 +305,6 @@ public:
   /**}@*/
 
 private:
-
   // MHR Sub Header
   MhrFrameControl m_mhrFrameControl;    ///< Frame control
   uint8_t m_seqNum;                     ///< Sequence number.
@@ -343,7 +341,6 @@ class Isa100DlAckHeader : public Header
 {
 
 public:
-
   Isa100DlAckHeader (void);
 
   virtual ~Isa100DlAckHeader (void);
@@ -403,7 +400,7 @@ public:
    *
    * \return The 32-bit DMIC.
    */
-  uint32_t GetDmic(void) const;
+  uint32_t GetDmic (void) const;
 
   /** Set the DMIC.
    *
@@ -427,7 +424,6 @@ public:
   /**}@*/
 
 private:
-
   // MHR sub-header
   MhrFrameControl m_mhrFrameControl;
 
@@ -441,7 +437,7 @@ private:
   uint32_t m_dmic;
 
 };
-}; // namespace ns-3
+}  // namespace ns-3
 #endif
 
 

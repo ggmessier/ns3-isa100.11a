@@ -39,11 +39,11 @@
 
 // Topology
 //#define SENSOR_DENSITY 0.0185  // Nodes/m^2
-#define SENSOR_DENSITY 0.0093  // Nodes/m^2
+//#define SENSOR_DENSITY 0.0093  // Nodes/m^2
 #define MIN_NODE_SPACING 3.0               // Node spacing is at least this distance (m)
 #define FIELD_SIZE_X 60.0  // Field size in the x direction.
-#define FIELD_SIZE_Y 90.0  // Field size in the y direction.
-
+//#define FIELD_SIZE_Y 90.0  // Field size in the y direction.
+#define FIELD_SIZE_Y 60.0  // Field size in the y direction.
 
 // Defines for node applications
 #define SENSOR_SAMPLE_DURATION_S  0.10     // Duration of a sensor sample (s)
@@ -103,6 +103,8 @@ vector<Time> reportTxTime;
 vector<Time> reportTotalDelay;
 vector<int> reportRetxNum;
 
+Mac16Address exHaustedNode;
+
 bool starvedNode = false;
 bool failOccured = false;
 
@@ -124,6 +126,7 @@ void BatteryDepletionCallbackEvent(Mac16Address addr)
   if(!terminateSim){
     networkLifetime = (Simulator::Now()).GetSeconds();
     NS_LOG_UNCOND(" Node " << addr << " out of energy at " << networkLifetime);
+    exHaustedNode = addr;
     terminateSim = 1;
   }
 
@@ -138,50 +141,50 @@ void NodeFailureCallbackEvent(Mac16Address addr)
   }
 }
 
-static void StopSensing(NetDeviceContainer devContainer)
-{
-  if(!failOccured && totPktsToNodeFail !=0 && totPktSimulation > totPktsToNodeFail)
-    {
-      for(int16_t i = 0; i < nodeMap.size(); i++)
-        {
-          int16_t nodeIndex =  nodeMap[i];
-          Ptr<Isa100NetDevice> netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
-          NS_LOG_UNCOND("Sensing terminated! Node: "<<nodeIndex);
-//          netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
-          Mac16Address addr = Mac16Address::ConvertFrom(netDevice->GetAddress());
-          netDevice->GetApplication(0)->SetAttribute("WorkingStatus", BooleanValue(false));
-          terminatedSensors.push_back(addr);
-          NS_LOG_DEBUG("@StopSensing Node: "<<nodeIndex<<"reportTxNum: "<<reportTxNum[nodeIndex]);
-        }
-      failOccured = true;
-    }
-
-  while(!needToTerminateSensors.empty())
-    {
-    Mac16Address addr = needToTerminateSensors.back();
-    needToTerminateSensors.pop_back();
-    if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0)
-      {
-        NS_LOG_UNCOND("terminatedSensors: "<<terminatedSensors.size());
-        uint8_t buffer[4];
-        addr.CopyTo (buffer);
-
-        uint32_t i = static_cast<uint32_t> (buffer[1]);
-        Ptr<Isa100NetDevice> netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
-        NS_LOG_UNCOND("Sensing terminated! Node: "<<i);
-        netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
-
-        terminatedSensors.push_back(addr);
-      }
-    }
-  if(numSensorNodes == terminatedSensors.size() + 2)
-    {
-      terminateSim = 1;
-    }
-
-  NS_LOG_DEBUG("*** STOP SENSING TRIGGERED *** "<<Simulator::Now ().GetMilliSeconds());
-  Simulator::Schedule(terminateCheckPeriod,&StopSensing,devContainer);
-}
+//static void StopSensing(NetDeviceContainer devContainer)
+//{
+//  if(!failOccured && totPktsToNodeFail !=0 && totPktSimulation > totPktsToNodeFail)
+//    {
+//      for(int16_t i = 0; i < nodeMap.size(); i++)
+//        {
+//          int16_t nodeIndex =  nodeMap[i];
+//          Ptr<Isa100NetDevice> netDevice = devContainer.Get(nodeIndex)->GetObject<Isa100NetDevice>();
+//          NS_LOG_UNCOND("Sensing terminated! Node: "<<nodeIndex);
+////          netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
+//          Mac16Address addr = Mac16Address::ConvertFrom(netDevice->GetAddress());
+//          netDevice->GetApplication(0)->SetAttribute("WorkingStatus", BooleanValue(false));
+//          terminatedSensors.push_back(addr);
+//          NS_LOG_DEBUG("@StopSensing Node: "<<nodeIndex<<"reportTxNum: "<<reportTxNum[nodeIndex]);
+//        }
+//      failOccured = true;
+//    }
+//
+//  while(!needToTerminateSensors.empty())
+//    {
+//    Mac16Address addr = needToTerminateSensors.back();
+//    needToTerminateSensors.pop_back();
+//    if(count(terminatedSensors.begin(),terminatedSensors.end(),addr)==0)
+//      {
+//        NS_LOG_UNCOND("terminatedSensors: "<<terminatedSensors.size());
+//        uint8_t buffer[4];
+//        addr.CopyTo (buffer);
+//
+//        uint32_t i = static_cast<uint32_t> (buffer[1]);
+//        Ptr<Isa100NetDevice> netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+//        NS_LOG_UNCOND("Sensing terminated! Node: "<<i);
+//        netDevice->GetDl()->SetAttribute("WorkingStatus", BooleanValue(false));
+//
+//        terminatedSensors.push_back(addr);
+//      }
+//    }
+//  if(numSensorNodes == terminatedSensors.size() + 2)
+//    {
+//      terminateSim = 1;
+//    }
+//
+//  NS_LOG_DEBUG("*** STOP SENSING TRIGGERED *** "<<Simulator::Now ().GetMilliSeconds());
+//  Simulator::Schedule(terminateCheckPeriod,&StopSensing,devContainer);
+//}
 
 
 static void TerminateSimulation()
@@ -245,7 +248,7 @@ static void LogReportRetx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
   int nodeInd = ( (uint)buff[0] << 8 ) + (uint)buff[1];
 
   reportRetxNum[nodeInd]++;
-  NS_LOG_DEBUG("ReTx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr);
+  NS_LOG_UNCOND("ReTx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr);
 //  *stream->GetStream() << "Rx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr << std::endl;
 }
 
@@ -261,7 +264,9 @@ static void LogHops(Ptr<OutputStreamWrapper> stream, vector<int> hops)
 static void PrintLocations(Ptr<OutputStreamWrapper> stream, int node, double x, double y, double z)
 {
 //	float distToSink = sqrt((FIELD_SIZE_X/2-x)*(FIELD_SIZE_X/2-x) + y*y); //Rajith removed
-	float distToSink = sqrt((FIELD_SIZE_X*factor/2-x)*(FIELD_SIZE_X*factor/2-x) + y*y); //Rajith
+//	float distToSink = sqrt((FIELD_SIZE_X*factor/2-x)*(FIELD_SIZE_X*factor/2-x) + y*y); //Rajith
+  float distToSink = sqrt((FIELD_SIZE_X*factor/2-x)*(FIELD_SIZE_X*factor/2-x) +
+                          (FIELD_SIZE_Y*factor/2-x)*(FIELD_SIZE_Y*factor/2-x)); //Rajith
 	*stream->GetStream() << "Node " << node << ": (" << x << "," << y << ") " << distToSink << "m from sink." << std::endl;
 }
 
@@ -350,9 +355,10 @@ int main (int argc, char *argv[])
 //    LogComponentEnable("RandomNetworkTdma",LOG_ALL);
 
 
-	/*  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
-	  LogComponentEnable("Isa100Processor",LOG_LEVEL_LOGIC);
-	*/
+
+//  	  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
+//  	  LogComponentEnable("Isa100Processor",LOG_LEVEL_LOGIC);
+
 
 	// Command Line Arguments
 //  uint32_t seed = 1002;
@@ -451,11 +457,12 @@ int main (int argc, char *argv[])
   std::string filePath = "/home/rajith/NS30712/Results/";
 	ss.str( std::string() );
 	ss.clear();
-	ss << filePath << "N" << numSensorNodes << "_" << optString << "_";
+	ss << filePath << "N" << numSensorNodes << "_" << optString << "_"<<factor<<"_";
   std::string filePrefix = ss.str();
 
   uint16_t numNodes = 1 + numSensorNodes;
-  double fieldSizeY = ( (double)numSensorNodes / SENSOR_DENSITY ) / FIELD_SIZE_X;
+//  double fieldSizeY = ( (double)numSensorNodes / SENSOR_DENSITY ) / FIELD_SIZE_X;
+  double fieldSizeY = FIELD_SIZE_Y;
 
   // routing debug
 //  numNodes = 6;
@@ -567,7 +574,8 @@ int main (int argc, char *argv[])
 //	*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";   //Rajith new Report
 	*(locationStream->GetStream()) << "#" << iter << "#\n";
 //	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
-	*(scheduleStream->GetStream()) << "-1 " << iter << " "<< seed <<" "<<maxTxPower<<"\n";
+	*(scheduleStream->GetStream()) << "-1 " << "-1 " << seed <<" "<<factor<<"\n";
+//  *(scheduleStream->GetStream()) << "-1 -1 -1 -1" << "\n";
 	*(txPowerStream->GetStream()) << "#" << iter << "#\n";
 	*(avgHopsStream->GetStream()) << "-1 " << iter << "\n";
 	*(initGraphStream->GetStream()) << "-1 " << iter << "\n";
@@ -585,14 +593,14 @@ int main (int argc, char *argv[])
   Ptr<ListPositionAllocator> positionAlloc = CreateObject<ListPositionAllocator>();
   isaHelper->TraceConnectWithoutContext ("NodeLocations", MakeBoundCallback (&PrintLocations, locationStream));
 
-  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
-  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
-  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
+//  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,0.0,0.0); //Rajith
+//  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,0.0,0.0); //Rajith
+//  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,0.0,0.0); //Rajith
 
   // in order to comply with the
-//  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,fieldSizeY/2,0.0); //Rajith
-//  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/2,fieldSizeY/4,0.0); //Rajith
-//  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/2,fieldSizeY/4*3,0.0); //Rajith
+  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,fieldSizeY/2,0.0); //Rajith
+  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,fieldSizeY/4,0.0); //Rajith
+  ns3::Vector accessPoint2Loc(FIELD_SIZE_X/4*3,fieldSizeY/4*3,0.0); //Rajith
 
 //  ns3::Vector gateWayLoc(FIELD_SIZE_X/2,fieldSizeY/2,0.0); //Rajith
 //  ns3::Vector accessPoint1Loc(FIELD_SIZE_X/4,fieldSizeY/2,0.0); //Rajith
@@ -710,6 +718,24 @@ int main (int argc, char *argv[])
 	// Install application
 	isaHelper->InstallApplication(nc,0,sinkNodeULApp);
 
+//  // Sink application
+//  Mac16AddressValue address;
+//  Ptr<Isa100NetDevice> netDevice;
+//  for (int16_t i = 1; i < 3; i++)
+//  {
+//    Ptr<Isa100BackboneNodeApplication> sinkNodeULApp = CreateObject<Isa100BackboneNodeApplication>();
+//
+//    // Sensor application attributes
+//    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+//    netDevice->GetDl()->GetAttribute("Address",address);
+//    sinkNodeULApp->SetAttribute("SrcAddress",address);
+//    sinkNodeULApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+//    sinkNodeULApp->TraceConnectWithoutContext ("ReportRx", MakeBoundCallback (&LogReportRx, reportStream));
+//
+//    // Install application
+//    isaHelper->InstallApplication(nc,i,sinkNodeULApp);
+//  }
+
 	// Create the sensor node applications
 	Mac16AddressValue address;
 	Ptr<Isa100NetDevice> netDevice;
@@ -740,11 +766,12 @@ int main (int argc, char *argv[])
         isaHelper->InstallApplication(nc,i,sensorNodeULApp);
 //	    }
 
-	  if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
-	    {
-	      Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
-	      netDevice->GetDl()->SetAttribute("WorkingStatus",BooleanValue (false));
-	    }
+//	  if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
+//	    {
+//	      NS_LOG_UNCOND("Failed Node: "<<i);
+//	      Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
+//	      netDevice->GetDl()->SetAttribute("WorkingStatus",BooleanValue (false));
+//	    }
 	}
 
 //	// ******************* DOWNLINK *******************
@@ -877,7 +904,7 @@ int main (int argc, char *argv[])
   uint32_t offset = numSlotsPerFrame/8;
   Time initialTerminateCheck = Seconds((frameSize-offset)*slotDuration.GetSeconds());  // Rajith Added
   Simulator::Schedule(initialTerminateCheck,&TerminateSimulation);
-  Simulator::Schedule(initialTerminateCheck,&StopSensing,devContainer);
+//  Simulator::Schedule(initialTerminateCheck,&StopSensing,devContainer);               //Rajith Temporary 2019_05_10
   Simulator::Schedule(initialTerminateCheck,&LogPktReport,reportStream);
   terminateCheckPeriod = Seconds(frameSize*slotDuration.GetSeconds());  // Rajith Added
 
@@ -928,7 +955,7 @@ int main (int argc, char *argv[])
   else{
       //Rajith new Report
       *(reportStream->GetStream()) << seed << " "<<numNodes<<" "<<factor<<" "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "
-          <<totDelay.GetSeconds()/totReportRx << " "<< networkLifetime << "\n";
+          <<totDelay.GetSeconds()/totReportRx << " "<< networkLifetime << " "<<exHaustedNode<<"\n";
 //      *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
 //  	*(reportStream->GetStream()) << "TotalTx," << totReportTx << "\n";
 //  	*(reportStream->GetStream()) << "TotalRx," << totReportRx << "\n";

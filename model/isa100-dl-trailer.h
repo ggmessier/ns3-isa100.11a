@@ -46,7 +46,6 @@ class Isa100DlTrailer : public Trailer
 {
 
 public:
-
   Isa100DlTrailer (void);
 
   virtual ~Isa100DlTrailer (void);
@@ -111,14 +110,13 @@ public:
   /**}@*/
 
 private:
-
   // Data required for distributed routing
   uint32_t m_cost;                    ///< Cost to transmit to the sink from the node transmitting this packet
   uint32_t m_remainingJoules;         ///< The remaining energy of the node transmitting this packet
   oneByte_t m_txPowDbm;               ///< The tx power with which this packet was sent
 
 };
-}; // namespace ns-3
+}  // namespace ns-3
 #endif
 
 

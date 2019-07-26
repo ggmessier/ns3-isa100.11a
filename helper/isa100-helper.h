@@ -43,28 +43,53 @@ class ListPositionAllocator;
 /** Used by the breadth first search that designs a minimum hop network.
  *
  */
-typedef struct{
-	int parent; ///< Parent node in the network tree.
-	std::vector<uint16_t> slotSched;  ///< Array of slot numbers where the node is active
-	std::vector<DlLinkType> slotType;  ///< What the node is actually doing in those slots (tx,rx,etc)
-	int hopCount; ///< Number of hops to sink
-	double pwr; ///< Transmit power required to reach the next hop.
-	int totalPackets; ///< Number of packets the node has to send.
+typedef struct
+{
+  int parent;       ///< Parent node in the network tree.
+  std::vector<uint16_t> slotSched;        ///< Array of slot numbers where the node is active
+  std::vector<DlLinkType> slotType;        ///< What the node is actually doing in those slots (tx,rx,etc)
+  int hopCount;       ///< Number of hops to sink
+  double pwr;       ///< Transmit power required to reach the next hop.
+  int totalPackets;       ///< Number of packets the node has to send.
 } ScheduleStruct;
 
-/** Used to contain the superframe schedule for a node.
+/** Used to contain the SUPERFRAME schedule for a node.
  *
  */
-typedef struct{
-	std::vector<uint16_t> slotSched;  ///< Array of slot numbers where the node is active
+typedef struct
+{
+  std::vector<uint16_t> slotSched;        ///< Array of slot numbers where the node is active
 //	std::vector<uint8_t> channelSched;  ///< channel used for the communication
-	std::vector<DlLinkType> slotType;  ///< What the node is actually doing in those slots
+  std::vector<DlLinkType> slotType;        ///< What the node is actually doing in those slots
 } NodeSchedule;
+
+/** Used to contain the node schedule information of a particular slot
+ *
+ */
+typedef struct
+{
+  uint8_t channelSched;  ///< channel used for the communication
+  DlLinkType slotType;  ///< TX/ RX or shared slot
+  Mac16Address graphID;  ///< current graph ID
+  uint16_t localPathID;  ///< local path ID when multiple paths exist
+  uint32_t pathSource;  ///< source node of the path
+} NodeInfo;
+
+/** Used to contain the Table for a routing.
+ *
+ */
+typedef struct
+{
+  uint32_t destID;  ///< destination ID
+  Mac16Address nextGraphID;  ///< current graph ID
+  std::vector<uint32_t> neighborList;  ///< neighbors for the next transmission
+} RoutingTable;
 
 /** Used to contain slot and frequency information
  *
  */
-typedef struct{
+typedef struct
+{
   uint32_t timeSlot;  ///< time slot number
   uint8_t channelIndex;  ///< carrier used for the communication
 } Resource;
@@ -72,11 +97,12 @@ typedef struct{
 /** Indicates the result of attempting to schedule a routing algorithm solution.
  *
  */
-typedef enum{
-	SCHEDULE_FOUND,
-	INSUFFICIENT_SLOTS,
-	NO_ROUTE,
-	STARVED_NODE
+typedef enum
+{
+  SCHEDULE_FOUND,
+  INSUFFICIENT_SLOTS,
+  NO_ROUTE,
+  STARVED_NODE
 } SchedulingResult;
 
 
@@ -107,10 +133,9 @@ typedef TracedCallback<int, int> HelperGraphTracedCallback;
 class Isa100Helper : public Object
 {
 public:
-
   static TypeId GetTypeId (void);
 
-	Isa100Helper (void);
+  Isa100Helper (void);
   ~Isa100Helper (void);
 
   /** Creates and installs net devices and installs them in each node in the node container.
@@ -132,7 +157,7 @@ public:
    * @param numNodes Number of nodes in the network.
    * @param routingTable 2D Mac16Address array where row n contains the multi-hop path to reach node n.
    */
-  void SetSourceRoutingTable(uint32_t nodeInd, uint32_t numNodes,  std::string *routingTable);
+  void SetSourceRoutingTable (uint32_t nodeInd, uint32_t numNodes,  std::string *routingTable);
 
   /** Install an application object on a specific node.
    * - Must be called after Isa100Helper::Install()
@@ -141,7 +166,7 @@ public:
    * @param nodeIndex Index of the node where the object will be installed.
    * @param app Reference to the application object.
    */
-  void InstallApplication(NodeContainer c, uint32_t nodeIndex, Ptr<Isa100Application> app);
+  void InstallApplication (NodeContainer c, uint32_t nodeIndex, Ptr<Isa100Application> app);
 
   /** Install a battery object on a specific node.
    * - Must be called after Isa100Helper::Install()
@@ -149,7 +174,7 @@ public:
    * @param nodeIndex Index of the node where the object will be installed.
    * @param battery Pointer to the battery object.
    */
-  void InstallBattery(uint32_t nodeIndex, Ptr<Isa100Battery> battery);
+  void InstallBattery (uint32_t nodeIndex, Ptr<Isa100Battery> battery);
 
   /** Install a processor object on a specific node.
    * - Must be called after Isa100Helper::Install()
@@ -157,7 +182,7 @@ public:
    * @param nodeIndex Index of the node where the object will be installed.
    * @param processor Pointer to the processor object.
    */
-  void InstallProcessor(uint32_t nodeIndex, Ptr<Isa100Processor> processor);
+  void InstallProcessor (uint32_t nodeIndex, Ptr<Isa100Processor> processor);
 
   /** Install a sensor object on a specific node.
    * - Must be called after Isa100Helper::Install()
@@ -165,7 +190,7 @@ public:
    * @param nodeIndex Index of the node where the object will be installed.
    * @param sensor Pointer to the sensor object.
    */
-  void InstallSensor(uint32_t nodeIndex, Ptr<Isa100Sensor> sensor);
+  void InstallSensor (uint32_t nodeIndex, Ptr<Isa100Sensor> sensor);
 
 
   /** Pass a DL attribute to the helper.
@@ -175,7 +200,7 @@ public:
    * @param n String identifying attribute.
    * @param v Attribute value.
    */
-  void SetDlAttribute(std::string n, const AttributeValue &v);
+  void SetDlAttribute (std::string n, const AttributeValue &v);
 
   /** Pass a zigbee trx current attribute to the helper
    * - Must be called before Isa100Helper::Install().
@@ -184,7 +209,7 @@ public:
    *  @param n String identifying attribute.
    *  @param v Attribute value.
    */
-  void SetTrxCurrentAttribute(std::string n, const AttributeValue &v);
+  void SetTrxCurrentAttribute (std::string n, const AttributeValue &v);
 
   /** Pass a zigbee PHY attribute to the helper
    * - Must be called before Isa100Helper::Install().
@@ -193,7 +218,7 @@ public:
    *  @param n String identifying attribute.
    *  @param v Attribute value.
    */
-  void SetPhyAttribute(std::string n, const AttributeValue &v);
+  void SetPhyAttribute (std::string n, const AttributeValue &v);
 
   // ------ Node Location ---------
   /** Set the position of the nodes
@@ -201,7 +226,7 @@ public:
    * @param dc node container.
    * @param positionAlloc A list containing the node position vectors.
    */
-  void SetDeviceConstantPosition(NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc);
+  void SetDeviceConstantPosition (NetDeviceContainer dc, Ptr<ListPositionAllocator> positionAlloc);
 
   /** Generate random positions for a fixed number of nodes in a square coverage area.
    * - The result of this function is stored in positionAlloc and not directly in the nodes.
@@ -215,8 +240,8 @@ public:
    * @param minNodeSpacing Nodes must be separated by at least this much (m).
    * @param sinkLocation Location of the sink node.
    */
-  void GenerateLocationsFixedNumNodes(Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength,
-		  double minNodeSpacing, std::vector<Vector> coreNodeLocations, double factor);
+  void GenerateLocationsFixedNumNodes (Ptr<ListPositionAllocator> positionAlloc, int numNodes, double xLength, double yLength,
+                                       double minNodeSpacing, std::vector<Vector> coreNodeLocations, double factor);
 
   // ------ Scheduling -----------
 
@@ -230,7 +255,7 @@ public:
    * @param linkTypes Pointer to array indicating what kind of activity occurs in the active slots (TRANSMIT,RECEIVE,SHARED).
    * @param numLink Length of the linkSched and linkTypes arrays.
    */
-  void SetSfSchedule(uint32_t nodeInd, uint8_t *hopPattern, uint32_t numHop, uint16_t *linkSched, DlLinkType *linkTypes, uint32_t numLink);
+  void SetSfSchedule (uint32_t nodeInd, uint8_t *hopPattern, uint32_t numHop, uint16_t *linkSched, DlLinkType *linkTypes, uint32_t numLink);
 
 
   /** Pass a TDMA Optimizer attribute to the helper
@@ -239,7 +264,7 @@ public:
    *  @param n String identifying attribute.
    *  @param v Attribute value.
    */
-  void SetTdmaOptAttribute(std::string n, const AttributeValue &v);
+  void SetTdmaOptAttribute (std::string n, const AttributeValue &v);
 
 
   /* Uses a tdma-optimizer to determine network routes and schedule.
@@ -252,9 +277,9 @@ public:
    * @param stream An optional stream to output the schedule to
    * @return Result of scheduling attempt.
    */
-  SchedulingResult CreateOptimizedTdmaSchedule(NodeContainer c, Ptr<PropagationLossModel> propModel,
-      vector<uint8_t> carriers, uint32_t numHop, OptimizerSelect optSelect,
-      Ptr<OutputStreamWrapper> stream = NULL);
+  SchedulingResult CreateOptimizedTdmaSchedule (NodeContainer c, Ptr<PropagationLossModel> propModel,
+                                                vector<uint8_t> carriers, uint32_t numHop, OptimizerSelect optSelect,
+                                                Ptr<OutputStreamWrapper> stream = NULL);
 
   // ------ Graph Scheduling Exclusive Functions -----------
 
@@ -262,7 +287,7 @@ public:
      *
      * @param G Pointer for the graph network that need to create the schedule
      */
-  SchedulingResult ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph>> mapOfG);
+  SchedulingResult ConstructDataCommunicationSchedule (Ptr<IsaGraph> G, map <uint32_t, Ptr<IsaGraph> > mapOfG);
 
   /** Schedule link for specific graph type
    *
@@ -272,7 +297,8 @@ public:
    * @param timeSlot earliest slot to be allocated
    * @param option link option whether exclusive or shared
    */
-  bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option);
+  bool ScheduleLinks (Ptr<Node> u, Ptr<Node> v, Ptr<IsaGraph> Graph, uint32_t superframe, uint32_t timeSlot, DlLinkType option,
+                      uint16_t grpahID, uint32_t source);
 
   /** Get next available channel offset and the time slot
    *
@@ -281,19 +307,19 @@ public:
    * @param option link option whether exclusive or shared
    * @param repLength for the allocating slot
    */
-  Resource GetNextAvailableSlot(uint32_t u, uint32_t v, uint32_t timeSlot, DlLinkType option, uint32_t repLength);
+  Resource GetNextAvailableSlot (uint32_t u, uint32_t v, uint32_t timeSlot, DlLinkType option, uint32_t repLength);
 
   /** Set created schedule for simulation
    *
    * @return Result of scheduling attempt.
    */
-  SchedulingResult ScheduleAndRouteTDMAgraph();
+  SchedulingResult ScheduleAndRouteTDMAgraph ();
 
   /** Resize the main schedule (and repeat length vector) to fit all the slots of the SUPERFRAME
    *
    * @param superframe SUPERFRAME size considering the sample rate
    */
-  void ResizeSchedule(uint32_t superframe);
+  void ResizeSchedule (uint32_t superframe);
 
   /** Add Edge Weights to Han's Graph Algorithms (Not Required)
    *
@@ -318,10 +344,10 @@ public:
    *
    * @return Result of scheduling attempt.
    */
-  SchedulingResult ConstructDataCommunicationScheduleMinLoad(vector< vector<uint32_t>> UL_Ex, vector< vector<uint32_t>> UL_Sh,
-                                               vector< vector<uint32_t>> DL_Ex, vector< vector<uint32_t>> DL_Sh, int frameSize);
+  SchedulingResult ConstructDataCommunicationScheduleMinLoad (vector< vector<uint32_t> > UL_Ex, vector<vector< vector<uint32_t> > > UL_Sh,
+                                                              vector< vector<uint32_t> > DL_Ex, vector< vector<uint32_t> > DL_Sh, int frameSize);
 
-  bool ScheduleLinksMinLoad(vector< vector<uint32_t>> flows, int frameSize, uint32_t timeSlot, DlLinkType option);
+  bool ScheduleLinksMinLoad (vector< vector<uint32_t> > flows, int frameSize, uint32_t timeSlot, DlLinkType option);
 //  /** Construct the data communication schedule of the graph network
 //     *
 //     * @param G Pointer for the graph network that need to create the schedule
@@ -331,7 +357,6 @@ public:
   /**}@*/
 
 private:
-
   // -- Flow Matrix Scheduling Functions --
 
   // ... General Functions ...
@@ -351,7 +376,7 @@ private:
    * @param scheduleSummary Summary of TDMA schedule used by routing algorithm.
    *
    */
-  void PopulateNodeSchedule(int src, int dst, int weight, vector<NodeSchedule> &schedules, int &nSlot, vector< vector<int> > &scheduleSummary);
+  void PopulateNodeSchedule (int src, int dst, int weight, vector<NodeSchedule> &schedules, int &nSlot, vector< vector<int> > &scheduleSummary);
 
   /** Program source route and TDMA schedules into nodes based on a slot flow matrix.
    *
@@ -359,14 +384,14 @@ private:
    * @param packetsPerSlot Number of packets sent per slot.
    * @return Whether scheduling was possible.
    */
-  SchedulingResult ScheduleAndRouteTdma(std::vector< std::vector<int> > slotFlows, int packetsPerSlot);
+  SchedulingResult ScheduleAndRouteTdma (std::vector< std::vector<int> > slotFlows, int packetsPerSlot);
 
   /** Calculates transmit powers between nodes.
    *
    * @param c Node container.
    * @param propModel Propagation model.
    */
-  void CalculateTxPowers(NodeContainer c, Ptr<PropagationLossModel> propModel);
+  void CalculateTxPowers (NodeContainer c, Ptr<PropagationLossModel> propModel);
 
 
   // ... TDMA Superframe Generation Functions ...
@@ -378,28 +403,31 @@ private:
    * @param packetFlows Matrix of packet flows.
    * @return Whether a TDMA schedule could be found.
    */
-  SchedulingResult FlowMatrixToTdmaSchedule(vector<NodeSchedule> &lAll, vector< vector<int> > &scheduleSummary, vector< vector<int> > packetFlows);
+  SchedulingResult FlowMatrixToTdmaSchedule (vector<NodeSchedule> &lAll, vector< vector<int> > &scheduleSummary, vector< vector<int> > packetFlows);
+
+  // Rajith Revised
+  SchedulingResult FlowMatrixToTdmaScheduleRevised (vector<NodeSchedule> &lAll, vector< vector<int> > &scheduleSummary, vector< vector<int> > packetFlows);
 
   /** Determines if all the outflow links for node have been scheduled.
    *
    * @param node Index for the node being examined.
    * @param packetFlows Matrix of packet flows.
    */
-  int AllOutlinksScheduled(int node, vector< vector<int> > &packetFlows);
+  int AllOutlinksScheduled (int node, vector< vector<int> > &packetFlows);
 
   /** Adds a node to a vector of node indices except if that node is not already in the vector.
    *
    * @param node Node index.
    * @param q0 Vector of node indices.
    */
-  void PushBackNoDuplicates(int node, vector<int> &q0);
+  void PushBackNoDuplicates (int node, vector<int> &q0);
 
   /** Determines if a node is a leaf on the flow graph.
    *
    * @param node Node index.
    * @param flowMatrix Flow matrix.
    */
-  bool IsLeaf(int node, vector< vector<int> > packetFlows);
+  bool IsLeaf (int node, vector< vector<int> > packetFlows);
 
   /** Determines whether a node has a parent in the current Q vector.
    *
@@ -408,7 +436,7 @@ private:
    * @param packetFlows Flow matrix
    * @return Whether there is a parent in Q.
    */
-  bool NoParentInQ(int node, vector<int> q, vector< vector<int> > &packetFlows);
+  bool NoParentInQ (int node, vector<int> q, vector< vector<int> > &packetFlows);
 
 
   // ... Source Routing List Generation ...
@@ -419,7 +447,7 @@ private:
    * @param schedule TDMA schedule summary.
    * @return Whether routes could be found for all nodes.
    */
-  SchedulingResult CalculateSourceRouteStrings(vector<std::string> &routingStrings, vector< vector<int> > schedule);
+  SchedulingResult CalculateSourceRouteStrings (vector<std::string> &routingStrings, vector< vector<int> > schedule);
 
   /** Set the DL attributes of a net device.
    * @param device Pointer to the net device object.
@@ -430,6 +458,12 @@ private:
    * @param device Pointer to the Zigbee PHY.
    */
   void SetPhyAttributes (Ptr<ZigbeePhy> device);
+
+  /** Convert the graphIDs to match the current DROUT routing information
+   * @param graphID as 16bit (2 Byte) number
+   * @return graphID represent as a MacAddress
+   */
+  Mac16Address GraphIDConverter (uint16_t graphID);
 
   /** Trace source for number of hops in scheduled network.
    */
@@ -449,17 +483,21 @@ private:
   // Additional private variables used by Rajith
   bool m_graphType;  ///< use to identify the graph
   // slot -> channel -> TX/ RX -> node
-  vector<vector<vector<uint32_t>>> m_mainSchedule;  ///< main schedule information (slot, channel index,  TX if 0 and TX if 1)
+  vector<vector<vector<uint32_t> > > m_mainSchedule;  ///< main schedule information (slot, channel index,  TX if 0 and TX if 1)
   // node -> slot -> (channel, TX/ RX/ Shared)
-  map<uint32_t, map<uint32_t, pair<uint8_t, DlLinkType>>> m_nodeScheduleN;    ///< schedule for each node of the network (map of node to NodeSchedule)
-  map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
-  map<uint32_t, map<uint32_t, vector<uint32_t>>> m_avgHopCount;  ///< average hop count of each node
-  vector<vector<uint32_t>> m_repLength;   ///<repetition length of the slot and channel index
+  map<uint32_t, map<uint32_t, NodeInfo> > m_nodeScheduleN;    ///< schedule for each node of the network (map of node to NodeSchedule)
+//  map<uint32_t, map<uint32_t, vector<Mac16Address>>> m_tableList;  ///< routing tables of each nodes (Node ID -> destination -> routing table)
+  ///< routing tables of each nodes (Node ID -> graphID -> routing table)
+  map<uint32_t, map<Mac16Address, RoutingTable> > m_tableList;
+
+  map<uint32_t, map<uint32_t, vector<uint32_t> > > m_avgHopCount;  ///< average hop count of each node
+  vector<vector<uint32_t> > m_repLength;   ///<repetition length of the slot and channel index
   vector<uint8_t> m_carriers;    ///< carriers used (channels)
   map<uint32_t, uint32_t> m_nextAvailableSlot;   ///< to track the next available time slot for schedule (current slot -> next)
   map<uint32_t, uint8_t> m_nextAvailableChIndex;   ///< to track the next available carrier for schedule (slot -> next channel index)
+  uint16_t m_grpahID;  ///< graph ID for the schedule creation
 
-  map<uint32_t, vector<Ptr<Node>>> m_groupSameSampleRate;         ///< group all the nodes with same sample rate
+  map<uint32_t, vector<Ptr<Node> > > m_groupSameSampleRate;         ///< group all the nodes with same sample rate
 
   HelperLocationTracedCallback m_locationTrace;
   HelperScheduleTracedCallback m_scheduleTrace;
@@ -467,8 +505,16 @@ private:
   HelperHopCountTracedCallback m_hopCountTrace;
   HelperGraphTracedCallback m_graphTrace;
 
-  vector<pair<uint32_t,uint32_t>> m_edgeWeight;
+  vector<pair<uint32_t,uint32_t> > m_edgeWeight;
   bool m_ResourceAvailable;     ///< whether frame size is sufficient to create the scheduling
+
+  uint16_t m_panID;
+  ///< routing tables of each nodes (Node ID -> destID -> graphID sequence)
+  map<uint32_t, map<uint32_t, vector<vector<Mac16Address> > > > m_tableList2;
+//  map<uint32_t, vector<Mac16Address>> m_pathsMap;
+//  map<uint16_t, vector<Mac16Address>> m_paths;
+//  vector<uint16_t> m_graphAllocation;
+//  uint16_t m_iter;  ///< graph ID for the schedule creation
 
 };
 

@@ -35,23 +35,23 @@ ZigbeeTrxCurrentModel::GetTypeId (void)
     .SetParent<Object> ()
     .AddConstructor<ZigbeeTrxCurrentModel> ()
     .AddAttribute ("ProcessorSleepCurrentA",
-                  "The microprocessor sleep current in Ampere.",
-                  DoubleValue (0.0000249),  // sleep mode = 24.9uA
-                  MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetProcessorSleepCurrentA,
-                                      &ZigbeeTrxCurrentModel::GetProcessorSleepCurrentA),
-                  MakeDoubleChecker<double> (0))
+                   "The microprocessor sleep current in Ampere.",
+                   DoubleValue (0.0000249), // sleep mode = 24.9uA
+                   MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetProcessorSleepCurrentA,
+                                       &ZigbeeTrxCurrentModel::GetProcessorSleepCurrentA),
+                   MakeDoubleChecker<double> (0))
     .AddAttribute ("ProcessorActiveCurrentA",
-                  "The microprocessor active current in Ampere.",
-                  DoubleValue (0.0185),  // active mode = 18.5mA
-                  MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetProcessorActiveCurrentA,
-                                      &ZigbeeTrxCurrentModel::GetProcessorActiveCurrentA),
-                      MakeDoubleChecker<double> (0))
+                   "The microprocessor active current in Ampere.",
+                   DoubleValue (0.0185), // active mode = 18.5mA
+                   MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetProcessorActiveCurrentA,
+                                       &ZigbeeTrxCurrentModel::GetProcessorActiveCurrentA),
+                   MakeDoubleChecker<double> (0))
     .AddAttribute ("ProcessorIdleCurrentA",
-                  "The microprocessor idle current in Ampere.",
-                  DoubleValue (0.0029),  // idle mode = 2.9mA
-                  MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetProcessorIdleCurrentA,
-                  &ZigbeeTrxCurrentModel::GetProcessorIdleCurrentA),
-                MakeDoubleChecker<double> (0))
+                   "The microprocessor idle current in Ampere.",
+                   DoubleValue (0.0029), // idle mode = 2.9mA
+                   MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetProcessorIdleCurrentA,
+                                       &ZigbeeTrxCurrentModel::GetProcessorIdleCurrentA),
+                   MakeDoubleChecker<double> (0))
     .AddAttribute ("TrxOffCurrentA",
                    "The default radio TRX_OFF current in Ampere.",
                    DoubleValue (0.0003),  // TRX_OFF mode = 300uA
@@ -64,12 +64,12 @@ ZigbeeTrxCurrentModel::GetTypeId (void)
                    MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetRxOnCurrentA,
                                        &ZigbeeTrxCurrentModel::GetRxOnCurrentA),
                    MakeDoubleChecker<double> ())
-     .AddAttribute ("BusyRxCurrentA",
-                    "The default radio BUSY_RX current in Ampere.",
-                    DoubleValue (0.0118),  // BUSY_RX mode = 11.8mA (equal to RX_ON)
-                    MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetBusyRxCurrentA,
-                                        &ZigbeeTrxCurrentModel::GetBusyRxCurrentA),
-                    MakeDoubleChecker<double> (0))
+    .AddAttribute ("BusyRxCurrentA",
+                   "The default radio BUSY_RX current in Ampere.",
+                   DoubleValue (0.0118),   // BUSY_RX mode = 11.8mA (equal to RX_ON)
+                   MakeDoubleAccessor (&ZigbeeTrxCurrentModel::SetBusyRxCurrentA,
+                                       &ZigbeeTrxCurrentModel::GetBusyRxCurrentA),
+                   MakeDoubleChecker<double> (0))
     .AddAttribute ("TxOnCurrentA",
                    "The radio TX_ON current in Ampere.",
                    DoubleValue (0.0052),    // TX_ON mode = 5.2mA
@@ -103,12 +103,10 @@ ZigbeeTrxCurrentModel::GetTypeId (void)
 
 ZigbeeTrxCurrentModel::ZigbeeTrxCurrentModel ()
 {
-  ;
 }
 
-ZigbeeTrxCurrentModel::~ZigbeeTrxCurrentModel()
+ZigbeeTrxCurrentModel::~ZigbeeTrxCurrentModel ()
 {
-  ;
 }
 double
 ZigbeeTrxCurrentModel::GetTrxOffCurrentA (void) const
@@ -178,10 +176,12 @@ ZigbeeTrxCurrentModel::GetBusyTxCurrentA (double txPowerDbm) const
 {
   NS_LOG_FUNCTION (this << txPowerDbm);
 
-  double ret = txPowerDbm*m_slope + m_offset;
+  double ret = txPowerDbm * m_slope + m_offset;
 
-  if(ret < 0)
-    ret = 0;
+  if (ret < 0)
+    {
+      ret = 0;
+    }
 
   return ret;
 }
@@ -283,10 +283,12 @@ ZigbeeTrxCurrentModel::UpdateTxCurrent (double txPowerDbm)
 {
   NS_LOG_FUNCTION (this << txPowerDbm);
 
-  m_busyTxCurrentA = txPowerDbm*m_slope + m_offset;
+  m_busyTxCurrentA = txPowerDbm * m_slope + m_offset;
 
-  if(m_busyTxCurrentA < 0)
-    NS_FATAL_ERROR("Transmit current cannot be negative.");
+  if (m_busyTxCurrentA < 0)
+    {
+      NS_FATAL_ERROR ("Transmit current cannot be negative.");
+    }
 }
 
 

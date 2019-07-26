@@ -61,14 +61,14 @@ ZigbeeRadioEnergyModelHelper::SetRechargedCallback (
 
 void
 ZigbeeRadioEnergyModelHelper::SetTxCurrentModel (std::string name,
-                                               std::string n0, const AttributeValue& v0,
-                                               std::string n1, const AttributeValue& v1,
-                                               std::string n2, const AttributeValue& v2,
-                                               std::string n3, const AttributeValue& v3,
-                                               std::string n4, const AttributeValue& v4,
-                                               std::string n5, const AttributeValue& v5,
-                                               std::string n6, const AttributeValue& v6,
-                                               std::string n7, const AttributeValue& v7)
+                                                 std::string n0, const AttributeValue& v0,
+                                                 std::string n1, const AttributeValue& v1,
+                                                 std::string n2, const AttributeValue& v2,
+                                                 std::string n3, const AttributeValue& v3,
+                                                 std::string n4, const AttributeValue& v4,
+                                                 std::string n5, const AttributeValue& v5,
+                                                 std::string n6, const AttributeValue& v6,
+                                                 std::string n7, const AttributeValue& v7)
 {
   ObjectFactory factory;
   factory.SetTypeId (name);
@@ -90,7 +90,7 @@ ZigbeeRadioEnergyModelHelper::SetTxCurrentModel (std::string name,
 
 Ptr<DeviceEnergyModel>
 ZigbeeRadioEnergyModelHelper::DoInstall (Ptr<NetDevice> device,
-                                       Ptr<EnergySource> source) const
+                                         Ptr<EnergySource> source) const
 {
   NS_ASSERT (device != NULL);
   NS_ASSERT (source != NULL);
