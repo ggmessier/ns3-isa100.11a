@@ -49,11 +49,11 @@ Isa100ErrorModel::Isa100ErrorModel ()
 double
 Isa100ErrorModel::GetChunkSuccessRate (double snr, uint32_t nbits) const
 {
-	// Q(x) = 0.5erfc(x/sqrt(2));
+  // Q(x) = 0.5erfc(x/sqrt(2));
 
-  double ber = 0.5*erfc(sqrt(snr/2));
+  double ber = 0.5 * erfc (sqrt (snr / 2));
 
-  return pow(1.0-ber,nbits);
+  return pow (1.0 - ber,nbits);
 }
 
 

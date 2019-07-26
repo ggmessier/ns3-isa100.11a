@@ -53,10 +53,9 @@ class SpectrumChannel;
 class Isa100NetDevice : public NetDevice
 {
 public:
-
   static TypeId GetTypeId (void);
 
-  Isa100NetDevice();
+  Isa100NetDevice ();
 
   virtual ~Isa100NetDevice ();
 
@@ -230,7 +229,6 @@ public:
   /**}@*/
 
 private:
-
   /** Called during net device disposal.
    */
   virtual void DoDispose (void);
@@ -269,8 +267,8 @@ private:
   bool m_configComplete;  ///< Indicates the protocol objects have been configured.
   bool m_linkUp;         ///< Indicates the link is up.
   uint32_t m_ifIndex;   ///< Index number for this interface.
- // mutable uint16_t m_mtu;   ///< ?
-  vector<Ptr<Isa100Application>>m_applications; //Rajith Added.
+  // mutable uint16_t m_mtu;   ///< ?
+  vector<Ptr<Isa100Application> >m_applications; //Rajith Added.
 
   TracedCallback<> m_linkChanges; ///< ?
 };

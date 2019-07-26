@@ -31,7 +31,7 @@ NS_OBJECT_ENSURE_REGISTERED (Isa100DlHeader);
 
 Isa100DlHeader::Isa100DlHeader ()
 {
-	// 2 octet Frame Control
+  // 2 octet Frame Control
   m_mhrFrameControl.bothOctets = 0;
   m_mhrFrameControl.frameType = 1;    // Bit 0-2    = 0 - Beacon, 1 - Data, 2 - Ack, 3 - Command
   m_mhrFrameControl.dstAddrMode = 2;  // Bit 10-11  = 0 - No DstAddr, 2 - ShtDstAddr, 3 - ExtDstAddr
@@ -51,8 +51,10 @@ Isa100DlHeader::Isa100DlHeader ()
   /* DROUT Sub-Header */
   m_numRouteAddresses = 0;
 
-  for(int iAddr=0; iAddr < ISA100_ROUTE_MAX_HOPS; iAddr++)
-  	m_routeAddresses[iAddr] = Mac16Address("EE:EE");
+  for (int iAddr = 0; iAddr < ISA100_ROUTE_MAX_HOPS; iAddr++)
+    {
+      m_routeAddresses[iAddr] = Mac16Address ("EE:EE");
+    }
 
   /* DMIC */
   m_dmic = 0;
@@ -93,12 +95,11 @@ void Isa100DlHeader::Print (std::ostream &os) const
 //  os << ", NumRouteAddresses = " << static_cast<uint16_t> (m_numRouteAddresses);
 
 //  for(uint32_t iAddr = 0; iAddr < m_numRouteAddresses; iAddr++)
-//  	os << ", HopAddr " << iAddr << " = " << m_routeAddresses[iAddr];
+//      os << ", HopAddr " << iAddr << " = " << m_routeAddresses[iAddr];
 }
 
 void Isa100DlHeader::PrintFrameControl (std::ostream &os) const
 {
-	;
 }
 
 std::string Isa100DlHeader::GetName (void) const
@@ -106,62 +107,74 @@ std::string Isa100DlHeader::GetName (void) const
   return "Isa100 DL Header";
 }
 
-void Isa100DlHeader::SetSourceRouteHop(uint8_t hopNum, Mac16Address addr)
+void Isa100DlHeader::SetSourceRouteHop (uint8_t hopNum, Mac16Address addr)
 {
-	if( hopNum > ISA100_ROUTE_MAX_HOPS)
-		NS_FATAL_ERROR("hopNum cannot exceed ISA100_ROUTE_MAX_HOPS");
+  if ( hopNum > ISA100_ROUTE_MAX_HOPS)
+    {
+      NS_FATAL_ERROR ("hopNum cannot exceed ISA100_ROUTE_MAX_HOPS");
+    }
 
-	m_routeAddresses[hopNum] = addr;
+  m_routeAddresses[hopNum] = addr;
 
-	if(m_numRouteAddresses == 0 || hopNum > (m_numRouteAddresses-1))
-		m_numRouteAddresses = hopNum+1;
+  if (m_numRouteAddresses == 0 || hopNum > (m_numRouteAddresses - 1))
+    {
+      m_numRouteAddresses = hopNum + 1;
+    }
 
 }
 
-Mac16Address Isa100DlHeader::PopNextSourceRoutingHop()
+Mac16Address Isa100DlHeader::PopNextSourceRoutingHop ()
 {
   Mac16Address nextAddr = m_routeAddresses[0];
 
-  if(m_numRouteAddresses > 1){
+  if (m_numRouteAddresses > 1)
+    {
 
-    nextAddr = m_routeAddresses[1];
+      nextAddr = m_routeAddresses[1];
 
-    for(int iAddr=1; iAddr < m_numRouteAddresses; iAddr++)
-      m_routeAddresses[iAddr-1] = m_routeAddresses[iAddr];
+      for (int iAddr = 1; iAddr < m_numRouteAddresses; iAddr++)
+        {
+          m_routeAddresses[iAddr - 1] = m_routeAddresses[iAddr];
+        }
 
-    m_numRouteAddresses--;
+      m_numRouteAddresses--;
 
-  }
+    }
   return nextAddr;
 
 }
 
 //Rajith Added
-void Isa100DlHeader::SetGraphRouteHop(uint8_t hopNum, Mac16Address addr)
+void Isa100DlHeader::SetGraphRouteHop (uint8_t hopNum, Mac16Address addr)
 {
-  if( hopNum > ISA100_ROUTE_MAX_HOPS)
-    NS_FATAL_ERROR("hopNum cannot exceed ISA100_ROUTE_MAX_HOPS");
+  if ( hopNum > ISA100_ROUTE_MAX_HOPS)
+    {
+      NS_FATAL_ERROR ("hopNum cannot exceed ISA100_ROUTE_MAX_HOPS");
+    }
 
   m_routeAddresses[hopNum] = addr;
 
-  if(m_numRouteAddresses == 0 || hopNum > (m_numRouteAddresses-1))
-    m_numRouteAddresses = hopNum+1;
+  if (m_numRouteAddresses == 0 || hopNum > (m_numRouteAddresses - 1))
+    {
+      m_numRouteAddresses = hopNum + 1;
+    }
 
 }
 
-Mac16Address Isa100DlHeader::GetGraphRouteHop(uint8_t hopNum)
+Mac16Address Isa100DlHeader::GetGraphRouteHop (uint8_t hopNum)
 {
-	Mac16Address nextAddr = m_routeAddresses[0];
+  Mac16Address nextAddr = m_routeAddresses[0];
 
-	if(m_numRouteAddresses > 1){
-	    nextAddr = m_routeAddresses[hopNum];
-	}
+  if (m_numRouteAddresses > 1)
+    {
+      nextAddr = m_routeAddresses[hopNum];
+    }
 
-	return nextAddr;
+  return nextAddr;
 
 }
 
-uint8_t Isa100DlHeader::GetNumOfGraphRouteHop()
+uint8_t Isa100DlHeader::GetNumOfGraphRouteHop ()
 {
 //  return sizeof(m_routeAddresses);
   return m_numRouteAddresses;       // Rajith Changed
@@ -193,7 +206,7 @@ uint32_t Isa100DlHeader::GetSerializedSize (void) const
   size += 1; // DHDR frame control
 
   size += 1; // Number of route addresses.
-  size += 2*m_numRouteAddresses;  // Storage for route addresses.
+  size += 2 * m_numRouteAddresses;  // Storage for route addresses.
 
   size += 2; // DADDR source address
   size += 2; // DADDR dest address
@@ -219,19 +232,21 @@ void Isa100DlHeader::Serialize (Buffer::Iterator start) const
   i.WriteHtolsbU16 (m_addrSrcPanId);
   WriteTo (i, m_addrShortSrcAddr);
 
-  i.WriteU8(m_dhdrFrameControl.octet);
+  i.WriteU8 (m_dhdrFrameControl.octet);
 
-  i.WriteU8(m_numRouteAddresses);
+  i.WriteU8 (m_numRouteAddresses);
 
-  for(uint8_t iAddr=0; iAddr < m_numRouteAddresses; iAddr++)
-  	WriteTo (i, m_routeAddresses[iAddr]);
+  for (uint8_t iAddr = 0; iAddr < m_numRouteAddresses; iAddr++)
+    {
+      WriteTo (i, m_routeAddresses[iAddr]);
+    }
 
   WriteTo (i, m_daddrSrcAddr);
   WriteTo (i, m_daddrDstAddr);
 
-  i.WriteHtolsbU32(m_dmic);
+  i.WriteHtolsbU32 (m_dmic);
 
-  i.WriteHtolsbU64(m_timeGeneratedNS);
+  i.WriteHtolsbU64 (m_timeGeneratedNS);
 
 }
 
@@ -249,19 +264,21 @@ uint32_t Isa100DlHeader::Deserialize (Buffer::Iterator start)
   m_addrSrcPanId = i.ReadLsbtohU16 ();
   ReadFrom (i, m_addrShortSrcAddr);
 
-  m_dhdrFrameControl.octet = i.ReadU8();
+  m_dhdrFrameControl.octet = i.ReadU8 ();
 
-  m_numRouteAddresses = i.ReadU8();
+  m_numRouteAddresses = i.ReadU8 ();
 
-  for(uint8_t iAddr=0; iAddr < m_numRouteAddresses; iAddr++)
-  	ReadFrom(i, m_routeAddresses[iAddr]);
+  for (uint8_t iAddr = 0; iAddr < m_numRouteAddresses; iAddr++)
+    {
+      ReadFrom (i, m_routeAddresses[iAddr]);
+    }
 
   ReadFrom (i, m_daddrSrcAddr);
   ReadFrom (i, m_daddrDstAddr);
 
-  m_dmic = i.ReadLsbtohU32();
+  m_dmic = i.ReadLsbtohU32 ();
 
-  m_timeGeneratedNS = i.ReadLsbtohU64();
+  m_timeGeneratedNS = i.ReadLsbtohU64 ();
 
   return i.GetDistanceFrom (start);
 }
@@ -287,26 +304,26 @@ DhdrFrameControl Isa100DlHeader::GetDhdrFrameControl (void) const
 }
 
 
-void Isa100DlHeader::SetDaddrSrcAddress(Mac16Address addr)
+void Isa100DlHeader::SetDaddrSrcAddress (Mac16Address addr)
 {
-	m_daddrSrcAddr = addr;
+  m_daddrSrcAddr = addr;
 }
 
 
-Mac16Address Isa100DlHeader::GetDaddrSrcAddress()
+Mac16Address Isa100DlHeader::GetDaddrSrcAddress ()
 {
-	return m_daddrSrcAddr;
+  return m_daddrSrcAddr;
 }
 
 
-void Isa100DlHeader::SetDaddrDestAddress(Mac16Address addr)
+void Isa100DlHeader::SetDaddrDestAddress (Mac16Address addr)
 {
-	m_daddrDstAddr = addr;
+  m_daddrDstAddr = addr;
 }
 
-Mac16Address Isa100DlHeader::GetDaddrDestAddress()
+Mac16Address Isa100DlHeader::GetDaddrDestAddress ()
 {
-	return m_daddrDstAddr;
+  return m_daddrDstAddr;
 }
 
 
@@ -342,8 +359,8 @@ Mac16Address Isa100DlHeader::GetShortSrcAddr (void) const
 
 
 void Isa100DlHeader::SetSrcAddrFields (
-		uint16_t panId,
-		Mac16Address addr)
+  uint16_t panId,
+  Mac16Address addr)
 {
   m_addrSrcPanId = panId;
   m_addrShortSrcAddr = addr;
@@ -351,29 +368,29 @@ void Isa100DlHeader::SetSrcAddrFields (
 
 
 void Isa100DlHeader::SetDstAddrFields (
-		uint16_t panId,
-		Mac16Address addr)
+  uint16_t panId,
+  Mac16Address addr)
 {
   m_addrDstPanId = panId;
   m_addrShortDstAddr = addr;
 }
 
-void Isa100DlHeader::SetDmic(uint32_t dmic)
+void Isa100DlHeader::SetDmic (uint32_t dmic)
 {
   m_dmic = dmic;
 }
 
-uint32_t Isa100DlHeader::GetDmic(void) const
+uint32_t Isa100DlHeader::GetDmic (void) const
 {
   return(m_dmic);
 }
 
-void Isa100DlHeader::SetTimeGeneratedNS(uint64_t timeGen)
+void Isa100DlHeader::SetTimeGeneratedNS (uint64_t timeGen)
 {
   m_timeGeneratedNS = timeGen;
 }
 
-uint64_t Isa100DlHeader::GetTimeGeneratedNS(void)
+uint64_t Isa100DlHeader::GetTimeGeneratedNS (void)
 {
   return m_timeGeneratedNS;
 }
@@ -415,73 +432,73 @@ TypeId Isa100DlAckHeader::GetInstanceTypeId (void) const
 
 void Isa100DlAckHeader::Print (std::ostream &os) const
 {
-   os << "MHR Frame Control = " << (m_mhrFrameControl.bothOctets);
-   os << ", DHR Frame Control = " << static_cast<uint16_t> (m_dhrFrameControl.octet);
-   os << ", Dst Addr = " << m_addrShortDstAddr;
-   os << ", DMIC-32 = " << (m_dmic);
+  os << "MHR Frame Control = " << (m_mhrFrameControl.bothOctets);
+  os << ", DHR Frame Control = " << static_cast<uint16_t> (m_dhrFrameControl.octet);
+  os << ", Dst Addr = " << m_addrShortDstAddr;
+  os << ", DMIC-32 = " << (m_dmic);
 }
 
 uint32_t Isa100DlAckHeader::GetSerializedSize (void) const
 {
-   /*
-    * Each ack header will have
-    * MHR Frame Control  : 2 octets
-    * DHR Frame Control  : 1 Octet
-    * DST Address        : 2 Octets
-    * DMIC-32            : 4 Octets
-    */
+  /*
+   * Each ack header will have
+   * MHR Frame Control  : 2 octets
+   * DHR Frame Control  : 1 Octet
+   * DST Address        : 2 Octets
+   * DMIC-32            : 4 Octets
+   */
 
-   uint32_t size = 2;  // MHR Frame Control
-   size += 1;          // DHR Frame Control
-   size += 2;          // DST address
-   size += 4;          // DMIC-32
+  uint32_t size = 2;   // MHR Frame Control
+  size += 1;           // DHR Frame Control
+  size += 2;           // DST address
+  size += 4;           // DMIC-32
 
-   return (size);
+  return (size);
 }
 
 void Isa100DlAckHeader::Serialize (Buffer::Iterator start) const
 {
-   Buffer::Iterator i = start;
+  Buffer::Iterator i = start;
 
-   i.WriteHtolsbU16 (m_mhrFrameControl.bothOctets);
-   i.WriteU8 (m_dhrFrameControl.octet);
-   WriteTo (i, m_addrShortDstAddr);
-   i.WriteHtolsbU32(m_dmic);
+  i.WriteHtolsbU16 (m_mhrFrameControl.bothOctets);
+  i.WriteU8 (m_dhrFrameControl.octet);
+  WriteTo (i, m_addrShortDstAddr);
+  i.WriteHtolsbU32 (m_dmic);
 }
 
 uint32_t Isa100DlAckHeader::Deserialize (Buffer::Iterator start)
 {
-   Buffer::Iterator i = start;
+  Buffer::Iterator i = start;
 
-   m_mhrFrameControl.bothOctets = i.ReadLsbtohU16 ();
-   m_dhrFrameControl.octet =  i.ReadU8 ();
-   ReadFrom (i, m_addrShortDstAddr);
-   m_dmic = i.ReadLsbtohU32 ();
+  m_mhrFrameControl.bothOctets = i.ReadLsbtohU16 ();
+  m_dhrFrameControl.octet =  i.ReadU8 ();
+  ReadFrom (i, m_addrShortDstAddr);
+  m_dmic = i.ReadLsbtohU32 ();
 
-   return i.GetDistanceFrom (start);
+  return i.GetDistanceFrom (start);
 }
 
 void Isa100DlAckHeader::SetMhrFrameControl (MhrFrameControl frameControl)
 {
-   m_mhrFrameControl = frameControl;
+  m_mhrFrameControl = frameControl;
 }
 
 MhrFrameControl Isa100DlAckHeader::GetMhrFrameControl (void) const
 {
-   return m_mhrFrameControl;
+  return m_mhrFrameControl;
 }
 
 void Isa100DlAckHeader::SetDhrFrameControl (DhrFrameControl dhrFrameCtrl)
 {
-   m_dhrFrameControl = dhrFrameCtrl;
+  m_dhrFrameControl = dhrFrameCtrl;
 }
 
 DhrFrameControl Isa100DlAckHeader::GetDhrFrameControl (void) const
 {
-   return m_dhrFrameControl;
+  return m_dhrFrameControl;
 }
 
-void Isa100DlAckHeader::SetDmic(uint32_t dmic)
+void Isa100DlAckHeader::SetDmic (uint32_t dmic)
 {
   m_dmic = dmic;
 }

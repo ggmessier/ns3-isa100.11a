@@ -42,27 +42,27 @@ Isa100Sensor::GetTypeId (void)
     .AddConstructor<Isa100Sensor> ()
 
     .AddAttribute ("SensingTime","Time required to perform a sensing operation (s).",
-    		TimeValue(Seconds(0.0)),
-				MakeTimeAccessor(&Isa100Sensor::m_sensingTime),
-				MakeTimeChecker())
+                   TimeValue (Seconds (0.0)),
+                   MakeTimeAccessor (&Isa100Sensor::m_sensingTime),
+                   MakeTimeChecker ())
 
-	  .AddAttribute ("ActiveCurrent",
-	  		"Amount of current consumed when the sensor is active (A).",
-				DoubleValue (0.0),
-				MakeDoubleAccessor (&Isa100Sensor::m_currentActive),
-				MakeDoubleChecker<double> (0))
+    .AddAttribute ("ActiveCurrent",
+                   "Amount of current consumed when the sensor is active (A).",
+                   DoubleValue (0.0),
+                   MakeDoubleAccessor (&Isa100Sensor::m_currentActive),
+                   MakeDoubleChecker<double> (0))
 
     .AddAttribute ("IdleCurrent",
-    		"Amount of current consumed when the sensor is idle (A).",
-				DoubleValue (0.0),
-				MakeDoubleAccessor (&Isa100Sensor::m_currentIdle),
-				MakeDoubleChecker<double> (0))
+                   "Amount of current consumed when the sensor is idle (A).",
+                   DoubleValue (0.0),
+                   MakeDoubleAccessor (&Isa100Sensor::m_currentIdle),
+                   MakeDoubleChecker<double> (0))
 
-	  .AddAttribute ("SupplyVoltage",
-	  		"Supply voltage (V).",
-				DoubleValue (0.0),
-				MakeDoubleAccessor (&Isa100Sensor::m_supplyVoltage),
-				MakeDoubleChecker<double> (0))
+    .AddAttribute ("SupplyVoltage",
+                   "Supply voltage (V).",
+                   DoubleValue (0.0),
+                   MakeDoubleAccessor (&Isa100Sensor::m_supplyVoltage),
+                   MakeDoubleChecker<double> (0))
 
   ;
   return tid;
@@ -75,14 +75,14 @@ Isa100Sensor::Isa100Sensor ()
 
   int nTypes = 2;
   string energyTypes[] = {
-  		"SensorActive",
-  		"SensorIdle"
+    "SensorActive",
+    "SensorIdle"
   };
 
-  m_energyCategories.assign(energyTypes,energyTypes+nTypes);
+  m_energyCategories.assign (energyTypes,energyTypes + nTypes);
 
-  m_lastUpdateTime = Seconds(0.0);
-  m_sensingTime = Seconds(0.0);
+  m_lastUpdateTime = Seconds (0.0);
+  m_sensingTime = Seconds (0.0);
 
   m_currentActive = 0;
   m_currentIdle = 0;
@@ -101,89 +101,93 @@ Isa100Sensor::~Isa100Sensor ()
 
 
 vector<string>&
-Isa100Sensor::GetEnergyCategories()
+Isa100Sensor::GetEnergyCategories ()
 {
-	return m_energyCategories;
+  return m_energyCategories;
 }
 
 void
-Isa100Sensor::SetBatteryCallback(BatteryDecrementCallback c)
+Isa100Sensor::SetBatteryCallback (BatteryDecrementCallback c)
 {
-	NS_LOG_FUNCTION(this);
-	m_batteryDecrementCallback = c;
+  NS_LOG_FUNCTION (this);
+  m_batteryDecrementCallback = c;
 }
 
 void
-Isa100Sensor::SetActiveCurrent(double current)
+Isa100Sensor::SetActiveCurrent (double current)
 {
-	m_currentActive = current;
+  m_currentActive = current;
 }
 
 void
-Isa100Sensor::SetSupplyVoltage(double voltage)
+Isa100Sensor::SetSupplyVoltage (double voltage)
 {
-	m_supplyVoltage = voltage;
+  m_supplyVoltage = voltage;
 }
 
 void
-Isa100Sensor::StartSensing()
+Isa100Sensor::StartSensing ()
 {
-	NS_ASSERT(m_state == SENSOR_IDLE);
+  NS_ASSERT (m_state == SENSOR_IDLE);
 
-	SetState(SENSOR_ACTIVE);
+  SetState (SENSOR_ACTIVE);
 
-	Simulator::Schedule(m_sensingTime,&Isa100Sensor::EndSensing,this);
+  Simulator::Schedule (m_sensingTime,&Isa100Sensor::EndSensing,this);
 }
 
 void
-Isa100Sensor::EndSensing()
+Isa100Sensor::EndSensing ()
 {
-	SetState(SENSOR_IDLE);
+  SetState (SENSOR_IDLE);
 
-	// For now, we just return zero samples.
-	m_sensingCallback(0.0);
+  // For now, we just return zero samples.
+  m_sensingCallback (0.0);
 }
 
 
 
 
 void
-Isa100Sensor::SetState(Isa100SensorState state)
+Isa100Sensor::SetState (Isa100SensorState state)
 {
-	if(state == m_state)
-		return;
+  if (state == m_state)
+    {
+      return;
+    }
 
-	NS_LOG_FUNCTION (this);
+  NS_LOG_FUNCTION (this);
 
   Time duration = Simulator::Now () - m_lastUpdateTime;
   NS_ASSERT (duration.GetNanoSeconds () >= 0);
 
-  double energyConsumed = m_current * duration.GetSeconds() * m_supplyVoltage * 1e6 ;
-  if(!m_batteryDecrementCallback.IsNull())
-  	m_batteryDecrementCallback(m_energyCategory,energyConsumed);
+  double energyConsumed = m_current * duration.GetSeconds () * m_supplyVoltage * 1e6;
+  if (!m_batteryDecrementCallback.IsNull ())
+    {
+      m_batteryDecrementCallback (m_energyCategory,energyConsumed);
+    }
 
-  NS_LOG_LOGIC(" State " << m_energyCategories[m_state] << " to "<< m_energyCategories[state] << ", after: " << duration.GetSeconds() << "s, consumed " << energyConsumed << " uJ");
+  NS_LOG_LOGIC (" State " << m_energyCategories[m_state] << " to " << m_energyCategories[state] << ", after: " << duration.GetSeconds () << "s, consumed " << energyConsumed << " uJ");
 
   m_state = state;
-  m_lastUpdateTime = Simulator::Now();
+  m_lastUpdateTime = Simulator::Now ();
 
-	switch(m_state)
-	{
-		case SENSOR_ACTIVE:
-			m_current = m_currentActive;
-			m_energyCategory = "SensorActive";
-			break;
+  switch (m_state)
+    {
+    case SENSOR_ACTIVE:
+      m_current = m_currentActive;
+      m_energyCategory = "SensorActive";
+      break;
 
-		case SENSOR_IDLE:
-			m_current = m_currentIdle;
-			m_energyCategory = "SensorIdle";
-			break;
-	}
+    case SENSOR_IDLE:
+      m_current = m_currentIdle;
+      m_energyCategory = "SensorIdle";
+      break;
+    }
 }
 
-void Isa100Sensor::SetSensingCallback(SensingCallback c)
+void Isa100Sensor::SetSensingCallback (SensingCallback c)
 {
-	m_sensingCallback = c;
+  m_sensingCallback = c;
 }
 
 

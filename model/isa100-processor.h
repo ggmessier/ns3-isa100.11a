@@ -38,9 +38,10 @@ using namespace std;
 
 /** Enum for indexing processor states.
  */
-typedef enum{
-	PROCESSOR_ACTIVE,
-	PROCESSOR_SLEEP
+typedef enum
+{
+  PROCESSOR_ACTIVE,
+  PROCESSOR_SLEEP
 } Isa100ProcessorState;
 
 /** Callback used to change processor state.
@@ -54,10 +55,9 @@ typedef Callback< void, Isa100ProcessorState > ProcessorStateChangeCallback;
 class Isa100Processor : public Object
 {
 public:
-
   static TypeId GetTypeId (void);
 
-  Isa100Processor();
+  Isa100Processor ();
 
   virtual ~Isa100Processor ();
 
@@ -65,40 +65,39 @@ public:
    *
    * @return Vector of string names of the categories.
    */
-  vector<string>& GetEnergyCategories();
+  vector<string>& GetEnergyCategories ();
 
   /** Set the callback function to decrement battery energy.
    *
    * @param c Callback function.
    */
-  void SetBatteryCallback(BatteryDecrementCallback c);
+  void SetBatteryCallback (BatteryDecrementCallback c);
 
   /** Get active current.
    *
    * @return The active current (A).
    */
-  double GetActiveCurrent();
+  double GetActiveCurrent ();
 
   /** Get sleep current.
    *
    * @return The sleep current (A).
    */
-  double GetSleepCurrent();
+  double GetSleepCurrent ();
 
 
   /** Set processor state.
    *
    * @param state New state value.
    */
-  void SetState(Isa100ProcessorState state);
+  void SetState (Isa100ProcessorState state);
 
 private:
-
   vector<string> m_energyCategories; /// Energy consumption categories.
 
   BatteryDecrementCallback m_batteryDecrementCallback;  /// Callback function used to decrement battery energy.
 
-	Isa100ProcessorState m_state; /// Processor state.
+  Isa100ProcessorState m_state;       /// Processor state.
 
   double m_current; /// Current current (A).
   double m_currentActive; /// Active current (A).

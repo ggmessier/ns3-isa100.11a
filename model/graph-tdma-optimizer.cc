@@ -50,12 +50,12 @@ TypeId GraphTdmaOptimzer::GetTypeId (void)
     .SetParent<TdmaOptimizerBase> ()
     .AddConstructor<GraphTdmaOptimzer> ()
 
-    ;
+  ;
 
   return tid;
 }
 
-GraphTdmaOptimzer::GraphTdmaOptimzer () : TdmaOptimizerBase()
+GraphTdmaOptimzer::GraphTdmaOptimzer () : TdmaOptimizerBase ()
 {
   NS_LOG_FUNCTION (this);
   m_numNodes = 0;
@@ -72,137 +72,137 @@ void GraphTdmaOptimzer::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
   NS_LOG_FUNCTION (this);
 
   // Setup the common base properties
-  TdmaOptimizerBase::SetupOptimization(c, propModel);
-  GraphCreation(c);
+  TdmaOptimizerBase::SetupOptimization (c, propModel);
+  GraphCreation (c);
 
 }
 
-void GraphTdmaOptimzer::GraphCreation(NodeContainer c)
+void GraphTdmaOptimzer::GraphCreation (NodeContainer c)
 {
   NS_LOG_FUNCTION (this);
 
-  m_graph = CreateObject<IsaGraph>(c);
+  m_graph = CreateObject<IsaGraph> (c);
 
-  m_graph->AddGateway(0);
+  m_graph->AddGateway (0);
 
   // Rajith:: code required to modify to support any number of access points
-  m_graph->AddAccessPoint(1);
-  m_graph->AddAccessPoint(2);
+  m_graph->AddAccessPoint (1);
+  m_graph->AddAccessPoint (2);
 
-  uint32_t numNodes = c.GetN();
+  uint32_t numNodes = c.GetN ();
   TimeValue slotDurationV;
   UintegerValue tempNumSlotsV;
   uint32_t numSlotsV;
 
   for (uint32_t nNode = 0; nNode < numNodes; nNode++)
     {
-      m_graph->AddNode(c.Get(nNode));
+      m_graph->AddNode (c.Get (nNode));
     }
 
-  m_graph->AddEdge(0, 1);
-  m_graph->AddEdge(0, 2);
-  m_graph->AddEdge(1, 2);
+  m_graph->AddEdge (0, 1);
+  m_graph->AddEdge (0, 2);
+  m_graph->AddEdge (1, 2);
 
-  m_graph->AddEdge(1, 0);
-  m_graph->AddEdge(2, 0);
-  m_graph->AddEdge(2, 1);
+  m_graph->AddEdge (1, 0);
+  m_graph->AddEdge (2, 0);
+  m_graph->AddEdge (2, 1);
 
-  m_graph->SetHopCount(0,0);
-  m_graph->SetHopCount(1,1);
-  m_graph->SetHopCount(2,1);
+  m_graph->SetHopCount (0,0);
+  m_graph->SetHopCount (1,1);
+  m_graph->SetHopCount (2,1);
 
   bool edgeweight_empty = true;
 
   for (uint32_t parent = 0; parent < numNodes; parent++)
     {
-      Ptr<Isa100NetDevice> devPtr = c.Get(parent)->GetDevice(0)->GetObject<Isa100NetDevice>();
-      devPtr->GetDl()->GetAttribute("SuperFrameSlotDuration", slotDurationV);
-      m_slotDuration = slotDurationV.Get();
+      Ptr<Isa100NetDevice> devPtr = c.Get (parent)->GetDevice (0)->GetObject<Isa100NetDevice>();
+      devPtr->GetDl ()->GetAttribute ("SuperFrameSlotDuration", slotDurationV);
+      m_slotDuration = slotDurationV.Get ();
 
-      devPtr->GetDl()->GetAttribute("SuperFramePeriod", tempNumSlotsV);
-      numSlotsV = tempNumSlotsV.Get();
+      devPtr->GetDl ()->GetAttribute ("SuperFramePeriod", tempNumSlotsV);
+      numSlotsV = tempNumSlotsV.Get ();
 
-      m_graph->SetTimeSlots(parent, numSlotsV);
+      m_graph->SetTimeSlots (parent, numSlotsV);
 
-      if(edgeweight_empty)
+      if (edgeweight_empty)
         {
           for (uint32_t nNode = 1; nNode < numNodes; nNode++)
             {
-              if(parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
+              if (parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
                 {
-                  m_graph->AddEdge(parent, nNode);
+                  m_graph->AddEdge (parent, nNode);
                 }
             }
         }
     }
 
-  if(!edgeweight_empty)
+  if (!edgeweight_empty)
     {
-      NS_LOG_UNCOND("edgeweight is not empty");
-      for (std::vector<std::pair<uint32_t, uint32_t>>::const_iterator it = m_edgeWeightTDMA.begin ();
-                             it != m_edgeWeightTDMA.end (); ++it)
-                          {
+      NS_LOG_UNCOND ("edgeweight is not empty");
+      for (std::vector<std::pair<uint32_t, uint32_t> >::const_iterator it = m_edgeWeightTDMA.begin ();
+           it != m_edgeWeightTDMA.end (); ++it)
+        {
 
-                              m_graph->AddEdge(it->first, it->second);
-                              m_graph->AddEdge(it->second, it->first);
-                          }
+          m_graph->AddEdge (it->first, it->second);
+          m_graph->AddEdge (it->second, it->first);
+        }
     }
 
-  if(!m_edgeWeightTDMA.empty())
+  if (!m_edgeWeightTDMA.empty ())
     {
-      for (std::vector<std::pair<uint32_t, uint32_t>>::const_iterator it1 = m_edgeWeightTDMA.begin ();
-                           it1 != m_edgeWeightTDMA.end (); ++it1)
-                    {
-                        NS_LOG_UNCOND("node: "<<it1->second<<" neighbor: "<<it1->first);
-                        std::vector<Ptr<Node>> tempEdges = m_graph->GetEdges (it1->second);
-                        for (std::vector<Ptr<Node>>::const_iterator it2 = tempEdges.begin ();
-                                             it2 != tempEdges.end (); ++it2)
-                                    {
-                                      if(it2->operator ->()->GetId() == it1->first)
-                                        {
-                                          m_graph->SetWeight(it1->first,m_graph->GetWeight(it1->first) +1);
-                                        }
-                                    }
-                        NS_LOG_UNCOND("m_graph->GetWeight(it1->first): "<<m_graph->GetWeight(it1->first));
+      for (std::vector<std::pair<uint32_t, uint32_t> >::const_iterator it1 = m_edgeWeightTDMA.begin ();
+           it1 != m_edgeWeightTDMA.end (); ++it1)
+        {
+          NS_LOG_UNCOND ("node: " << it1->second << " neighbor: " << it1->first);
+          std::vector<Ptr<Node> > tempEdges = m_graph->GetEdges (it1->second);
+          for (std::vector<Ptr<Node> >::const_iterator it2 = tempEdges.begin ();
+               it2 != tempEdges.end (); ++it2)
+            {
+              if (it2->operator -> ()->GetId () == it1->first)
+                {
+                  m_graph->SetWeight (it1->first,m_graph->GetWeight (it1->first) + 1);
+                }
+            }
+          NS_LOG_UNCOND ("m_graph->GetWeight(it1->first): " << m_graph->GetWeight (it1->first));
 
-                    }
+        }
     }
 
-  Ptr<Node> gateWay = c.Get(0);
-  Ptr<Node> acessPoint_1 = c.Get(1);
-  Ptr<Node> acessPoint_2 = c.Get(2);
+  Ptr<Node> gateWay = c.Get (0);
+  Ptr<Node> acessPoint_1 = c.Get (1);
+  Ptr<Node> acessPoint_2 = c.Get (2);
 
   //Initialize the reliable broadcast graph
   NodeContainer nc;
-  nc.Add(gateWay);
-  nc.Add(acessPoint_1);
-  nc.Add(acessPoint_2);
+  nc.Add (gateWay);
+  nc.Add (acessPoint_1);
+  nc.Add (acessPoint_2);
 
-  Ptr<IsaGraph> G_B = CreateObject<IsaGraph>(nc);      ///< Broadcast graph creation
+  Ptr<IsaGraph> G_B = CreateObject<IsaGraph> (nc);      ///< Broadcast graph creation
 
-  G_B->AddGateway(gateWay->GetId());
-  G_B->AddAccessPoint(acessPoint_1->GetId());
-  G_B->AddAccessPoint(acessPoint_2->GetId());
+  G_B->AddGateway (gateWay->GetId ());
+  G_B->AddAccessPoint (acessPoint_1->GetId ());
+  G_B->AddAccessPoint (acessPoint_2->GetId ());
 
-  G_B->AddEdge(gateWay->GetId(),acessPoint_1->GetId());
-  G_B->AddEdge(gateWay->GetId(),acessPoint_2->GetId());
-  G_B->SetHopCount(gateWay->GetId(),0);
-  G_B->SetHopCount(acessPoint_1->GetId(),1);
-  G_B->SetHopCount(acessPoint_2->GetId(),1);
+  G_B->AddEdge (gateWay->GetId (),acessPoint_1->GetId ());
+  G_B->AddEdge (gateWay->GetId (),acessPoint_2->GetId ());
+  G_B->SetHopCount (gateWay->GetId (),0);
+  G_B->SetHopCount (acessPoint_1->GetId (),1);
+  G_B->SetHopCount (acessPoint_2->GetId (),1);
 
-  Ptr<IsaGraph> G_U = CreateObject<IsaGraph>(nc);      ///< Uplink graph creation
+  Ptr<IsaGraph> G_U = CreateObject<IsaGraph> (nc);      ///< Uplink graph creation
 
-  G_U->AddGateway(gateWay->GetId());
-  G_U->AddAccessPoint(acessPoint_1->GetId());
-  G_U->AddAccessPoint(acessPoint_2->GetId());
+  G_U->AddGateway (gateWay->GetId ());
+  G_U->AddAccessPoint (acessPoint_1->GetId ());
+  G_U->AddAccessPoint (acessPoint_2->GetId ());
 
-  G_U->AddEdge(acessPoint_1->GetId(), gateWay->GetId());
-  G_U->AddEdge(acessPoint_2->GetId(), gateWay->GetId());
-  G_U->SetHopCount(gateWay->GetId(),0);
-  G_U->SetHopCount(acessPoint_1->GetId(),1);
-  G_U->SetHopCount(acessPoint_2->GetId(),1);
+  G_U->AddEdge (acessPoint_1->GetId (), gateWay->GetId ());
+  G_U->AddEdge (acessPoint_2->GetId (), gateWay->GetId ());
+  G_U->SetHopCount (gateWay->GetId (),0);
+  G_U->SetHopCount (acessPoint_1->GetId (),1);
+  G_U->SetHopCount (acessPoint_2->GetId (),1);
 
-  G_U->ReliableUplinkGraph(m_graph);
+  G_U->ReliableUplinkGraph (m_graph);
 
   m_graphMap[0] = G_U;
 
@@ -212,7 +212,7 @@ vector< vector<int> > GraphTdmaOptimzer::SolveTdma (void)
 {
   NS_LOG_FUNCTION (this);
 
-  vector< vector<int> > flows(m_numNodes);
+  vector< vector<int> > flows (m_numNodes);
 
   return flows;
 

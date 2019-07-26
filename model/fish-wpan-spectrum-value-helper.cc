@@ -36,13 +36,14 @@ public:
     Bands bands;
     // Use center frequencies only for the 11 channels supported by ISA100.
     // - Channels are 2MHz wide and separated by 5MHz
-    for(int i=0; i < 11; i++){
-    	BandInfo bi;
-    	bi.fl = 2404e6 + i * 5.0e6;
-    	bi.fh = 2406e6 + i * 5.0e6;
-      bi.fc = (bi.fl +  bi.fh) / 2;
-      bands.push_back (bi);
-    }
+    for (int i = 0; i < 11; i++)
+      {
+        BandInfo bi;
+        bi.fl = 2404e6 + i * 5.0e6;
+        bi.fh = 2406e6 + i * 5.0e6;
+        bi.fc = (bi.fl +  bi.fh) / 2;
+        bands.push_back (bi);
+      }
 
     g_FishWpanSpectrumModel = Create<SpectrumModel> (bands);
   }

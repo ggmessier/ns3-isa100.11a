@@ -40,7 +40,7 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
   GraphNode nodeMaxoutgoingEdges;       ///< Graph Node with maximum outgoing edges
   uint32_t maxOutgoingEdges;            ///< Number of outgoing edges of the maximum outgoing edges node
 
-  (this)->SetGraphId(65535);
+  (this)->SetGraphId (65535);
   /*
    *          S
    *       ------
@@ -59,7 +59,7 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
       S_2 = false;
       S_1 = false;
       maxOutgoingEdges = 0;
-      nodeMaxoutgoingEdges = (this)->GetGraphNode((this)->GetGateway()->GetId());
+      nodeMaxoutgoingEdges = (this)->GetGraphNode ((this)->GetGateway ()->GetId ());
       edgesForS = (this)->UpdateSVector (G, edgesForS);
 
       for (map<uint32_t, GraphNode>::const_iterator it = edgesForS.begin ();
@@ -68,7 +68,7 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
           if ((this)->m_graphNodeMap.count (it->first) != 1)
             { //considering only the V - VB nodes
               double hop_count;
-              tempParents.clear();
+              tempParents.clear ();
               for (uint32_t i = 0; i < (it->second).m_parents.size (); ++i)
                 {
                   uint32_t nextNode = (it->second).m_parents[i].operator -> ()->GetId ();
@@ -106,8 +106,8 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
               else if (tempParents.size () == 1 && !S_2)
                 {
                   uint32_t outgoingEdges = 0;
-                  hop_count = (this)->m_graphNodeMap[tempParents[0].m_head->GetId()].m_avgHopCount + 1;
-                   G->m_graphNodeMap[it->first].m_avgHopCount = hop_count;
+                  hop_count = (this)->m_graphNodeMap[tempParents[0].m_head->GetId ()].m_avgHopCount + 1;
+                  G->m_graphNodeMap[it->first].m_avgHopCount = hop_count;
                   vector<Ptr<Node> > tempNeighbours = G->m_graphNodeMap[it->first].m_neighbors;
                   for (uint32_t i = 0; i < tempNeighbours.size (); i++)
                     {
@@ -139,16 +139,16 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
         {
           (this)->AddNode (nodeMinHop.m_head);
           (this)->SetHopCount (nodeMinHop.m_head->GetId (), nodeMinHop.m_avgHopCount);
-          (this)->SetWeight(nodeMinHop.m_head->GetId (), nodeMinHop.m_weight);
+          (this)->SetWeight (nodeMinHop.m_head->GetId (), nodeMinHop.m_weight);
           GraphNode tempNode = edgesForS[nodeMinHop.m_head->GetId ()];
           (this)->AddEdge (tempNode.m_parents[0]->GetId (), nodeMinHop.m_head->GetId ());
           (this)->AddEdge (tempNode.m_parents[1]->GetId (), nodeMinHop.m_head->GetId ());
-          (this)->SetReliability(nodeMinHop.m_head->GetId ());
-          if((this)->GetWeight(tempNode.m_parents[0]->GetId ())>0)
+          (this)->SetReliability (nodeMinHop.m_head->GetId ());
+          if ((this)->GetWeight (tempNode.m_parents[0]->GetId ()) > 0)
             {
               (this)->m_graphNodeMap[tempNode.m_parents[0]->GetId ()].m_weight--;
             }
-          if((this)->GetWeight(tempNode.m_parents[1]->GetId ())>0)
+          if ((this)->GetWeight (tempNode.m_parents[1]->GetId ()) > 0)
             {
               (this)->m_graphNodeMap[tempNode.m_parents[1]->GetId ()].m_weight--;
             }
@@ -157,10 +157,10 @@ bool IsaGraph::ReliableBroadcastGraph (Ptr<IsaGraph> G)
         {
           (this)->AddNode (nodeMaxoutgoingEdges.m_head);
           (this)->SetHopCount (nodeMaxoutgoingEdges.m_head->GetId (), nodeMaxoutgoingEdges.m_avgHopCount);
-          (this)->SetWeight(nodeMaxoutgoingEdges.m_head->GetId (), nodeMaxoutgoingEdges.m_weight);
+          (this)->SetWeight (nodeMaxoutgoingEdges.m_head->GetId (), nodeMaxoutgoingEdges.m_weight);
           GraphNode tempNode = edgesForS[nodeMaxoutgoingEdges.m_head->GetId ()];
           (this)->AddEdge (tempNode.m_parents[0]->GetId (), nodeMaxoutgoingEdges.m_head->GetId ());
-          if((this)->GetWeight(tempNode.m_parents[0]->GetId ())>0)
+          if ((this)->GetWeight (tempNode.m_parents[0]->GetId ()) > 0)
             {
               (this)->m_graphNodeMap[tempNode.m_parents[0]->GetId ()].m_weight--;
             }

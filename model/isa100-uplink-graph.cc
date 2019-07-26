@@ -34,20 +34,20 @@ bool IsaGraph::ReliableUplinkGraph (Ptr<IsaGraph> G)
   NS_LOG_FUNCTION (this);
 
   // Initial graph with gateway and APs edges reversed.
-  (this)->FlipEdge();
+  (this)->FlipEdge ();
 
   // G graph reversed.
-  Ptr<IsaGraph> G_reverse = G->FlipEdge();
+  Ptr<IsaGraph> G_reverse = G->FlipEdge ();
 
   // Generate reliable broadcast graph from uplink flipped graph
-  (this)->ReliableBroadcastGraph(G_reverse);
+  (this)->ReliableBroadcastGraph (G_reverse);
 
-  (this)->SetGraphId(0);  // destination is the gateway (node 0)
+  (this)->SetGraphId (0);  // destination is the gateway (node 0)
 
-  if(G->GetNumofNodes()==(this)->GetNumofNodes())
+  if (G->GetNumofNodes () == (this)->GetNumofNodes ())
     {
       // Flip edges of created reliable broadcast graph
-      (this)->FlipEdge();
+      (this)->FlipEdge ();
     }
   else
     {

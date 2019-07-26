@@ -44,14 +44,14 @@ Isa100Battery::GetTypeId (void)
     .AddConstructor<Isa100Battery> ()
 
     .AddAttribute ("Energy","Amount of energy in the battery (uJ).",
-            DoubleValue(0),
-            MakeDoubleAccessor(&Isa100Battery::m_energy),
-            MakeDoubleChecker<double>())
+                   DoubleValue (0),
+                   MakeDoubleAccessor (&Isa100Battery::m_energy),
+                   MakeDoubleChecker<double>())
 
-		.AddTraceSource("EnergyConsumption",
-				" Trace tracking energy consumed by category.",
-				MakeTraceSourceAccessor (&Isa100Battery::m_energyConsumptionTrace),
-				"ns3::TracedCallback::Energy")
+    .AddTraceSource ("EnergyConsumption",
+                     " Trace tracking energy consumed by category.",
+                     MakeTraceSourceAccessor (&Isa100Battery::m_energyConsumptionTrace),
+                     "ns3::TracedCallback::Energy")
 
   ;
   return tid;
@@ -72,89 +72,95 @@ Isa100Battery::~Isa100Battery ()
 }
 
 
-void Isa100Battery::SetInitEnergy(double initEnergy)
+void Isa100Battery::SetInitEnergy (double initEnergy)
 {
-	m_initEnergy = initEnergy;
-	m_energy = m_initEnergy;
+  m_initEnergy = initEnergy;
+  m_energy = m_initEnergy;
 }
 
-void Isa100Battery::ZeroConsumptionCategories()
+void Isa100Battery::ZeroConsumptionCategories ()
 {
   map<string,double>::iterator categoryIter;
-  for(categoryIter = m_energyBreakdown.begin(); categoryIter != m_energyBreakdown.end(); categoryIter++)
-  	categoryIter->second = 0;
+  for (categoryIter = m_energyBreakdown.begin (); categoryIter != m_energyBreakdown.end (); categoryIter++)
+    {
+      categoryIter->second = 0;
+    }
 }
 
-void Isa100Battery::SetConsumptionCategories(vector<string> &categories)
+void Isa100Battery::SetConsumptionCategories (vector<string> &categories)
 {
-	for(int n=0; n < categories.size(); n++){
-		m_energyBreakdown[categories[n]] = 0;
-	}
+  for (int n = 0; n < categories.size (); n++)
+    {
+      m_energyBreakdown[categories[n]] = 0;
+    }
 }
 
-void Isa100Battery::SetDevicePointer(Ptr<NetDevice> device)
+void Isa100Battery::SetDevicePointer (Ptr<NetDevice> device)
 {
-	m_device = device;
+  m_device = device;
 }
 
-void Isa100Battery::SetBatteryDepletionCallback(BatteryDepletionCallback c)
+void Isa100Battery::SetBatteryDepletionCallback (BatteryDepletionCallback c)
 {
-	m_depletionCallback = c;
+  m_depletionCallback = c;
 }
 
-double Isa100Battery::GetEnergy() const
+double Isa100Battery::GetEnergy () const
 {
-	return m_energy;
+  return m_energy;
 }
 
-double Isa100Battery::GetInitialEnergy() const
+double Isa100Battery::GetInitialEnergy () const
 {
-	return m_initEnergy;
+  return m_initEnergy;
 }
 
-void Isa100Battery::DecrementEnergy(string category, double amount)
+void Isa100Battery::DecrementEnergy (string category, double amount)
 {
   // Do not update if simulation has finished
   if (Simulator::IsFinished ())
-  {
-    return;
-  }
+    {
+      return;
+    }
 
-	m_energyBreakdown[category] += amount;
-	m_energy -= amount;
+  m_energyBreakdown[category] += amount;
+  m_energy -= amount;
 
-	NS_ASSERT(m_device != 0);
-  Mac16Address addr = Mac16Address::ConvertFrom(m_device->GetAddress());
+  NS_ASSERT (m_device != 0);
+  Mac16Address addr = Mac16Address::ConvertFrom (m_device->GetAddress ());
 
-  m_energyConsumptionTrace(addr, category, amount, m_energy, m_initEnergy);
+  m_energyConsumptionTrace (addr, category, amount, m_energy, m_initEnergy);
 
-  NS_LOG_LOGIC(Simulator::Now().GetSeconds() << "s: Node " << addr << " has consumed " << amount << "uJ in category " << category << " (Total Battery: " << m_energy << ")");
+  NS_LOG_LOGIC (Simulator::Now ().GetSeconds () << "s: Node " << addr << " has consumed " << amount << "uJ in category " << category << " (Total Battery: " << m_energy << ")");
 
-	if(m_energy <= 0){
-		m_energy = 0;
-	  m_energyConsumptionTrace(addr, "DEPLETION", amount, m_energy, m_initEnergy);
+  if (m_energy <= 0)
+    {
+      m_energy = 0;
+      m_energyConsumptionTrace (addr, "DEPLETION", amount, m_energy, m_initEnergy);
 
-		if(!m_depletionCallback.IsNull()){
-			m_depletionCallback(addr);
-		}
-	}
+      if (!m_depletionCallback.IsNull ())
+        {
+          m_depletionCallback (addr);
+        }
+    }
 }
 
 void Isa100Battery::PrintEnergySummary (Ptr<OutputStreamWrapper> stream)
 {
-  int64_t timenow = Simulator::Now().GetNanoSeconds();
+  int64_t timenow = Simulator::Now ().GetNanoSeconds ();
 
-	NS_ASSERT(m_device != 0);
-  Mac16Address addr = Mac16Address::ConvertFrom(m_device->GetAddress());
+  NS_ASSERT (m_device != 0);
+  Mac16Address addr = Mac16Address::ConvertFrom (m_device->GetAddress ());
 
-  *stream->GetStream()
-	        << timenow << "," << addr << ",Total," << m_energy << std::endl;
+  *stream->GetStream ()
+    << timenow << "," << addr << ",Total," << m_energy << std::endl;
 
   map<string,double>::iterator categoryIter;
-  for(categoryIter = m_energyBreakdown.begin(); categoryIter != m_energyBreakdown.end(); categoryIter++){
-  	*stream->GetStream()
-  	        << timenow << "," << addr << "," << categoryIter->first << "," << categoryIter->second << std::endl;
-  }
+  for (categoryIter = m_energyBreakdown.begin (); categoryIter != m_energyBreakdown.end (); categoryIter++)
+    {
+      *stream->GetStream ()
+        << timenow << "," << addr << "," << categoryIter->first << "," << categoryIter->second << std::endl;
+    }
 
 }
 

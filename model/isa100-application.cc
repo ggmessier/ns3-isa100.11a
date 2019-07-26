@@ -48,7 +48,7 @@ typedef union
     uint32_t sleepDurationMs; ///< Sleep duration in milliseconds
   };
   uint8_t bytes[8];
-}BroadcastPacketPayload;
+} BroadcastPacketPayload;
 
 // Allow padding again
 #pragma pack(pop)
@@ -70,36 +70,36 @@ NS_OBJECT_ENSURE_REGISTERED (Isa100Application);
 
 TypeId Isa100Application::GetTypeId (void)
 {
-     static TypeId tid = TypeId ("ns3::Isa100Application")
+  static TypeId tid = TypeId ("ns3::Isa100Application")
     .SetParent<Object> ()
 
     .AddConstructor<Isa100Application> ()
 
-		.AddAttribute ("StartTime", "Application starting time",
-					 TimeValue(Seconds(0.0)),
-					 MakeTimeAccessor (&Isa100Application::m_startTime),
-					 MakeTimeChecker())
+    .AddAttribute ("StartTime", "Application starting time",
+                   TimeValue (Seconds (0.0)),
+                   MakeTimeAccessor (&Isa100Application::m_startTime),
+                   MakeTimeChecker ())
 
-		.AddAttribute ("PacketSize", "packet size",
-					UintegerValue (50),
-					MakeUintegerAccessor (&Isa100Application::m_packetSize),
-					MakeUintegerChecker<uint32_t> ())
+    .AddAttribute ("PacketSize", "packet size",
+                   UintegerValue (50),
+                   MakeUintegerAccessor (&Isa100Application::m_packetSize),
+                   MakeUintegerChecker<uint32_t> ())
 
-		.AddAttribute ("DestAddress", "The address of the destination",
-	    		Mac16AddressValue(),
-	    		MakeMac16AddressAccessor(&Isa100Application::m_dstAddress),
-	    		MakeMac16AddressChecker())
+    .AddAttribute ("DestAddress", "The address of the destination",
+                   Mac16AddressValue (),
+                   MakeMac16AddressAccessor (&Isa100Application::m_dstAddress),
+                   MakeMac16AddressChecker ())
 
-		.AddAttribute ("SrcAddress", "The address of the source.",
-				Mac16AddressValue (),
-				MakeMac16AddressAccessor (&Isa100Application::m_srcAddress),
-				MakeMac16AddressChecker ())
+    .AddAttribute ("SrcAddress", "The address of the source.",
+                   Mac16AddressValue (),
+                   MakeMac16AddressAccessor (&Isa100Application::m_srcAddress),
+                   MakeMac16AddressChecker ())
 
     .AddAttribute ("WorkingStatus", "Whether Application is at working condition.",
-                    BooleanValue (true),
-                    MakeBooleanAccessor (&Isa100Application::m_workingStatus),
-                    MakeBooleanChecker ())
-				;
+                   BooleanValue (true),
+                   MakeBooleanAccessor (&Isa100Application::m_workingStatus),
+                   MakeBooleanChecker ())
+  ;
   return tid;
 }
 
@@ -116,27 +116,25 @@ Isa100Application::~Isa100Application ()
 
 void Isa100Application::StartApplication (void)
 {
-	;
 }
 
 void Isa100Application::StopApplication (void)
 {
-	;
 }
 
 void Isa100Application::SetDlDataRequestCallback (DlDataRequestCallback c)
 {
-	m_dlDataRequest = c;
+  m_dlDataRequest = c;
 }
 
 void Isa100Application::DlDataIndication (DlDataIndicationParams params, Ptr<Packet> p)
 {
-  NS_LOG_INFO("Node " << m_srcAddress << " received packet: " << p);
+  NS_LOG_INFO ("Node " << m_srcAddress << " received packet: " << p);
 }
 
 void Isa100Application::DlDataConfirm (DlDataConfirmParams params)
 {
-  NS_LOG_INFO("Node " << m_srcAddress << " received confirmation of packet transmission.");
+  NS_LOG_INFO ("Node " << m_srcAddress << " received confirmation of packet transmission.");
 }
 
 
@@ -147,36 +145,36 @@ NS_OBJECT_ENSURE_REGISTERED (Isa100PacketGeneratorApplication);
 TypeId Isa100PacketGeneratorApplication::GetTypeId (void)
 {
 
-	static TypeId tid = TypeId ("ns3::Isa100PacketGeneratorApplication")
+  static TypeId tid = TypeId ("ns3::Isa100PacketGeneratorApplication")
 
-			.SetParent<Isa100Application> ()
+    .SetParent<Isa100Application> ()
 
-			.AddConstructor<Isa100PacketGeneratorApplication> ()
+    .AddConstructor<Isa100PacketGeneratorApplication> ()
 
-			.AddAttribute ("NumberOfPackets", "Number of packets",
-					UintegerValue (1),
-					MakeUintegerAccessor (&Isa100PacketGeneratorApplication::m_numberOfPackets),
-					MakeUintegerChecker<uint64_t> ())
+    .AddAttribute ("NumberOfPackets", "Number of packets",
+                   UintegerValue (1),
+                   MakeUintegerAccessor (&Isa100PacketGeneratorApplication::m_numberOfPackets),
+                   MakeUintegerChecker<uint64_t> ())
 
-		  .AddAttribute ("StopTime", "Application stopping time",
-		  			TimeValue(Seconds(0.0)),
-					MakeTimeAccessor (&Isa100PacketGeneratorApplication::m_stopTime),
-					MakeTimeChecker())
+    .AddAttribute ("StopTime", "Application stopping time",
+                   TimeValue (Seconds (0.0)),
+                   MakeTimeAccessor (&Isa100PacketGeneratorApplication::m_stopTime),
+                   MakeTimeChecker ())
 
-		.AddAttribute ("TxInterval", "Time between two consecutive packets",
-					TimeValue(Seconds(0.0)),
-				 	MakeTimeAccessor(&Isa100PacketGeneratorApplication::m_txInterval),
-					MakeTimeChecker())
+    .AddAttribute ("TxInterval", "Time between two consecutive packets",
+                   TimeValue (Seconds (0.0)),
+                   MakeTimeAccessor (&Isa100PacketGeneratorApplication::m_txInterval),
+                   MakeTimeChecker ())
 
 
-				;
+  ;
   return tid;
 }
 
 Isa100PacketGeneratorApplication::Isa100PacketGeneratorApplication ()
 {
-	m_numberPacketsSent = 0;
-	m_numberOfPackets = 0;
+  m_numberPacketsSent = 0;
+  m_numberOfPackets = 0;
 
 }
 
@@ -189,34 +187,36 @@ Isa100PacketGeneratorApplication::~Isa100PacketGeneratorApplication ()
 void Isa100PacketGeneratorApplication::StartApplication (void)
 {
 
-	m_sendPacketEvent = Simulator::ScheduleNow(&Isa100PacketGeneratorApplication::SendPacket,this);
+  m_sendPacketEvent = Simulator::ScheduleNow (&Isa100PacketGeneratorApplication::SendPacket,this);
 
 }
 
 void Isa100PacketGeneratorApplication::StopApplication (void)
 {
 
-	m_sendPacketEvent.Cancel();
+  m_sendPacketEvent.Cancel ();
 
 }
 
 
-void Isa100PacketGeneratorApplication::SendPacket()
+void Isa100PacketGeneratorApplication::SendPacket ()
 {
   NS_LOG_FUNCTION (this);
 
-	Ptr<Packet> p = Create<Packet>(m_packetSize);
+  Ptr<Packet> p = Create<Packet> (m_packetSize);
 
-	DlDataRequestParams params;
-	params.m_srcAddr = m_srcAddress;
-	params.m_destAddr = m_dstAddress;
-	params.m_dsduLength = m_packetSize;
-	params.m_dsduHandle = 0;  // Consider getting rid of this parameter.
+  DlDataRequestParams params;
+  params.m_srcAddr = m_srcAddress;
+  params.m_destAddr = m_dstAddress;
+  params.m_dsduLength = m_packetSize;
+  params.m_dsduHandle = 0;        // Consider getting rid of this parameter.
 
-	m_dlDataRequest(params,p);
+  m_dlDataRequest (params,p);
 
-	if(++m_numberPacketsSent < m_numberOfPackets || m_numberOfPackets == 0)
-		Simulator::Schedule(m_txInterval,&Isa100PacketGeneratorApplication::SendPacket,this);
+  if (++m_numberPacketsSent < m_numberOfPackets || m_numberOfPackets == 0)
+    {
+      Simulator::Schedule (m_txInterval,&Isa100PacketGeneratorApplication::SendPacket,this);
+    }
 
 }
 
@@ -232,69 +232,68 @@ NS_OBJECT_ENSURE_REGISTERED (Isa100FieldNodeApplication);
 
 TypeId Isa100FieldNodeApplication::GetTypeId (void)
 {
-     static TypeId tid = TypeId ("ns3::Isa100FieldNodeApplication")
+  static TypeId tid = TypeId ("ns3::Isa100FieldNodeApplication")
     .SetParent<Isa100Application> ()
 
     .AddConstructor<Isa100FieldNodeApplication> ()
 
     .AddTraceSource ("ReportTx",
-        "Trace source indicating when a node generates a packet.",
-        MakeTraceSourceAccessor (&Isa100FieldNodeApplication::m_reportTxTrace),
-        "ns3::TracedCallback::ReportTx")
+                     "Trace source indicating when a node generates a packet.",
+                     MakeTraceSourceAccessor (&Isa100FieldNodeApplication::m_reportTxTrace),
+                     "ns3::TracedCallback::ReportTx")
 
-        ;
+  ;
   return tid;
 }
 
 Isa100FieldNodeApplication::Isa100FieldNodeApplication ()
 {
-	m_sensor = 0;
-	m_processor = 0;
+  m_sensor = 0;
+  m_processor = 0;
 }
 
 Isa100FieldNodeApplication::~Isa100FieldNodeApplication ()
 {
-	;
 }
 
-void Isa100FieldNodeApplication::SetSensor(Ptr<Isa100Sensor> sensor)
+void Isa100FieldNodeApplication::SetSensor (Ptr<Isa100Sensor> sensor)
 {
-	m_sensor = sensor;
+  m_sensor = sensor;
 }
 
-void Isa100FieldNodeApplication::SetProcessor(Ptr<Isa100Processor> processor)
+void Isa100FieldNodeApplication::SetProcessor (Ptr<Isa100Processor> processor)
 {
-	m_processor = processor;
+  m_processor = processor;
 }
 
-void Isa100FieldNodeApplication::StartSensing()
+void Isa100FieldNodeApplication::StartSensing ()
 {
-  NS_LOG_FUNCTION (this << Simulator::Now().GetSeconds());
+  NS_LOG_FUNCTION (this << Simulator::Now ().GetSeconds ());
 
-  m_processor->SetState(PROCESSOR_ACTIVE);
-	m_sensor->StartSensing();
+  m_processor->SetState (PROCESSOR_ACTIVE);
+  m_sensor->StartSensing ();
 
-  m_sampleTaskId = Simulator::Schedule(m_updatePeriod,&Isa100FieldNodeApplication::StartSensing,this);
+  m_sampleTaskId = Simulator::Schedule (m_updatePeriod,&Isa100FieldNodeApplication::StartSensing,this);
 }
 
 
-void Isa100FieldNodeApplication::SensorSampleCallback(double data)
+void Isa100FieldNodeApplication::SensorSampleCallback (double data)
 {
-  NS_LOG_FUNCTION (this << Simulator::Now().GetSeconds());
+  NS_LOG_FUNCTION (this << Simulator::Now ().GetSeconds ());
 
   /*
-	 * NOTE: There currently is no callback mechanism to sync the application layer sampling to the packet delivery.
-	 * It's possible the two may get out of sync in a network that models timing drift or in the event of severe
-	 * congestion.  This may have to be addressed in future versions of the simulator.
-	 *
-	 * Probably the simplest fix is to have a callback to the DL that just asks the DL if it's ready to accept
-	 * a new packet.  The definition of "ready" can be sorted out by the DL.
-	 */
+         * NOTE: There currently is no callback mechanism to sync the application layer sampling to the packet delivery.
+         * It's possible the two may get out of sync in a network that models timing drift or in the event of severe
+         * congestion.  This may have to be addressed in future versions of the simulator.
+         *
+         * Probably the simplest fix is to have a callback to the DL that just asks the DL if it's ready to accept
+         * a new packet.  The definition of "ready" can be sorted out by the DL.
+         */
 
-  if(m_workingStatus)
+  if (m_workingStatus)
     {
       // A new sample exists, request to send the measurement to the sink
-      Ptr<Packet> measurementPacket = Create<Packet>(m_packetSize);
+      Ptr<Packet> measurementPacket = Create<Packet> (m_packetSize);
 
       DlDataRequestParams params;
       params.m_dsduHandle = DATA_PACKET;
@@ -303,50 +302,50 @@ void Isa100FieldNodeApplication::SensorSampleCallback(double data)
       params.m_dsduLength = m_packetSize;
 
       // Send the packet to the sink and put the processor to sleep.
-      m_dlDataRequest(params,measurementPacket);
-      m_processor->SetState(PROCESSOR_SLEEP);
+      m_dlDataRequest (params,measurementPacket);
+      m_processor->SetState (PROCESSOR_SLEEP);
 
       // Log the transmission
-      m_reportTxTrace(params.m_srcAddr);
+      m_reportTxTrace (params.m_srcAddr);
     }
 
 }
 
 void Isa100FieldNodeApplication::StartApplication (void)
 {
-	// Get schedule information
+  // Get schedule information
   UintegerValue framePeriodV;
   TimeValue slotDurationV;
   PointerValue sfSchedV;
-  Ptr<Isa100NetDevice> devPtr = m_node->GetDevice(0)->GetObject<Isa100NetDevice>();
+  Ptr<Isa100NetDevice> devPtr = m_node->GetDevice (0)->GetObject<Isa100NetDevice>();
 //  devPtr->GetDl()->GetAttribute("SuperFramePeriod", framePeriodV);
-  devPtr->GetDl()->GetAttribute("SensorUpdatePeriod", framePeriodV);
-  devPtr->GetDl()->GetAttribute("SuperFrameSlotDuration", slotDurationV);
-  devPtr->GetDl()->GetAttribute("SuperFrameSchedule", sfSchedV);
-  m_slotDuration = slotDurationV.Get();
-  uint16_t numMultiFrames =sfSchedV.Get<Isa100DlSfSchedule>()->GetFrameBounds()->size();
-  m_updatePeriod = m_slotDuration * framePeriodV.Get() / numMultiFrames;
+  devPtr->GetDl ()->GetAttribute ("SensorUpdatePeriod", framePeriodV);
+  devPtr->GetDl ()->GetAttribute ("SuperFrameSlotDuration", slotDurationV);
+  devPtr->GetDl ()->GetAttribute ("SuperFrameSchedule", sfSchedV);
+  m_slotDuration = slotDurationV.Get ();
+  uint16_t numMultiFrames = sfSchedV.Get<Isa100DlSfSchedule>()->GetFrameBounds ()->size ();
+  m_updatePeriod = m_slotDuration * framePeriodV.Get () / numMultiFrames;
 
   TimeValue sensingTime;
-  devPtr->GetSensor()->GetAttribute("SensingTime",sensingTime);
-  m_sampleDuration = sensingTime.Get();
+  devPtr->GetSensor ()->GetAttribute ("SensingTime",sensingTime);
+  m_sampleDuration = sensingTime.Get ();
 
   // Determine the time to start the sample, so it completes one slot before the same active slot next frame
   Time delayUntilSample = m_updatePeriod - m_sampleDuration - 2 * m_slotDuration;
-  NS_ASSERT_MSG(delayUntilSample >= 0, "TDMA App: The frame length must be greater than the amount of time it takes for one sample plus 1 slot.");
-  m_sampleTaskId = Simulator::Schedule(delayUntilSample,&Isa100FieldNodeApplication::StartSensing,this);
+  NS_ASSERT_MSG (delayUntilSample >= 0, "TDMA App: The frame length must be greater than the amount of time it takes for one sample plus 1 slot.");
+  m_sampleTaskId = Simulator::Schedule (delayUntilSample,&Isa100FieldNodeApplication::StartSensing,this);
 
 }
 
 void Isa100FieldNodeApplication::StopApplication (void)
 {
-  m_sampleTaskId.Cancel();
+  m_sampleTaskId.Cancel ();
 }
 
-void Isa100FieldNodeApplication::SetFault(void)
+void Isa100FieldNodeApplication::SetFault (void)
 {
   m_workingStatus = false;
-  NS_LOG_UNCOND("****** Set Fault ******");
+  NS_LOG_UNCOND ("****** Set Fault ******");
 }
 
 
@@ -356,38 +355,34 @@ NS_OBJECT_ENSURE_REGISTERED (Isa100BackboneNodeApplication);
 
 TypeId Isa100BackboneNodeApplication::GetTypeId (void)
 {
-     static TypeId tid = TypeId ("ns3::Isa100BackboneNodeApplication")
+  static TypeId tid = TypeId ("ns3::Isa100BackboneNodeApplication")
     .SetParent<Isa100Application> ()
 
     .AddConstructor<Isa100BackboneNodeApplication> ()
 
     .AddTraceSource ("ReportRx",
-        "Trace source indicating when a node generates a packet.",
-        MakeTraceSourceAccessor (&Isa100BackboneNodeApplication::m_reportRxTrace),
-        "ns3::TracedCallback::ReportRx")
+                     "Trace source indicating when a node generates a packet.",
+                     MakeTraceSourceAccessor (&Isa100BackboneNodeApplication::m_reportRxTrace),
+                     "ns3::TracedCallback::ReportRx")
 
-        ;
+  ;
   return tid;
 }
 
 Isa100BackboneNodeApplication::Isa100BackboneNodeApplication ()
 {
-	;
 }
 
 Isa100BackboneNodeApplication::~Isa100BackboneNodeApplication ()
 {
-	;
 }
 
 void Isa100BackboneNodeApplication::StartApplication (void)
 {
-	;
 }
 
 void Isa100BackboneNodeApplication::StopApplication (void)
 {
-	;
 }
 
 
@@ -395,23 +390,23 @@ void Isa100BackboneNodeApplication::DlDataIndication (DlDataIndicationParams par
 {
   // There shouldn't be broadcasts happening in TDMA
   Mac16Address broadcastAddr ("ff:ff");
-  NS_ASSERT_MSG(params.m_destAddr != broadcastAddr, "Sink App:TDMA does not support broadcasts!");
+  NS_ASSERT_MSG (params.m_destAddr != broadcastAddr, "Sink App:TDMA does not support broadcasts!");
 
   vector<uint8_t> tempDataSeqNums = recievedDataSeqNums[params.m_srcAddr];
 
-  if(tempDataSeqNums.empty() || count(tempDataSeqNums.begin(),tempDataSeqNums.end(),params.m_dataSeqNum) == 0)
+  if (tempDataSeqNums.empty () || count (tempDataSeqNums.begin (),tempDataSeqNums.end (),params.m_dataSeqNum) == 0)
     {
-      m_reportRxTrace(params.m_srcAddr);
-      if(tempDataSeqNums.size()>30)
+      m_reportRxTrace (params.m_srcAddr);
+      if (tempDataSeqNums.size () > 30)
         {
-          recievedDataSeqNums[params.m_srcAddr].erase(recievedDataSeqNums[params.m_srcAddr].begin());
+          recievedDataSeqNums[params.m_srcAddr].erase (recievedDataSeqNums[params.m_srcAddr].begin ());
         }
-      recievedDataSeqNums[params.m_srcAddr].push_back(params.m_dataSeqNum);
+      recievedDataSeqNums[params.m_srcAddr].push_back (params.m_dataSeqNum);
     }
   else
     {
-      NS_LOG_DEBUG("m_dataSeqNum count: "<<count(tempDataSeqNums.begin(),tempDataSeqNums.end(),params.m_dataSeqNum));
-      NS_LOG_DEBUG("m_dataSeqNum: "<<std::to_string(params.m_dataSeqNum)<<"m_srcAddr: "<<params.m_srcAddr);
+      NS_LOG_DEBUG ("m_dataSeqNum count: " << count (tempDataSeqNums.begin (),tempDataSeqNums.end (),params.m_dataSeqNum));
+      NS_LOG_DEBUG ("m_dataSeqNum: " << std::to_string (params.m_dataSeqNum) << "m_srcAddr: " << params.m_srcAddr);
     }
 
 //  NS_LOG_UNCOND("Received packet info m_dataSeqNum: "<<std::to_string(params.m_dataSeqNum)<<" m_srcAddr: "<<params.m_srcAddr);

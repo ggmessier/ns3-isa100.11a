@@ -52,20 +52,20 @@ Isa100NetDevice::GetTypeId (void)
     .SetParent<NetDevice> ()
     .AddConstructor<Isa100NetDevice> ()
     .AddAttribute (
-    		"Channel", "The channel attached to this device",
-    		PointerValue (),
-				MakePointerAccessor (&Isa100NetDevice::DoGetChannel),
-				MakePointerChecker<SpectrumChannel> ())
+      "Channel", "The channel attached to this device",
+      PointerValue (),
+      MakePointerAccessor (&Isa100NetDevice::DoGetChannel),
+      MakePointerChecker<SpectrumChannel> ())
     .AddAttribute (
-    		"Phy", "The PHY layer attached to this device.",
-				PointerValue (),
-				MakePointerAccessor (&Isa100NetDevice::GetPhy,&Isa100NetDevice::SetPhy),
-				MakePointerChecker<ZigbeePhy> ())
-	  .AddAttribute (
-	  		"Dl", "The DL layer attached to this device.",
-				PointerValue (),
-				MakePointerAccessor (&Isa100NetDevice::GetDl,&Isa100NetDevice::SetDl),
-				MakePointerChecker<Isa100Dl> ())
+      "Phy", "The PHY layer attached to this device.",
+      PointerValue (),
+      MakePointerAccessor (&Isa100NetDevice::GetPhy,&Isa100NetDevice::SetPhy),
+      MakePointerChecker<ZigbeePhy> ())
+    .AddAttribute (
+      "Dl", "The DL layer attached to this device.",
+      PointerValue (),
+      MakePointerAccessor (&Isa100NetDevice::GetDl,&Isa100NetDevice::SetDl),
+      MakePointerChecker<Isa100Dl> ())
   ;
   return tid;
 }
@@ -96,10 +96,14 @@ Isa100NetDevice::DoDispose (void)
   NS_LOG_FUNCTION (this);
   m_dl->Dispose ();
   m_phy->Dispose ();
-  if(m_battery)
-  	m_battery->Dispose();
-  if(m_processor)
-  	m_processor->Dispose();
+  if (m_battery)
+    {
+      m_battery->Dispose ();
+    }
+  if (m_processor)
+    {
+      m_processor->Dispose ();
+    }
   m_phy = 0;
   m_dl = 0;
   m_battery = 0;
@@ -139,10 +143,10 @@ void Isa100NetDevice::CompleteConfig (void)
   m_phy->SetErrorModel (model);
 
   // Callbacks for DL to PHY communication.
-  m_dl->SetPdDataRequestCallback( MakeCallback(&ZigbeePhy::PdDataRequest, m_phy) );
-  m_dl->SetPlmeCcaRequestCallback( MakeCallback(&ZigbeePhy::PlmeCcaRequest, m_phy) );
-  m_dl->SetPlmeSetTrxStateRequestCallback( MakeCallback(&ZigbeePhy::PlmeSetTRXStateRequest, m_phy) );
-  m_dl->SetPlmeSetAttributeCallback( MakeCallback(&ZigbeePhy::PlmeSetAttributeRequest, m_phy) );
+  m_dl->SetPdDataRequestCallback ( MakeCallback (&ZigbeePhy::PdDataRequest, m_phy) );
+  m_dl->SetPlmeCcaRequestCallback ( MakeCallback (&ZigbeePhy::PlmeCcaRequest, m_phy) );
+  m_dl->SetPlmeSetTrxStateRequestCallback ( MakeCallback (&ZigbeePhy::PlmeSetTRXStateRequest, m_phy) );
+  m_dl->SetPlmeSetAttributeCallback ( MakeCallback (&ZigbeePhy::PlmeSetAttributeRequest, m_phy) );
 
 
   // Callbacks for PHY to DL communication.
@@ -272,7 +276,7 @@ void
 Isa100NetDevice::SetAddress (Address address)
 {
   NS_LOG_FUNCTION (this);
-  m_dl->SetAttribute("Address",Mac16AddressValue(Mac16Address::ConvertFrom (address)));
+  m_dl->SetAttribute ("Address",Mac16AddressValue (Mac16Address::ConvertFrom (address)));
 }
 
 Address
@@ -283,13 +287,13 @@ Isa100NetDevice::GetAddress (void) const
   Mac16AddressValue addressValue;
   m_dl->GetAttribute ("Address", addressValue);
 
-  return Address(addressValue.Get());
+  return Address (addressValue.Get ());
 }
 
 bool
 Isa100NetDevice::SetMtu (const uint16_t mtu)
 {
-	NS_ABORT_MSG ("Unsupported");
+  NS_ABORT_MSG ("Unsupported");
   return false;
 }
 
@@ -373,8 +377,8 @@ Isa100NetDevice::Send (Ptr<Packet> packet, const Address& dest, uint16_t protoco
   // inventing a fake ethertype and packet tag for McpsDataRequest
 
 
-	 NS_ABORT_MSG ("Isa100NetDevice::Send -> Unsupported; use McpsDataRequest instead");
-	 return false;
+  NS_ABORT_MSG ("Isa100NetDevice::Send -> Unsupported; use McpsDataRequest instead");
+  return false;
 }
 
 bool

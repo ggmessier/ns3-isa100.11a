@@ -27,7 +27,7 @@ NS_LOG_COMPONENT_DEFINE ("IsaGraph");
 
 using namespace std;
 
-namespace ns3{
+namespace ns3 {
 
 NS_OBJECT_ENSURE_REGISTERED (IsaGraph);
 
@@ -37,19 +37,19 @@ bool CompareAverageHop (const GraphNode & e1, const GraphNode & e2)
     {
       return true;
     }
-  else if(e1.m_avgHopCount > e2.m_avgHopCount)
+  else if (e1.m_avgHopCount > e2.m_avgHopCount)
     {
       return false;
     }
-  else if(e1.m_weight > e2.m_weight)
+  else if (e1.m_weight > e2.m_weight)
     {
-      NS_LOG_UNCOND("e1.m_weight > e2.m_weight");
+      NS_LOG_UNCOND ("e1.m_weight > e2.m_weight");
       return true;
     }
   return false;
 //  return ((e1.m_avgHopCount < e2.m_avgHopCount) || ((e1.m_avgHopCount == e2.m_avgHopCount) && (e1.m_weight >= e2.m_weight)));
 //  return (e1.m_avgHopCount < e2.m_avgHopCount);
-};
+}
 
 TypeId IsaGraph::GetTypeId (void)
 {
@@ -107,7 +107,7 @@ uint32_t IsaGraph::GetGraphId ()
   return (this)->m_graphID;
 }
 
-vector<Ptr<Node>> IsaGraph::GetEdges (uint32_t src)
+vector<Ptr<Node> > IsaGraph::GetEdges (uint32_t src)
 {
   NS_LOG_FUNCTION (this);
   return (this)->m_graphNodeMap[src].m_neighbors;
@@ -116,18 +116,18 @@ vector<Ptr<Node>> IsaGraph::GetEdges (uint32_t src)
 void IsaGraph::AddEdge (uint32_t src, uint32_t dest)
 {
   NS_LOG_FUNCTION (this);
-  vector<Ptr<Node>> srcNeighbors = (this)->m_graphNodeMap[src].m_neighbors;
-  vector<Ptr<Node>> destParents = (this)->m_graphNodeMap[dest].m_parents;
+  vector<Ptr<Node> > srcNeighbors = (this)->m_graphNodeMap[src].m_neighbors;
+  vector<Ptr<Node> > destParents = (this)->m_graphNodeMap[dest].m_parents;
 
   Ptr<Node> srcNode = (this)->m_graphNodeMap[src].m_head;
   Ptr<Node> destNode = (this)->m_graphNodeMap[dest].m_head;
 
-  if (count(srcNeighbors.begin(),srcNeighbors.end(),destNode) == 0)
+  if (count (srcNeighbors.begin (),srcNeighbors.end (),destNode) == 0)
     {
       (this)->m_graphNodeMap[src].m_neighbors.push_back (destNode);
     }
 
-  if (count(destParents.begin(),destParents.end(),srcNode) == 0)
+  if (count (destParents.begin (),destParents.end (),srcNode) == 0)
     {
       (this)->m_graphNodeMap[dest].m_parents.push_back (srcNode);
     }
@@ -152,31 +152,31 @@ void IsaGraph::AddGraphNode (GraphNode graphNode)
   (this)->m_graphNodeMap[nodeId] = graphNode;
 
   // update the parents of newly adding graph node neighbors
-  for (vector<Ptr<Node>>::const_iterator it = graphNode.m_neighbors.begin ();
-         it != graphNode.m_neighbors.end (); ++it)
-      {
-        tempNodeId= it->operator ->()->GetId();
-        vector<Ptr<Node>> tempParents = (this)->m_graphNodeMap[tempNodeId].m_parents;
-        if (count(tempParents.begin(),tempParents.end(), graphNode.m_head) == 0)
-          {
-            (this)->m_graphNodeMap[tempNodeId].m_parents.push_back(graphNode.m_head);
-          }
-      }
+  for (vector<Ptr<Node> >::const_iterator it = graphNode.m_neighbors.begin ();
+       it != graphNode.m_neighbors.end (); ++it)
+    {
+      tempNodeId = it->operator -> ()->GetId ();
+      vector<Ptr<Node> > tempParents = (this)->m_graphNodeMap[tempNodeId].m_parents;
+      if (count (tempParents.begin (),tempParents.end (), graphNode.m_head) == 0)
+        {
+          (this)->m_graphNodeMap[tempNodeId].m_parents.push_back (graphNode.m_head);
+        }
+    }
 
   // update the neighbors of newly adding graph node parents
-  for (vector<Ptr<Node>>::const_iterator it = graphNode.m_parents.begin ();
-         it != graphNode.m_parents.end (); ++it)
-      {
-        tempNodeId= it->operator ->()->GetId();
-        vector<Ptr<Node>> tempNeighbors = (this)->m_graphNodeMap[tempNodeId].m_parents;
-        if (count(tempNeighbors.begin(),tempNeighbors.end(),graphNode.m_head) == 0)
-          {
-            (this)->m_graphNodeMap[tempNodeId] .m_neighbors.push_back(graphNode.m_head);
-          }
-      }
+  for (vector<Ptr<Node> >::const_iterator it = graphNode.m_parents.begin ();
+       it != graphNode.m_parents.end (); ++it)
+    {
+      tempNodeId = it->operator -> ()->GetId ();
+      vector<Ptr<Node> > tempNeighbors = (this)->m_graphNodeMap[tempNodeId].m_parents;
+      if (count (tempNeighbors.begin (),tempNeighbors.end (),graphNode.m_head) == 0)
+        {
+          (this)->m_graphNodeMap[tempNodeId].m_neighbors.push_back (graphNode.m_head);
+        }
+    }
 }
 
-void IsaGraph::RemoveGraphNode(uint32_t id)
+void IsaGraph::RemoveGraphNode (uint32_t id)
 {
   NS_LOG_FUNCTION (this);
   GraphNode graphNode = (this)->m_graphNodeMap[id];
@@ -184,18 +184,18 @@ void IsaGraph::RemoveGraphNode(uint32_t id)
   // remove graph node from it's neighbor's parents vector
   // Consider link A -> B, and Removing node is A
   // iterate over neighbors of A:
-  for (vector<Ptr<Node>>::const_iterator it1 = graphNode.m_neighbors.begin ();
-         it1 != graphNode.m_neighbors.end (); ++it1)
+  for (vector<Ptr<Node> >::const_iterator it1 = graphNode.m_neighbors.begin ();
+       it1 != graphNode.m_neighbors.end (); ++it1)
     {
       // iterate over parents of B:
       // graphNodeNeighbor is the neighbor of the removing node (B)
-      GraphNode graphNodeNeighbor = (this)->m_graphNodeMap[it1->operator ->()->GetId()];
-      for (uint32_t i = 0; i < graphNodeNeighbor.m_parents.size(); ++i)
+      GraphNode graphNodeNeighbor = (this)->m_graphNodeMap[it1->operator -> ()->GetId ()];
+      for (uint32_t i = 0; i < graphNodeNeighbor.m_parents.size (); ++i)
         {
           //find parent record matching to node A and remove it
-          if(graphNodeNeighbor.m_parents[i]->GetId() == id)
+          if (graphNodeNeighbor.m_parents[i]->GetId () == id)
             {
-              graphNodeNeighbor.m_parents.erase(graphNodeNeighbor.m_parents.begin()+i);
+              graphNodeNeighbor.m_parents.erase (graphNodeNeighbor.m_parents.begin () + i);
             }
         }
     }
@@ -203,24 +203,24 @@ void IsaGraph::RemoveGraphNode(uint32_t id)
   // remove graph node from it's parent's neighbor vector
   // Consider link A <- B, and Removing node is A
   // iterate over parents of A:
-  for (vector<Ptr<Node>>::const_iterator it1 = graphNode.m_parents.begin ();
-         it1 != graphNode.m_parents.end (); ++it1)
+  for (vector<Ptr<Node> >::const_iterator it1 = graphNode.m_parents.begin ();
+       it1 != graphNode.m_parents.end (); ++it1)
     {
       // iterate over neighbors of B:
       // graphNodeNeighbor is the parent of the removing node (B)
-      GraphNode graphNodeNeighbor = (this)->m_graphNodeMap[it1->operator ->()->GetId()];
-      for (uint32_t i = 0; i < graphNodeNeighbor.m_neighbors.size(); ++i)
+      GraphNode graphNodeNeighbor = (this)->m_graphNodeMap[it1->operator -> ()->GetId ()];
+      for (uint32_t i = 0; i < graphNodeNeighbor.m_neighbors.size (); ++i)
         {
           //find neighbor record matching to node A and remove it
-          if(graphNodeNeighbor.m_neighbors[i]->GetId() == id)
+          if (graphNodeNeighbor.m_neighbors[i]->GetId () == id)
             {
-              graphNodeNeighbor.m_neighbors.erase(graphNodeNeighbor.m_neighbors.begin()+i);
+              graphNodeNeighbor.m_neighbors.erase (graphNodeNeighbor.m_neighbors.begin () + i);
             }
         }
     }
 
   // remove the graph node from the graph
-  (this)->m_graphNodeMap.erase(id);
+  (this)->m_graphNodeMap.erase (id);
 }
 
 uint32_t IsaGraph::GetNumofNodes (void)
@@ -241,7 +241,7 @@ map <uint32_t, GraphNode> IsaGraph::GetGraphNodeMap (void)
   return (this)->m_graphNodeMap;
 }
 
-void IsaGraph::AddGateway(uint32_t id)
+void IsaGraph::AddGateway (uint32_t id)
 {
   NS_LOG_FUNCTION (this);
   (this)->m_gateway = id;
@@ -253,12 +253,12 @@ Ptr<Node> IsaGraph::GetGateway (void)
   return (this)->m_graphNodeMap[(this)->m_gateway].m_head;
 }
 
-void IsaGraph::AddAccessPoint(uint32_t id)
+void IsaGraph::AddAccessPoint (uint32_t id)
 {
   NS_LOG_FUNCTION (this);
-  if(count((this)->m_accessPoints.begin(),(this)->m_accessPoints.end(),id) == 0)
+  if (count ((this)->m_accessPoints.begin (),(this)->m_accessPoints.end (),id) == 0)
     {
-      (this)->m_accessPoints.push_back(id);
+      (this)->m_accessPoints.push_back (id);
     }
 }
 

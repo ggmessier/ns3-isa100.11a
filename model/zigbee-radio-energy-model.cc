@@ -66,12 +66,12 @@ ZigbeeRadioEnergyModel::GetTypeId (void)
                    MakeDoubleAccessor (&ZigbeeRadioEnergyModel::SetRxOnCurrentA,
                                        &ZigbeeRadioEnergyModel::GetRxOnCurrentA),
                    MakeDoubleChecker<double> ())
-     .AddAttribute ("BusyRxCurrentA",
-                    "The default radio BUSY_RX current in Ampere.",
-                    DoubleValue (0.0118),  // BUSY_RX mode = 11.8mA (equal to RX_ON)
-                    MakeDoubleAccessor (&ZigbeeRadioEnergyModel::SetBusyRxCurrentA,
-                                        &ZigbeeRadioEnergyModel::GetBusyRxCurrentA),
-                    MakeDoubleChecker<double> ())
+    .AddAttribute ("BusyRxCurrentA",
+                   "The default radio BUSY_RX current in Ampere.",
+                   DoubleValue (0.0118),   // BUSY_RX mode = 11.8mA (equal to RX_ON)
+                   MakeDoubleAccessor (&ZigbeeRadioEnergyModel::SetBusyRxCurrentA,
+                                       &ZigbeeRadioEnergyModel::GetBusyRxCurrentA),
+                   MakeDoubleChecker<double> ())
     .AddAttribute ("TxOnCurrentA",
                    "The radio TX_ON current in Ampere.",
                    DoubleValue (0.0052),    // TX_ON mode = 5.2mA
@@ -91,17 +91,17 @@ ZigbeeRadioEnergyModel::GetTypeId (void)
                                        &ZigbeeRadioEnergyModel::GetSleepCurrentA),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("ProcessorSleepCurrentA",
-                  "The microprocessor sleep current in Ampere.",
-                  DoubleValue (0.0000249),  // sleep mode = 24.9uA
-                  MakeDoubleAccessor (&ZigbeeRadioEnergyModel::SetProcessorSleepCurrentA,
-                                      &ZigbeeRadioEnergyModel::GetProcessorSleepCurrentA),
-                  MakeDoubleChecker<double> ())
+                   "The microprocessor sleep current in Ampere.",
+                   DoubleValue (0.0000249), // sleep mode = 24.9uA
+                   MakeDoubleAccessor (&ZigbeeRadioEnergyModel::SetProcessorSleepCurrentA,
+                                       &ZigbeeRadioEnergyModel::GetProcessorSleepCurrentA),
+                   MakeDoubleChecker<double> ())
     .AddAttribute ("ProcessorActiveCurrentA",
-                  "The microprocessor active current in Ampere.",
-                  DoubleValue (0.0185),  // sleep mode = 18.5mA
-                  MakeDoubleAccessor (&ZigbeeRadioEnergyModel::SetProcessorActiveCurrentA,
-                                      &ZigbeeRadioEnergyModel::GetProcessorActiveCurrentA),
-                  MakeDoubleChecker<double> ())
+                   "The microprocessor active current in Ampere.",
+                   DoubleValue (0.0185), // sleep mode = 18.5mA
+                   MakeDoubleAccessor (&ZigbeeRadioEnergyModel::SetProcessorActiveCurrentA,
+                                       &ZigbeeRadioEnergyModel::GetProcessorActiveCurrentA),
+                   MakeDoubleChecker<double> ())
     .AddAttribute ("TxCurrentModel", "A pointer to the attached tx current model.",
                    PointerValue (),
                    MakePointerAccessor (&ZigbeeRadioEnergyModel::m_txCurrentModel),
@@ -337,15 +337,15 @@ ZigbeeRadioEnergyModel::ChangeState (int newState)
     case IEEE_802_15_4_PHY_TRX_OFF:
       totalCurrent = m_trxOffCurrentA + m_processorActiveCurrentA;
       break;
- /* case SLEEP_MODE:
-  *   totalCurrent = m_sleepCurrentA + m_processorSleepCurrentA;
-  *   break; */
+    /* case SLEEP_MODE:
+     *   totalCurrent = m_sleepCurrentA + m_processorSleepCurrentA;
+     *   break; */
     default:
       NS_FATAL_ERROR ("ZigbeeRadioEnergyModel:Invalid radio state: " << m_currentState);
     }
 
   // update total energy consumption
-  m_totalEnergyConsumption += duration.GetSeconds () * totalCurrent * supplyVoltage;;
+  m_totalEnergyConsumption += duration.GetSeconds () * totalCurrent * supplyVoltage;
 
   // update last update time stamp
   m_lastUpdateTime = Simulator::Now ();
@@ -381,9 +381,9 @@ void
 ZigbeeRadioEnergyModel::HandleEnergyDepletion (void)
 {
   NS_LOG_FUNCTION (this);
-  NS_LOG_WARN (std::fixed << std::setprecision (2) << Simulator::Now().GetSeconds()
-      << "s ZigbeeRadioEnergyModel:Energy is depleted on Node "
-      << m_source->GetNode ()->GetId () <<"!");
+  NS_LOG_WARN (std::fixed << std::setprecision (2) << Simulator::Now ().GetSeconds ()
+                          << "s ZigbeeRadioEnergyModel:Energy is depleted on Node "
+                          << m_source->GetNode ()->GetId () << "!");
   // invoke energy depletion callback, if set.
   if (!m_energyDepletionCallback.IsNull ())
     {
@@ -438,9 +438,9 @@ ZigbeeRadioEnergyModel::DoGetCurrentA (void) const
       return m_txOnCurrentA + m_processorActiveCurrentA;
     case IEEE_802_15_4_PHY_TRX_OFF:
       return m_trxOffCurrentA + m_processorActiveCurrentA;
- /* case SLEEP_MODE:
-  *   return m_sleepCurrentA + m_processorSleepCurrentA;
-  *   break; */
+    /* case SLEEP_MODE:
+     *   return m_sleepCurrentA + m_processorSleepCurrentA;
+     *   break; */
     default:
       NS_FATAL_ERROR ("ZigbeeRadioEnergyModel:Invalid radio state:" << m_currentState);
     }
@@ -469,9 +469,9 @@ ZigbeeRadioEnergyModel::SetZigbeeRadioState (const ZigbeePhyEnumeration state)
     case IEEE_802_15_4_PHY_TRX_OFF:
       stateName = "TRX_OFF";
       break;
-/*  case SLEEP_MODE:
- *    stateName = "SLEEP";
- *    break; */
+    /*  case SLEEP_MODE:
+     *    stateName = "SLEEP";
+     *    break; */
     default:
       NS_FATAL_ERROR ("ZigbeeRadioEnergyModel:Invalid radio state:" << state);
     }
@@ -568,12 +568,12 @@ ZigbeeRadioEnergyModelPhyListener::NotifySleep (void)
     {
       NS_FATAL_ERROR ("ZigbeeRadioEnergyModelPhyListener:Change state callback not set!");
     }
-  NS_LOG_INFO("Notify a change into SLEEP mode, but PHY doesn't support sleeping.");
+  NS_LOG_INFO ("Notify a change into SLEEP mode, but PHY doesn't support sleeping.");
   //m_changeStateCallback (SLEEP_MODE);
 }
 
 void
-ZigbeeRadioEnergyModelPhyListener::NotifyWakeup(void)
+ZigbeeRadioEnergyModelPhyListener::NotifyWakeup (void)
 {
   NS_LOG_FUNCTION (this);
   if (m_changeStateCallback.IsNull ())

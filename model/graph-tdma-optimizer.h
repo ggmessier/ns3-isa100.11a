@@ -27,7 +27,7 @@
 
 using namespace std;
 
-namespace ns3{
+namespace ns3 {
 
 /**
  * \class GraphTdmaOptimzer
@@ -40,7 +40,6 @@ namespace ns3{
 class GraphTdmaOptimzer : public TdmaOptimizerBase
 {
 public:
-
   static TypeId GetTypeId (void);
 
   GraphTdmaOptimzer ();
@@ -62,15 +61,14 @@ public:
    *
    * @param edgeWeight information of the edge. i.e., source and destination node ID pairs
    */
-  void SetEdgeWeights (vector<pair<uint32_t,uint32_t>> edgeWeight);
+  void SetEdgeWeights (vector<pair<uint32_t,uint32_t> > edgeWeight);
 
 private:
-
   /** Create a graph from the container information..
      *
      * @param c node container with all nodes
      */
-  void GraphCreation(NodeContainer c);
+  void GraphCreation (NodeContainer c);
 
 };
 

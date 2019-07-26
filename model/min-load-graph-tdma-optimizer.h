@@ -28,11 +28,11 @@
 
 using namespace std;
 
-namespace ns3{
+namespace ns3 {
 
-  /** Defining Node information structure for graph routing.
-   *
-   */
+/** Defining Node information structure for graph routing.
+ *
+ */
 typedef struct
 {
   Ptr<Node> m_head;                  ///< Pointer for the node.
@@ -44,7 +44,7 @@ typedef struct
 
 } MinLoadVertex;
 
-const double INF_DOUBLE = std::numeric_limits<double>::max();
+const double INF_DOUBLE = std::numeric_limits<double>::max ();
 
 /**
  * \class MinLoadGraphTdmaOptimzer
@@ -57,7 +57,6 @@ const double INF_DOUBLE = std::numeric_limits<double>::max();
 class MinLoadGraphTdmaOptimzer : public TdmaOptimizerBase
 {
 public:
-
   static TypeId GetTypeId (void);
 
   MinLoadGraphTdmaOptimzer ();
@@ -80,19 +79,18 @@ public:
    *
    * @param edgeWeight information of the edge. i.e., source and destination node ID pairs
    */
-  void SetEdgeWeights (vector<pair<uint32_t,uint32_t>> edgeWeight);
+  void SetEdgeWeights (vector<pair<uint32_t,uint32_t> > edgeWeight);
 
 private:
-
   /** Create a graph from the container information..
      *
      * @param c node container with all nodes
      */
-  void GraphCreation(NodeContainer c);
+  void GraphCreation (NodeContainer c);
 
-  map<uint32_t, MinLoadVertex>  MinLoadGraphRoute(map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
+  map<uint32_t, MinLoadVertex>  MinLoadGraphRoute (map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
 
-  map<uint32_t, MinLoadVertex>  MinLoadSourceRoute(map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
+  map<uint32_t, MinLoadVertex>  MinLoadSourceRoute (map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
 
   std::map<uint32_t, MinLoadVertex> m_vertexVector;   ///< vertex information for the algorithm; map<nodeID, MinLoadVertex>
   std::map<uint32_t, MinLoadVertex> m_rawVertex;   ///< vertex information for the algorithm; map<nodeID, MinLoadVertex> with normLoad INF

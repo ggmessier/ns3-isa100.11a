@@ -107,7 +107,6 @@ typedef Callback< void, Time, double> PhyConsumeEnergyCallback;
 class Isa100Application : public Application
 {
 public:
-
   Isa100Application ();
 
   virtual ~Isa100Application ();
@@ -142,8 +141,6 @@ public:
 
 
 protected:
-
-
   /** Called automatically at m_startTime.
    * - Inherited from Application.
    */
@@ -184,8 +181,6 @@ public:
 
 
 private:
-
-
   /** Called automatically at m_startTime.
    * - Inherited from Application.
    */
@@ -200,14 +195,13 @@ private:
   /** Function scheduled to transmit a single packet.
    *
    */
-  void SendPacket();
+  void SendPacket ();
 
   uint64_t m_numberOfPackets;  ///< Total number of packets to generate.
-	Time m_txInterval; ///< Time between packets.
+  Time m_txInterval;       ///< Time between packets.
 
   uint64_t m_numberPacketsSent;  ///< Current number of packets generated.
   EventId m_sendPacketEvent;  ///< Linked to the next scheduled SendPacket() call.
-	;
 };
 
 
@@ -216,7 +210,6 @@ private:
 class Isa100FieldNodeApplication : public Isa100Application
 {
 public:
-
   Isa100FieldNodeApplication ();
 
   virtual ~Isa100FieldNodeApplication ();
@@ -227,21 +220,21 @@ public:
    *
    * @param data The sensor data sample.
    */
-  void SensorSampleCallback(double data);
+  void SensorSampleCallback (double data);
 
   /** Sets the pointer to the sensor being used by the application
    *
    * @param sensor Pointer to the sensor
    */
-  void SetSensor(Ptr<Isa100Sensor> sensor);
+  void SetSensor (Ptr<Isa100Sensor> sensor);
 
   /** Sets the pointer to the processor being used by the application
    *
    * @param processor Pointer to the processor
    */
-  void SetProcessor(Ptr<Isa100Processor> processor);
+  void SetProcessor (Ptr<Isa100Processor> processor);
 
-  void SetFault(void);
+  void SetFault (void);
 
 private:
   /** Called automatically at m_startTime.
@@ -258,12 +251,12 @@ private:
 
   /** Start the sensing operation
    */
-  void StartSensing();
+  void StartSensing ();
 
 
   Time m_slotDuration;                   ///< Duration of a timeslot
   Time m_updatePeriod;                   ///< One update period: equal to both the sample time and the length of a superframe.
-  Time m_sampleDuration;    			     ///< Time required to perform a sample.
+  Time m_sampleDuration;                             ///< Time required to perform a sample.
 
   Ptr<Isa100Sensor> m_sensor;  ///<  Pointer to the sensor being used by the application.
   Ptr<Isa100Processor> m_processor;  ///<  Pointer to the processor being used by the application.
@@ -282,7 +275,6 @@ private:
 class Isa100BackboneNodeApplication : public Isa100Application
 {
 public:
-
   Isa100BackboneNodeApplication ();
 
   virtual ~Isa100BackboneNodeApplication ();
