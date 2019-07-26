@@ -454,10 +454,10 @@ int main (int argc, char *argv[])
   std::string filename;
   std::stringstream ss;
 
-  std::string filePath = "/home/rajith/NS30712/Results/";
+  std::string filePath = "/home/rajith/tarballs/Results/";
 	ss.str( std::string() );
 	ss.clear();
-	ss << filePath << "N" << numSensorNodes << "_" << optString << "_"<<factor<<"_";
+	ss << filePath << "N" << numSensorNodes << "_" << optString << "_";
   std::string filePrefix = ss.str();
 
   uint16_t numNodes = 1 + numSensorNodes;
@@ -766,12 +766,12 @@ int main (int argc, char *argv[])
         isaHelper->InstallApplication(nc,i,sensorNodeULApp);
 //	    }
 
-//	  if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
-//	    {
-//	      NS_LOG_UNCOND("Failed Node: "<<i);
-//	      Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
-//	      netDevice->GetDl()->SetAttribute("WorkingStatus",BooleanValue (false));
-//	    }
+	if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
+	    {
+	      NS_LOG_UNCOND("Failed Node: "<<i);
+	      Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
+	      netDevice->GetDl()->SetAttribute("WorkingStatus",BooleanValue (false));
+	    }
 	}
 
 //	// ******************* DOWNLINK *******************
@@ -924,6 +924,7 @@ int main (int argc, char *argv[])
 
   int totReportTx = 0, totReportRx = 0, totReportReTx = 0;
   Time totDelay = Seconds(0.0);
+  int starvedCount = 0;
 //  bool starvedNode = false;
 
   for (int16_t i = 3; i < numNodes; i++){
@@ -941,6 +942,7 @@ int main (int argc, char *argv[])
 
   	if(reportRxNum[i] == 0){
   		NS_LOG_UNCOND("*Starved Node*: " << i);
+                starvedCount++;
   	}
 
   }
@@ -955,7 +957,7 @@ int main (int argc, char *argv[])
   else{
       //Rajith new Report
       *(reportStream->GetStream()) << seed << " "<<numNodes<<" "<<factor<<" "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "
-          <<totDelay.GetSeconds()/totReportRx << " "<< networkLifetime << " "<<exHaustedNode<<"\n";
+          <<totDelay.GetSeconds()/totReportRx << " "<< networkLifetime << " "<<exHaustedNode<<" "<<starvedCount<<"\n";
 //      *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
 //  	*(reportStream->GetStream()) << "TotalTx," << totReportTx << "\n";
 //  	*(reportStream->GetStream()) << "TotalRx," << totReportRx << "\n";
