@@ -159,7 +159,7 @@ TypeId Isa100Dl::GetTypeId (void)
                    MakePointerChecker<Isa100DlSfSchedule>())
 
     .AddAttribute ("MaxFrameRetries","Max number of retries allowed after a transmission failure",
-                   UintegerValue (3),
+                   UintegerValue (0),
                    MakeUintegerAccessor (&Isa100Dl::m_maxFrameRetries),
                    MakeUintegerChecker<uint8_t> (0,7))
 
@@ -1173,29 +1173,26 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       // Else check for an address match
       if (addressMatch)
         {
+          // Need to remove the trailer to obtain just the packet data
+          packetData->RemoveTrailer (trailer);
+
           if (m_routingAlgorithm)
             {
 
-              // Need to remove the trailer to obtain just the packet data
-              packetData->RemoveTrailer (trailer);
+//              // Need to remove the trailer to obtain just the packet data
+//              packetData->RemoveTrailer (trailer);
 
               // GGM: Can we use this instead of programming the transmit power list into the node when we create its schedule?
               // This received power thing is just for the distributed FA routing but there's no reason why we couldn't use it for everything.
 
               // Update the tx power for this neighbour
-              double chLossDb = trailer.GetDistrRoutingTxPower () - rxPowDbm;
+              double chLossDb = trailer.GetDistrRoutingTxPower () - floor(rxPowDbm);
               NS_LOG_DEBUG ("TX: " << rxDlHdr.GetShortSrcAddr () << " Rx: " << m_address << " Txpwr:" << to_string (m_txPowerDbm[srcNodeInd]) << " Loss: " << to_string (chLossDb) << " Rxpwr " << rxPowDbm);
 
-              if (rxPowDbm < -100)
-                {
-                  chLossDb += 1;
-                }
               SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
 
-              // Modify trailer
-              trailer.SetDistrRoutingTxPower (m_txPowerDbm[srcNodeInd]);
-              // Return the modified trailer to the packet.
-              p->AddTrailer (trailer);
+//              // Return the trailer to the packet.
+//              p->AddTrailer (trailer);
 
               // Process the rx packet
               m_routingAlgorithm->ProcessRxPacket (p,forwardPacketOn);
@@ -1213,6 +1210,15 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               Isa100DlHeader header;
               p->RemoveHeader (header);
               header.SetDmic (dmic);
+
+              uTwoBytes_t bufferShortDst;
+              header.GetShortDstAddr().CopyTo (bufferShortDst.byte);
+
+              // Modify trailer
+              trailer.SetDistrRoutingTxPower (m_txPowerDbm[bufferShortDst.byte[1]]);
+              NS_LOG_DEBUG ("Power forwardPacketOn to  " << header.GetShortDstAddr() << " TxPwrFWD " <<m_txPowerDbm[bufferShortDst.byte[1]]);
+              // Return the trailer to the packet.
+              p->AddTrailer (trailer);
 
               // Return the modified header to the packet.
               p->AddHeader (header);
@@ -1333,10 +1339,10 @@ void Isa100Dl::DlDataRequest (DlDataRequestParams params, Ptr<Packet> p)
   uTwoBytes_t buffer;
   params.m_destAddr.CopyTo (buffer.byte);
 
-  // Rajith
-  Isa100DlTrailer trailer;
-  trailer.SetDistrRoutingTxPower (m_txPowerDbm[buffer.byte[1]]);
-  p->AddTrailer (trailer);
+//  // Rajith
+//  Isa100DlTrailer trailer;
+//  trailer.SetDistrRoutingTxPower (m_txPowerDbm[buffer.byte[1]]);
+//  p->AddTrailer (trailer);
 
   if ( m_ackEnabled )
     {
@@ -1365,6 +1371,13 @@ void Isa100Dl::DlDataRequest (DlDataRequestParams params, Ptr<Packet> p)
   if (m_routingAlgorithm)
     {
       m_routingAlgorithm->PrepTxPacketHeader (dlHdr);
+      uTwoBytes_t bufferShortDst;
+      dlHdr.GetShortDstAddr().CopyTo (bufferShortDst.byte);
+
+      // Rajith
+      Isa100DlTrailer trailer;
+      trailer.SetDistrRoutingTxPower (m_txPowerDbm[bufferShortDst.byte[1]]);
+      p->AddTrailer (trailer);
     }
 
   p->AddHeader (dlHdr);
