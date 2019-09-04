@@ -499,7 +499,7 @@ void Isa100Helper::PrintGraphSchedule ()
 
 }
 
-SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph ()
+SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph (OptimizerSelect optSelect)
 {
   NS_LOG_FUNCTION (this);
   uint32_t numNodes = m_devices.GetN ();
@@ -523,7 +523,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph ()
       NodeSchedule nodeSchedule;
       // this is to match with the routing table used in routing; map <destination ID, graph ID list> m_Table
 
-      map<Mac16Address, pair<Mac16Address, vector<Mac16Address> > > graphTable; // graphID -> next graph ID, neighbor
+      map<Mac16Address, Mac16Address > graphTable; // graphID -> next graph ID, neighbor
 
       // Assign schedule to DL
       Ptr<NetDevice> baseDevice = m_devices.Get (nNode);
@@ -534,13 +534,33 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph ()
       Ptr<Isa100NetDevice> netDevice_next;
       Mac16AddressValue address_next;
 
+      // [LPL] low-power listening - this is only for single channel transmission
+      // for multi-channel transmission, these LPL scheduling need to be done at the optimizer level scheduling
+      BooleanValue lplEnabled;
+      netDevice->GetDl ()->GetAttribute ("LplEnabled",lplEnabled);
+
       for (map<uint32_t, NodeInfo>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
           uint32_t slot = it->first;
           NodeInfo nInfo = it->second;
           nodeSchedule.slotSched.push_back (slot);
-          nodeSchedule.slotType.push_back (nInfo.slotType);
+
+          DlLinkType slotType = nInfo.slotType;
+          // [LPL] low-power listening
+          if (lplEnabled && nInfo.slotType == SHARED)
+            {
+              if (m_mainSchedule[slot][nInfo.channelSched][1] == nNode)
+                {
+                  slotType = LPL;
+                }
+              else
+                {
+                  slotType = TRANSMIT; // This is not necessary SHARED type is also support.
+                }
+            }
+
+          nodeSchedule.slotType.push_back (slotType);
           hoppingPattern.push_back (nInfo.channelSched);
 
           if (m_tableList[nNode][nInfo.graphID].neighborList.size () > 0)
@@ -549,15 +569,11 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph ()
               baseDevice_next = m_devices.Get (m_tableList[nNode][nInfo.graphID].neighborList[0]);
               netDevice_next = baseDevice_next->GetObject<Isa100NetDevice>();
               netDevice_next->GetDl ()->GetAttribute ("Address",address_next);
-              graphTable[nInfo.graphID].first = address_next.Get ();
-
-              vector<Mac16Address> backUpGraphSequence;
-              backUpGraphSequence.push_back (m_tableList[nNode][nInfo.graphID].nextGraphID);
-              graphTable[nInfo.graphID].second = backUpGraphSequence;
+              graphTable[nInfo.graphID] = address_next.Get ();
 
             }
 
-          if (nInfo.pathSource == nNode && m_tableList2.empty ())
+          if (nInfo.pathSource == nNode && optSelect == TDMA_GRAPH)   // only applicable for graph routing
             {
               vector<Mac16Address> Path;
               Mac16Address currentGraph = nInfo.graphID;
@@ -581,39 +597,51 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph ()
             }
         }
 
-      if (!m_tableList2.empty ())
-        {
-          tableForRouting[nNode] = m_tableList2[nNode];
-        }
-
       netDevice->GetDl ()->SetAttribute ("SuperFramePeriod", UintegerValue (m_mainSchedule.size ()));
-
-//    NS_LOG_UNCOND("Here");
-//    for (map<uint32_t, vector<vector<Mac16Address>>>::const_iterator it = tableForRouting[nNode].begin ();
-//               it != tableForRouting[nNode].end (); ++it)
-//        {
-//          NS_LOG_UNCOND("Here tableForRouting");
-//          NS_LOG_UNCOND("tableForRouting ****** node: "<<nNode<<" dst: "<<it->first);
-//          for(int j = 0; j < it->second.size(); j++)
-//            {
-//              vector<Mac16Address> path = it->second[j];
-//              NS_LOG_UNCOND(" panID: "<<j);
-//              for(int k = 0; k < path.size(); k++)
-//                {
-//                  NS_LOG_UNCOND(path[k]);
-//                }
-//            }
-//        }
 
       if (!baseDevice || !netDevice)
         {
           NS_FATAL_ERROR ("Installing TDMA schedule on non-existent ISA100 net device.");
         }
 
-      Ptr<Isa100RoutingAlgorithm> routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm> (tableForRouting[nNode]);
+      Ptr<Isa100RoutingAlgorithm> routingAlgorithm;
+      if (optSelect == TDMA_GRAPH)
+        {
+          routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm> (tableForRouting[nNode]);
+        }
+      else if (optSelect == TDMA_MIN_LOAD)
+        {
+          tableForRouting[nNode] = m_tableList2[nNode];
+          routingAlgorithm = CreateObject<Isa100MinLoadRoutingAlgorithm> (tableForRouting[nNode]);
+        }
+
+      NS_LOG_UNCOND("Here");
+      for (map<uint32_t, vector<vector<Mac16Address>>>::const_iterator it = tableForRouting[nNode].begin ();
+                 it != tableForRouting[nNode].end (); ++it)
+          {
+            NS_LOG_UNCOND("Here tableForRouting");
+            NS_LOG_UNCOND("tableForRouting ****** node: "<<nNode<<" dst: "<<it->first);
+            for(int j = 0; j < it->second.size(); j++)
+              {
+                vector<Mac16Address> path = it->second[j];
+                NS_LOG_UNCOND(" panID: "<<j);
+                for(int k = 0; k < path.size(); k++)
+                  {
+                    NS_LOG_UNCOND(path[k]);
+                  }
+              }
+          }
+
+      NS_LOG_UNCOND("Here");
+      for (map<Mac16Address, Mac16Address >::const_iterator it = graphTable.begin ();
+                 it != graphTable.end (); ++it)
+          {
+            NS_LOG_UNCOND("Here graphTable");
+            NS_LOG_UNCOND("node: "<<nNode<<" graph ID "<<it->first<<" neighbor "<<it->second);
+          }
+
       routingAlgorithm->SetGraphTable (graphTable);
       netDevice->GetDl ()->SetRoutingAlgorithm (routingAlgorithm);
-
       Mac16AddressValue address;
       netDevice->GetDl ()->GetAttribute ("Address",address);
       netDevice->GetDl ()->GetRoutingAlgorithm ()->SetAttribute ("Address",address);

@@ -313,7 +313,7 @@ public:
    *
    * @return Result of scheduling attempt.
    */
-  SchedulingResult ScheduleAndRouteTDMAgraph ();
+  SchedulingResult ScheduleAndRouteTDMAgraph (OptimizerSelect optSelect);
 
   /** Resize the main schedule (and repeat length vector) to fit all the slots of the SUPERFRAME
    *
@@ -511,10 +511,7 @@ private:
   uint16_t m_panID;
   ///< routing tables of each nodes (Node ID -> destID -> graphID sequence)
   map<uint32_t, map<uint32_t, vector<vector<Mac16Address> > > > m_tableList2;
-//  map<uint32_t, vector<Mac16Address>> m_pathsMap;
-//  map<uint16_t, vector<Mac16Address>> m_paths;
-//  vector<uint16_t> m_graphAllocation;
-//  uint16_t m_iter;  ///< graph ID for the schedule creation
+
 
 };
 

@@ -140,14 +140,14 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr
     case TDMA_GRAPH:
       {
         tdmaOptimizer = CreateObject<GraphTdmaOptimzer> ();
-        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
+//        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
 //      m_graphType = true;
         break;
       }
     case TDMA_MIN_LOAD:
       {
         tdmaOptimizer = CreateObject<MinLoadGraphTdmaOptimzer> ();
-        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
+//        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
         break;
       }
     default:
@@ -190,7 +190,7 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr
 
         if (schedResult == SCHEDULE_FOUND)
           {
-            return ScheduleAndRouteTDMAgraph ();
+            return ScheduleAndRouteTDMAgraph (optSelect);
           }
         else
           {
@@ -203,7 +203,7 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr
                                                                   , tdmaOptimizer->m_DLEx, tdmaOptimizer->m_DLSh, m_numTimeslots);
         if (schedResult == SCHEDULE_FOUND)
           {
-            return ScheduleAndRouteTDMAgraph ();
+            return ScheduleAndRouteTDMAgraph (optSelect);
           }
         else
           {
