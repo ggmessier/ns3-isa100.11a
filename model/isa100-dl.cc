@@ -159,7 +159,7 @@ TypeId Isa100Dl::GetTypeId (void)
                    MakePointerChecker<Isa100DlSfSchedule>())
 
     .AddAttribute ("MaxFrameRetries","Max number of retries allowed after a transmission failure",
-                   UintegerValue (0),
+                   UintegerValue (1),
                    MakeUintegerAccessor (&Isa100Dl::m_maxFrameRetries),
                    MakeUintegerChecker<uint8_t> (0,7))
 
@@ -203,10 +203,20 @@ TypeId Isa100Dl::GetTypeId (void)
                    MakeBooleanAccessor (&Isa100Dl::m_working),
                    MakeBooleanChecker ())
 
-    .AddAttribute ("IsGraph", "Whether Optimization is based on graph routing.",
-                   BooleanValue (false),
-                   MakeBooleanAccessor (&Isa100Dl::m_isGraph),
-                   MakeBooleanChecker ())
+    .AddAttribute ("LplEnabled", "[LPL] whether LPL is enabled.",
+                  BooleanValue (false),
+                  MakeBooleanAccessor (&Isa100Dl::m_lplEnabled),
+                  MakeBooleanChecker ())
+
+    .AddAttribute ("MaxCCAtries","[LPL] The max number of retries for LPL listening.",
+                   UintegerValue (3),
+                   MakeUintegerAccessor (&Isa100Dl::m_maxCCAtries),
+                   MakeUintegerChecker<uint8_t> (0,7))
+
+//    .AddAttribute ("IsGraph", "Whether Optimization is based on graph routing.",
+//                   BooleanValue (false),
+//                   MakeBooleanAccessor (&Isa100Dl::m_isGraph),
+//                   MakeBooleanChecker ())
 
     .AddAttribute ("SensorUpdatePeriod","Sensor initiate the data in this period.",
                    UintegerValue (1),
@@ -281,6 +291,9 @@ Isa100Dl::Isa100Dl ()
   m_expArqBackoffCounter = 0;
   m_tdmaPktsLeft = 0;
 
+  m_isCCAListening = false;     // [LPL] variable
+  m_CCAtries = 0;     // [LPL] variable
+
   for (int i = 0; i < 256; i++)
     {
 //      m_packetTxSeqNum[i] = 0;
@@ -288,7 +301,7 @@ Isa100Dl::Isa100Dl ()
       m_txPowerDbm[i] = 100;           // set to an invalid transmit power level
     }
   m_usePowerCtrl = 0;
-  m_txPowerLevelMarginDb = 0;
+  m_txPowerLevelMarginDb = 1;
 
   m_address = Mac16Address::Allocate ();
 
@@ -310,8 +323,10 @@ Isa100Dl::Isa100Dl ()
 
   // Timing values from ISA100.11a
   m_clockError = Seconds (1.0 / 32000);
-  m_xmitEarliest = Seconds (2.212e-3);
+//  m_xmitEarliest = Seconds (2.212e-3);
+  m_xmitEarliest = Seconds (2.12e-3);
 
+  m_tsRxOffset = Seconds (1.12e-3);
   m_processor = 0;
   m_dlSleepEnabled = false;
   m_ackEnabled = false;
@@ -496,7 +511,8 @@ void Isa100Dl::ProcessLink ()
 
       NS_LOG_LOGIC (" Setting PHY to Rx On for a single slot.");
 
-      ProcessTrxStateRequest (IEEE_802_15_4_PHY_RX_ON);
+//      ProcessTrxStateRequest (IEEE_802_15_4_PHY_RX_ON);
+      Simulator::Schedule (m_tsRxOffset, &Isa100Dl::ProcessTrxStateRequest, this,IEEE_802_15_4_PHY_RX_ON);
     }
 
 
@@ -507,7 +523,7 @@ void Isa100Dl::ProcessLink ()
       Simulator::Schedule (m_xmitEarliest,&Isa100Dl::CallPlmeCcaRequest,this);
     }
 
-  if (linkType == TRANSMIT)
+  if (linkType == TRANSMIT && m_txQueue.size ())
     {
       NS_LOG_LOGIC (" Setting PHY to Tx On.");
 
@@ -517,14 +533,36 @@ void Isa100Dl::ProcessLink ()
           m_expBackoffCounter = 0;
         }
 
-      if (m_xmitEarliest == Seconds (0.0))
+//      if (m_xmitEarliest == Seconds (0.0))
+//        {
+//          ProcessTrxStateRequest (IEEE_802_15_4_PHY_TX_ON);
+//        }
+//      else
+//        {
+          Simulator::Schedule (m_xmitEarliest, &Isa100Dl::ProcessTrxStateRequest, this,IEEE_802_15_4_PHY_TX_ON);
+//        }
+    }
+
+  if (linkType == LPL)    // [LPL] condition
+    {
+      NS_LOG_LOGIC (" Setting PHY to TRX OFF, and toggle with SLEEP.");
+
+      ZigbeePibAttributeIdentifier id = phyCCAMode;
+      ZigbeePhyPIBAttributes attribute;
+
+      attribute.phyCCAMode = 1;
+
+      if (!m_plmeSetAttribute.IsNull ())
         {
-          ProcessTrxStateRequest (IEEE_802_15_4_PHY_TX_ON);
+          m_plmeSetAttribute (id,&attribute);
         }
       else
         {
-          Simulator::Schedule (m_xmitEarliest, &Isa100Dl::ProcessTrxStateRequest, this,IEEE_802_15_4_PHY_TX_ON);
+          NS_FATAL_ERROR ("m_plmeSetAttribute null.");
         }
+
+      m_CCAtries = 0;
+      Simulator::Schedule (m_xmitEarliest,&Isa100Dl::BMACListening,this);
     }
 
 
@@ -614,6 +652,12 @@ bool Isa100Dl::IsAckPacket (Ptr<const Packet> p)
       return false;
     }
 
+  // ACK header frame type is 2.
+  if (ackHeader.GetMhrFrameControl ().frameType != 2)
+    {
+      return false;
+    }
+
   // Should be an ACK header, just double check the reserved signature of the DHR sub-header.
   if (ackHeader.GetDhrFrameControl ().reserved != 3)
     {
@@ -635,10 +679,16 @@ void Isa100Dl::PlmeCcaConfirm (ZigbeePhyEnumeration status)
 
       m_dlTaskTrace (m_address, "CCA reported an idle channel");
 
+      // TX ON only if node is at LPL listening state
       // Make sure queue hasn't been flushed during cca
-      if (m_txQueue.size () != 0)
+      if (m_txQueue.size () != 0 && !m_isCCAListening)
         {
           ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_TX_ON);
+        }
+      else if (m_isCCAListening)
+        {
+          // interval between two consecutive CCA, used_tsRxOffset
+          Simulator::Schedule (m_tsRxOffset,&Isa100Dl::BMACListening,this);
         }
     }
   else
@@ -653,6 +703,12 @@ void Isa100Dl::PlmeCcaConfirm (ZigbeePhyEnumeration status)
       ss << "CCA reported a busy channel. Backoff counter set to " << m_expBackoffCounter;
       std::string msg = ss.str ();
       m_dlTaskTrace (m_address, msg);
+
+      // if RX_ON while LPL listening then turning off LPL Listening
+      if (m_isCCAListening)
+        {
+          m_isCCAListening = false;
+        }
 
       // Put the transceiver into RX while in backoff
       ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_RX_ON);
@@ -682,47 +738,24 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       TxQueueElement *txQElement = m_txQueue.front ();
 
       // Print the information of the packets in the queue.
-      for (unsigned int i = 0; i < m_txQueue.size (); i++)
-        {
-          std::stringstream ssTemp;
-          TxQueueElement *txQElementTemp = m_txQueue[i];
-          if (IsAckPacket (txQElementTemp->m_packet))
-            {
-              Isa100DlAckHeader ackHdrTemp;
-              txQElementTemp->m_packet->PeekHeader (ackHdrTemp);
-              ackHdrTemp.Print (ssTemp);
-            }
-          else
-            {
-              Isa100DlHeader headerTemp;
-              txQElementTemp->m_packet->PeekHeader (headerTemp);
-              headerTemp.Print (ssTemp);
-
-            }
-          std::string msgTemp = ssTemp.str ();
-          NS_LOG_DEBUG (msgTemp);
-        }
+      PrintQueue();
 
       Mac16Address nextNodeAddr;
       uTwoBytes_t buffer;
       uint8_t nextNodeInd;
-//      bool ACK = false; //Rajith new temporary
 
+      Isa100DlAckHeader ackHdr;
+      Isa100DlHeader header;
       if (IsAckPacket (txQElement->m_packet))
         {
-          Isa100DlAckHeader ackHdr;
           txQElement->m_packet->PeekHeader (ackHdr);
           nextNodeAddr = ackHdr.GetShortDstAddr ();
-//          ACK = true;
         }
-      else
+      else if (!IsAWakeBeaconPacket (txQElement->m_packet))   // [LPL] Condition modified.
         {
-          Isa100DlHeader header;
           txQElement->m_packet->PeekHeader (header);
           nextNodeAddr = header.GetShortDstAddr ();
-          NS_LOG_DEBUG ("PlmeSetTrxStateConfirm Source: " << header.GetDaddrSrcAddress () << " Destination: " << header.GetDaddrDestAddress ());
         }
-
 
       nextNodeAddr.CopyTo (buffer.byte);
       nextNodeInd = buffer.byte[1];
@@ -794,7 +827,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
         }
 
       // We're using ACKs but we have no attempts remaining.
-      if (m_ackEnabled && txQElement->m_txAttemptsRem == 0)
+      if (m_ackEnabled && txQElement->m_txAttemptsRem == 0 && !m_lplEnabled)   // [LPL] Condition modified.
         {
 
           NS_LOG_LOGIC (" Packet could not be transmitted after " << m_maxFrameRetries << " retries. Drop packet.");
@@ -817,25 +850,22 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
               m_dlDataConfirmCallback (params);
             }
 
-/*          if(m_routingAlgorithm && m_isGraph){
-              m_routingAlgorithm->DeleteTableEntry(nextNodeAddr);
-          }*/
-
           return;
         }
 
       // The first attempt of sending a data packet
-      else if (!m_ackEnabled || ( !IsAckPacket (txQElement->m_packet) && (txQElement->m_txAttemptsRem == m_maxFrameRetries + 1) ) )
+      else if (!m_ackEnabled || ( !IsAckPacket (txQElement->m_packet) && !IsAWakeBeaconPacket (txQElement->m_packet)
+          && (txQElement->m_txAttemptsRem == m_maxFrameRetries + 1) ) )   // [LPL] Condition modified.
         {
 
           NS_LOG_DEBUG (" First packet transmit attempt.");
 
 //          Isa100DlHeader header;
-
-          // GGM: I'm going to increment the sequence number here.. double check to see if that's a problem for the ACK mechanism.
-
-
-          // Set the sequence number
+//
+//          // GGM: I'm going to increment the sequence number here.. double check to see if that's a problem for the ACK mechanism.
+//
+//
+//          // Set the sequence number
 //          txQElement->m_packet->RemoveHeader (header);
 //          header.SetSeqNum (m_packetTxSeqNum[nextNodeInd]++);
 //          txQElement->m_packet->AddHeader (header);
@@ -851,9 +881,6 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
               // Set the arq backoff counter
               m_expArqBackoffCounter = 0;
 //              m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue (0,pow (2,m_arqBackoffExponent - 1)));
-
-//              Isa100DlHeader header;
-//              txQElement->m_packet->PeekHeader (header);
 
             }
 
@@ -876,6 +903,33 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
           // Set the arq backoff counter
           m_expArqBackoffCounter = 0;
 //          m_expArqBackoffCounter = (uint32_t)(m_uniformRv->GetValue (0,pow (2,m_arqBackoffExponent - 1)));
+
+          if (m_lplEnabled)
+            {
+              // ACK request original packet set to 0
+              DhdrFrameControl frameCtrl = header.GetDhdrFrameControl ();
+              frameCtrl.ackReq = 0;
+              header.SetDhdrFrameControl (frameCtrl);
+
+              // Construct the awake Packet
+              Ptr<Packet> awake = Create<Packet> (20);
+              Isa100DlAWakeBeaconHeader awakeHdr;
+
+              // Set the destination address
+              awakeHdr.SetShortDstAddr (nextNodeAddr);
+
+              awake->AddHeader (awakeHdr);
+              NS_LOG_LOGIC (" awake ready: " << *awake);
+
+              m_dlTxTrace (m_address,awake);
+
+              // Add the ACK to the front of the queue and transmit it
+              TxQueueElement *txQElement = new TxQueueElement;
+              txQElement->m_packet = awake;
+              txQElement->m_txAttemptsRem = 1;            // Attempt to send the awake just once
+
+              m_txQueue.push_front (txQElement);
+            }
         }
 
       // This is the first attempt of an ACK packet
@@ -982,12 +1036,21 @@ void Isa100Dl::PdDataConfirm (ZigbeePhyEnumeration status)
       params.m_dsduHandle = txQElement->m_dsduHandle;
       params.m_status = SUCCESS;
 
-      Isa100DlHeader dataHdr;
-      txQElement->m_packet->PeekHeader (dataHdr);
-
       txQElement->m_packet = 0;
       delete txQElement;
       m_txQueue.pop_front ();
+
+      if (m_lplEnabled)
+        {
+          // Check if packet is an awake packet
+          if (IsAWakeBeaconPacket (txQElement->m_packet))
+            {
+              ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_TX_ON);
+              return;
+            }
+        }
+      Isa100DlHeader dataHdr;
+      txQElement->m_packet->PeekHeader (dataHdr);
 
       // Only confirm to higher layer if the packet originated at this node
       if (dataHdr.GetDaddrSrcAddress () == m_address)
@@ -1138,8 +1201,10 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       NS_LOG_LOGIC (" ACK Ignored:  Ack with DMIC " << ackDmic << " received at node "
                                                     << m_address << ", but corresponding packet in Tx Queue could not be found.");
     }
-
-
+  else if (m_lplEnabled && IsAWakeBeaconPacket (p)) //[LPL] Condition
+    {
+      NS_LOG_LOGIC (" This is an awake Packet. Ignored. ");
+    }
   else
     {
       Isa100DlHeader rxDlHdr;
@@ -1156,8 +1221,6 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
       rxDlHdr.GetShortSrcAddr ().CopyTo (shortSrcBuffer.byte);
       uint8_t srcNodeInd = shortSrcBuffer.byte[1];
       bool forwardPacketOn = false;
-
-//      NS_LOG_UNCOND("ProcessPdDataIndication Source: "<<rxDlHdr.GetDaddrSrcAddress()<<" Destination: "<<rxDlHdr.GetDaddrDestAddress());
 
       bool addressMatch = false;
       // check address match - Rajith
@@ -1186,7 +1249,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
               // This received power thing is just for the distributed FA routing but there's no reason why we couldn't use it for everything.
 
               // Update the tx power for this neighbour
-              double chLossDb = trailer.GetDistrRoutingTxPower () - floor(rxPowDbm);
+              double chLossDb = trailer.GetDistrRoutingTxPower () - rxPowDbm;
               NS_LOG_DEBUG ("TX: " << rxDlHdr.GetShortSrcAddr () << " Rx: " << m_address << " Txpwr:" << to_string (m_txPowerDbm[srcNodeInd]) << " Loss: " << to_string (chLossDb) << " Rxpwr " << rxPowDbm);
 
               SetTxPowerDbm (chLossDb - 101 + m_txPowerLevelMarginDb, srcNodeInd);
@@ -1216,7 +1279,7 @@ void Isa100Dl::ProcessPdDataIndication (uint32_t size, Ptr<Packet> p, uint32_t l
 
               // Modify trailer
               trailer.SetDistrRoutingTxPower (m_txPowerDbm[bufferShortDst.byte[1]]);
-              NS_LOG_DEBUG ("Power forwardPacketOn to  " << header.GetShortDstAddr() << " TxPwrFWD " <<m_txPowerDbm[bufferShortDst.byte[1]]);
+              NS_LOG_DEBUG ("Power forwardPacketOn to  " << header.GetShortDstAddr() << " TxPwrFWD " <<to_string(m_txPowerDbm[bufferShortDst.byte[1]]));
               // Return the trailer to the packet.
               p->AddTrailer (trailer);
 
@@ -1619,4 +1682,70 @@ int8_t Isa100Dl::GetTxPowerDbm (uint8_t destNodeI)
   return m_txPowerDbm[destNodeI];
 }
 
+void Isa100Dl::BMACListening ()     // [LPL] Function
+{
+  if(m_isCCAListening && m_CCAtries < m_maxCCAtries)
+    {
+      ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_RX_ON);
+      CallPlmeCcaRequest();
+      m_CCAtries++;
+    }
+  if (m_CCAtries == m_maxCCAtries)
+    {
+      ProcessTrxStateRequest ((ZigbeePhyEnumeration)PHY_SLEEP);
+    }
+}
+
+bool Isa100Dl::IsAWakeBeaconPacket (Ptr<const Packet> p)    // [LPL] Function
+{
+  // Always false if we're not using ACKs
+  if ( !m_lplEnabled  )
+    {
+      return false;
+    }
+
+  // The MHR sub-header is the same for all headers.
+  Isa100DlAWakeBeaconHeader awakeHdr;
+  p->PeekHeader (awakeHdr);
+
+  // beacon header frame type is zero.
+  if (awakeHdr.GetMhrFrameControl ().frameType != 0)
+    {
+      return false;
+    }
+
+  // For the time being, this check is sufficient. It may need to be improved if headers become more sophisticated
+  return true;
+}
+
+void Isa100Dl::PrintQueue ()
+{
+  // Print the information of the packets in the queue.
+  for (unsigned int i = 0; i < m_txQueue.size (); i++)
+    {
+      std::stringstream ssTemp;
+      TxQueueElement *txQElementTemp = m_txQueue[i];
+      if (IsAckPacket (txQElementTemp->m_packet))
+        {
+          Isa100DlAckHeader ackHdrTemp;
+          txQElementTemp->m_packet->PeekHeader (ackHdrTemp);
+          ackHdrTemp.Print (ssTemp);
+        }
+      else if (IsAWakeBeaconPacket (txQElementTemp->m_packet))
+        {
+          Isa100DlAWakeBeaconHeader awakeHdrTemp;
+          txQElementTemp->m_packet->PeekHeader (awakeHdrTemp);
+          awakeHdrTemp.Print (ssTemp);
+        }
+      else
+        {
+          Isa100DlHeader headerTemp;
+          txQElementTemp->m_packet->PeekHeader (headerTemp);
+          headerTemp.Print (ssTemp);
+
+        }
+      std::string msgTemp = ssTemp.str ();
+      NS_LOG_DEBUG (msgTemp);
+    }
+}
 } // namespace ns3

@@ -437,6 +437,100 @@ private:
   uint32_t m_dmic;
 
 };
+
+//*********************************************************************************************
+//************************* WAKE UP BEACON HEADER CLASS ***************************************
+//*********************************************************************************************
+
+class Isa100DlAWakeBeaconHeader : public Header
+{
+
+public:
+  Isa100DlAWakeBeaconHeader (void);
+
+  virtual ~Isa100DlAWakeBeaconHeader (void);
+
+  static TypeId GetTypeId (void);
+
+  TypeId GetInstanceTypeId (void) const;
+
+  /** Print header contents.
+   */
+  void Print (std::ostream &os) const;
+
+  /** Calculate header size.
+   *
+   * \return Header size in bytes.
+   */
+  uint32_t GetSerializedSize (void) const;
+
+  /** Write the header to a byte buffer.
+   *
+   * @param start Iterator for the buffer.
+   */
+  void Serialize (Buffer::Iterator start) const;
+
+  /** Read header contents from a byte buffer.
+   *
+   * @param start Iterator for the buffer.
+   * \return Size of the buffer.
+   */
+  uint32_t Deserialize (Buffer::Iterator start);
+
+  /** Get MHR frame control fields.
+   *
+   * \return A 16 bit integer with MHR frame control bits set.
+   */
+  MhrFrameControl GetMhrFrameControl (void) const;
+
+  /** Set MHR frame control fields.
+   *
+   * @param A 16 bit integer with MHR frame control bits set.
+   */
+  void SetMhrFrameControl (MhrFrameControl frameControl);
+
+  /** Get DHR frame control fields.
+   *
+   * \return A 8 bit integer with DHR frame control bits set.
+   */
+  DhrFrameControl GetDhrFrameControl (void) const;
+
+  /** Set DHR frame control fields.
+   *
+   * @param A 8 bit integer with DHR frame control bits set.
+   */
+  void SetDhrFrameControl (DhrFrameControl dhrFrameControl);
+
+  /* Set the destination address
+   *
+   * @param The 16 bit destination address
+   */
+  void SetShortDstAddr (Mac16Address addr);
+
+  /** Get destination address.
+   *
+   * \return 16 bit address.
+   */
+  Mac16Address GetShortDstAddr (void) const;
+
+
+  /**}@*/
+
+private:
+  // MHR sub-header
+  MhrFrameControl m_mhrFrameControl;
+
+  // DHR sub-header
+  DhrFrameControl m_dhrFrameControl;
+
+  // Destination Address (not in isa100-11a standard)
+  Mac16Address m_addrShortDstAddr;
+
+  // DMIC-32 of the packet being ack'd
+  uint32_t m_dmic;
+
+};
+
 }  // namespace ns-3
 #endif
 

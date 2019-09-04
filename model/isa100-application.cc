@@ -205,6 +205,8 @@ void Isa100PacketGeneratorApplication::SendPacket ()
 
   Ptr<Packet> p = Create<Packet> (m_packetSize);
 
+  NS_LOG_UNCOND("Packet Size: "<<to_string(m_packetSize));
+
   DlDataRequestParams params;
   params.m_srcAddr = m_srcAddress;
   params.m_destAddr = m_dstAddress;

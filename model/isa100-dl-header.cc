@@ -404,7 +404,7 @@ NS_OBJECT_ENSURE_REGISTERED (Isa100DlAckHeader);
 Isa100DlAckHeader::Isa100DlAckHeader ()
 {
   m_mhrFrameControl.bothOctets = 0;
-  m_mhrFrameControl.frameType = 1;
+  m_mhrFrameControl.frameType = 2;
   m_mhrFrameControl.frameVer = 1;
 
   m_dhrFrameControl.octet = 0;
@@ -517,6 +517,120 @@ Mac16Address Isa100DlAckHeader::GetShortDstAddr (void) const
 {
   return(m_addrShortDstAddr);
 }
+
+//*********************************************************************************************
+//************************* WAKE UP BEACON HEADER CLASS ***************************************
+//*********************************************************************************************
+
+NS_OBJECT_ENSURE_REGISTERED (Isa100DlAWakeBeaconHeader);
+
+Isa100DlAWakeBeaconHeader::Isa100DlAWakeBeaconHeader ()
+{
+  m_mhrFrameControl.bothOctets = 0;
+//  m_mhrFrameControl.frameType = 0;  // use a beacon type wake up message
+  m_mhrFrameControl.frameVer = 1;
+
+  m_dhrFrameControl.octet = 0;
+  m_dhrFrameControl.reserved = 3;
+
+  m_dmic = 0;
+}
+
+Isa100DlAWakeBeaconHeader::~Isa100DlAWakeBeaconHeader ()
+{
+}
+
+TypeId Isa100DlAWakeBeaconHeader::GetTypeId (void)
+{
+  static TypeId tid = TypeId ("ns3::Isa100DlAWakeBeaconHeader")
+    .SetParent<Header> ()
+    .AddConstructor<Isa100DlAWakeBeaconHeader> ();
+  return tid;
+}
+
+TypeId Isa100DlAWakeBeaconHeader::GetInstanceTypeId (void) const
+{
+  return GetTypeId ();
+}
+
+void Isa100DlAWakeBeaconHeader::Print (std::ostream &os) const
+{
+  os << "MHR Frame Control = " << (m_mhrFrameControl.bothOctets);
+  os << ", DHR Frame Control = " << static_cast<uint16_t> (m_dhrFrameControl.octet);
+  os << ", Dst Addr = " << m_addrShortDstAddr;
+  os << ", DMIC-32 = " << (m_dmic);
+}
+
+uint32_t Isa100DlAWakeBeaconHeader::GetSerializedSize (void) const
+{
+  /*
+   * Each wake up beacon header will have
+   * MHR Frame Control  : 2 octets
+   * DHR Frame Control  : 1 Octet
+   * DST Address        : 2 Octets
+   * DMIC-32            : 4 Octets
+   */
+
+  uint32_t size = 2;   // MHR Frame Control
+  size += 1;           // DHR Frame Control
+  size += 2;           // DST address
+  size += 4;           // DMIC-32
+
+  return (size);
+}
+
+void Isa100DlAWakeBeaconHeader::Serialize (Buffer::Iterator start) const
+{
+  Buffer::Iterator i = start;
+
+  i.WriteHtolsbU16 (m_mhrFrameControl.bothOctets);
+  i.WriteU8 (m_dhrFrameControl.octet);
+  WriteTo (i, m_addrShortDstAddr);
+  i.WriteHtolsbU32 (m_dmic);
+}
+
+uint32_t Isa100DlAWakeBeaconHeader::Deserialize (Buffer::Iterator start)
+{
+  Buffer::Iterator i = start;
+
+  m_mhrFrameControl.bothOctets = i.ReadLsbtohU16 ();
+  m_dhrFrameControl.octet =  i.ReadU8 ();
+  ReadFrom (i, m_addrShortDstAddr);
+  m_dmic = i.ReadLsbtohU32 ();
+
+  return i.GetDistanceFrom (start);
+}
+
+void Isa100DlAWakeBeaconHeader::SetMhrFrameControl (MhrFrameControl frameControl)
+{
+  m_mhrFrameControl = frameControl;
+}
+
+MhrFrameControl Isa100DlAWakeBeaconHeader::GetMhrFrameControl (void) const
+{
+  return m_mhrFrameControl;
+}
+
+void Isa100DlAWakeBeaconHeader::SetDhrFrameControl (DhrFrameControl dhrFrameCtrl)
+{
+  m_dhrFrameControl = dhrFrameCtrl;
+}
+
+DhrFrameControl Isa100DlAWakeBeaconHeader::GetDhrFrameControl (void) const
+{
+  return m_dhrFrameControl;
+}
+
+void Isa100DlAWakeBeaconHeader::SetShortDstAddr (Mac16Address addr)
+{
+  m_addrShortDstAddr = addr;
+}
+
+Mac16Address Isa100DlAWakeBeaconHeader::GetShortDstAddr (void) const
+{
+  return(m_addrShortDstAddr);
+}
+
 } //namespace ns3
 
 

@@ -143,7 +143,7 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
 
       for (uint32_t nNode = 1; nNode < numNodes; nNode++)
         {
-          if (parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
+          if (parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] < m_maxTxPowerDbm)
             {
               m_graph->AddEdge (parent, nNode);
 //              NS_LOG_UNCOND("Edge: "<<parent<<" "<<nNode);
@@ -209,7 +209,7 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
 
           vertex = MinLoadGraphRoute (tempVertex, m_routeIndexIt, i, gwID);
 
-          NS_LOG_UNCOND ("PATH " << i << " -> " << gwID);
+          NS_LOG_DEBUG ("PATH " << i << " -> " << gwID);
           uint32_t hop = i;
           if (vertex[i].m_normalizedLoad != INF_DOUBLE)
             {
@@ -219,7 +219,7 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
               while (1)
                 {
                   tempPrimaryPath[i].push_back (hop);
-                  NS_LOG_UNCOND (hop);
+                  NS_LOG_DEBUG (hop);
 
                   //              NS_LOG_UNCOND("vertex[hop].m_normalizedLoad: "<<vertex[hop].m_normalizedLoad);
                   //              NS_LOG_UNCOND("pre tempVertex[hop].m_normalizedLoad: "<<tempVertex[hop].m_normalizedLoad);
@@ -264,12 +264,12 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
             }
 
 //          totLoad += tempVertex[i].m_normalizedLoad;
-          NS_LOG_UNCOND ("m_normalizedLoad: " << tempVertex[i].m_normalizedLoad);
+          NS_LOG_DEBUG ("m_normalizedLoad: " << tempVertex[i].m_normalizedLoad);
         }
-      NS_LOG_UNCOND ("Max Load: " << maxLoad << " Pre Max: " << preMaxLoad);
+      NS_LOG_DEBUG ("Max Load: " << maxLoad << " Pre Max: " << preMaxLoad);
 //      NS_LOG_UNCOND("Max totLoad: "<<totLoad<<" Pre tot: "<<preTotLoad);
       double diff = maxLoad - preMaxLoad;
-      NS_LOG_UNCOND ("diff: " << diff);
+      NS_LOG_DEBUG ("diff: " << diff);
 
       if (diff == 0)
         {
@@ -350,18 +350,18 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
       m_ULEx.push_back (primaryPath[i]);
       m_ULSh.push_back (backupPath[i]);
 
-      NS_LOG_UNCOND ("****** PRIMARY PATH " << i << " -> " << gwID);
+      NS_LOG_DEBUG ("****** PRIMARY PATH " << i << " -> " << gwID);
       for (uint32_t k = 0; k < primaryPath[i].size (); k++)
         {
-          NS_LOG_UNCOND (primaryPath[i][k]);
+          NS_LOG_DEBUG (primaryPath[i][k]);
         }
 
-      NS_LOG_UNCOND ("****** BACKUP PATH " << i << " -> " << gwID);
+      NS_LOG_DEBUG ("****** BACKUP PATH " << i << " -> " << gwID);
       for (uint32_t k = 0; k < backupPath[i].size (); k++)
         {
           for (uint32_t m = 0; m < backupPath[i][k].size (); m++)
             {
-              NS_LOG_UNCOND (backupPath[i][k][m]);
+              NS_LOG_DEBUG (backupPath[i][k][m]);
             }
         }
 

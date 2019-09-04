@@ -194,7 +194,8 @@ typedef enum
 {
   TRANSMIT,
   RECEIVE,
-  SHARED
+  SHARED,
+  LPL       // indicate that the slot is scheduled for low-power listening (LPL)
 } DlLinkType;
 
 class Isa100Dl;
@@ -544,6 +545,11 @@ private:
    */
   bool IsAckPacket (Ptr<const Packet> p);
 
+  bool IsAWakeBeaconPacket (Ptr<const Packet> p);
+
+  void BMACListening ();
+
+  void PrintQueue ();
 
   // ------- Trace Functions --------
   /** Trace source for all packets entering transmitter.
@@ -648,6 +654,8 @@ private:
   Time m_clockError;                    ///< Max allowed sync error between nodes due to clock rounding.
   Time m_xmitEarliest;                  ///< Earliest time a transmitter sends a packet after the start of a frame.
 
+  Time m_tsRxOffset;    // TsRxOffset - start of the slot when transceiver must be listening
+
   // Variables to help with generating results/stats
   uint32_t m_numFramesSent;   ///< Total number of transmitted frames
   uint32_t m_numFramesDrop;   ///< Total number of dropped frames (rx and tx)
@@ -658,9 +666,14 @@ private:
 
   bool m_ackEnabled; ///< Whether the ACK mechanism is used.
   bool m_working; ///< whether node is at working condition or not. (Rajith)
-  bool m_isGraph; ///< whether node is at working condition or not. (Rajith)
+//  bool m_isGraph; ///< whether node is at working condition or not. (Rajith)
   uint16_t m_sensorUpdatePeriod;  ///< Sensor update period (number of timeslots).
 
+  // Variables related to LPL
+  bool m_isCCAListening; ///< whether CCA checking is continuing and A-wait beacon packet is not detected
+  bool m_lplEnabled;  ///< whether LPL is enabled.
+  uint8_t m_maxCCAtries; ///< The max number of retries for LPL listening. (Range: 0 to 7)
+  uint8_t m_CCAtries; ///< Number of tries for LPL listening. (Range: 0 to 7)
 };
 
 
