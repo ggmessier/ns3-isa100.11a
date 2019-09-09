@@ -347,7 +347,7 @@ public:
   SchedulingResult ConstructDataCommunicationScheduleMinLoad (vector< vector<uint32_t> > UL_Ex, vector<vector< vector<uint32_t> > > UL_Sh,
                                                               vector< vector<uint32_t> > DL_Ex, vector< vector<uint32_t> > DL_Sh, int frameSize);
 
-  bool ScheduleLinksMinLoad (vector< vector<uint32_t> > flows, int frameSize, uint32_t timeSlot, DlLinkType option);
+  bool ScheduleLinksMinLoad (vector< vector<uint32_t> > flows, int frameSize, uint32_t timeSlot, DlLinkType option, bool isBackup);
 //  /** Construct the data communication schedule of the graph network
 //     *
 //     * @param G Pointer for the graph network that need to create the schedule
@@ -510,8 +510,11 @@ private:
 
   uint16_t m_panID;
   ///< routing tables of each nodes (Node ID -> destID -> graphID sequence)
-  map<uint32_t, map<uint32_t, vector<vector<Mac16Address> > > > m_tableList2;
-
+  map<uint32_t, map<uint32_t, vector<vector<Mac16Address> > > > m_tableListMinLoad;
+/*  // source -> destination -> Primary path
+  map<uint32_t, map<uint32_t, vector<Mac16Address> > > m_tableListPrimary;*/
+  // node -> Primary GraphID -> Backup Path
+  map<uint32_t, map<Mac16Address, vector<Mac16Address> > > m_tableListBackup;
 
 };
 

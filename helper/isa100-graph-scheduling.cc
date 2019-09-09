@@ -88,27 +88,27 @@ SchedulingResult Isa100Helper::ConstructDataCommunicationSchedule (Ptr<IsaGraph>
                   m_grpahID -= MAX_Uint16 / 2;
                 }
 
-              scheduleFound = (this)->ScheduleLinks (v, gateway, GUL, superframe, 0, TRANSMIT,
+              scheduleFound = (this)->ScheduleLinks (v, gateway, GUL, superframe, 0, (DlLinkType)TRANSMIT,
                                                      static_cast<uint16_t> (v->GetId ()), v->GetId ());
               if (!scheduleFound)
                 {
                   return INSUFFICIENT_SLOTS; // schedule FAIL
                 }
 
-//              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED,
+//              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, (DlLinkType) SHARED,
 //                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/2 + 1, v);
 
-//              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, SHARED,
+//              scheduleFound = (this)->ScheduleLinks(v, gateway, GUL , superframe, superframe/4, (DlLinkType) SHARED,
 //                                                    static_cast<uint16_t>(v->GetId()), v);
 //              if (!scheduleFound)
 //                return INSUFFICIENT_SLOTS; // schedule FAIL
 
               // Schedule primary and retry links for control data
-//              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, TRANSMIT,
+//              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/2, (DlLinkType) TRANSMIT,
 //                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/4 + 1, v);
 //              if (!scheduleFound)
 //                return INSUFFICIENT_SLOTS;  // schedule FAIL
-//              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/4*3, SHARED,
+//              scheduleFound = (this)->ScheduleLinks(gateway, v, GDL[v->GetId()] , superframe, superframe/4*3, (DlLinkType) SHARED,
 //                                                    static_cast<uint16_t>(v->GetId()) + MAX_Uint16/4*3 + 1), v;
 //              if (!scheduleFound)
 //                return INSUFFICIENT_SLOTS;  // schedule FAIL
@@ -307,6 +307,7 @@ Resource Isa100Helper::GetNextAvailableSlot (uint32_t u, uint32_t v, uint32_t ti
     {
     case TRANSMIT:
     case RECEIVE:
+    case LPL:
       while (!found)
         {
           uint32_t i = nSlot + slotIndex;
@@ -505,64 +506,56 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph (OptimizerSelect optSel
   uint32_t numNodes = m_devices.GetN ();
   SchedulingResult schedulingResult = SCHEDULE_FOUND;
 
+  // schedule trace
   (this)->PrintGraphSchedule ();
 
+  // resize the superframe size to fit the current schedule
   (this)->SetDlAttribute ("SuperFramePeriod",UintegerValue (m_mainSchedule.size ()));
 
+  // Allocating the channels
   map<uint8_t, uint8_t> channelIndexMap; // channel -> channel index
   for (uint8_t i; i < m_carriers.size (); i++)
     {
       channelIndexMap[m_carriers[i]] = i;
     }
 
+  // Following is to get the MAC addresses of nodes
+  Ptr<NetDevice> baseDevice;
+  Ptr<Isa100NetDevice> netDevice;
+  Ptr<NetDevice> baseDevice_next;
+  Ptr<Isa100NetDevice> netDevice_next;
+  Mac16AddressValue address_next;
+
+  // "tableForRouting" is only used for graph routing - Han's
+  // "tableForRouting" is the direct matching variable of "m_table" of "Isa100RoutingAlgorithm"
   // routing tables of each nodes (Node ID -> destID -> graphID sequence)
   map<uint32_t, map<uint32_t, vector<vector<Mac16Address> > > > tableForRouting;
 
   for (uint32_t nNode = 0; nNode < numNodes; nNode++)
     {
       NodeSchedule nodeSchedule;
-      // this is to match with the routing table used in routing; map <destination ID, graph ID list> m_Table
+      vector<uint8_t> hoppingPattern;
 
+      // "graphTable" is to match with the m_graphTable used in routing; map <destination ID, graph ID list> m_Table
       map<Mac16Address, Mac16Address > graphTable; // graphID -> next graph ID, neighbor
 
       // Assign schedule to DL
-      Ptr<NetDevice> baseDevice = m_devices.Get (nNode);
-      Ptr<Isa100NetDevice> netDevice = baseDevice->GetObject<Isa100NetDevice>();
-
-      vector<uint8_t> hoppingPattern;
-      Ptr<NetDevice> baseDevice_next;
-      Ptr<Isa100NetDevice> netDevice_next;
-      Mac16AddressValue address_next;
-
-      // [LPL] low-power listening - this is only for single channel transmission
-      // for multi-channel transmission, these LPL scheduling need to be done at the optimizer level scheduling
-      BooleanValue lplEnabled;
-      netDevice->GetDl ()->GetAttribute ("LplEnabled",lplEnabled);
+      baseDevice = m_devices.Get (nNode);
+      netDevice = baseDevice->GetObject<Isa100NetDevice>();
 
       for (map<uint32_t, NodeInfo>::const_iterator it = m_nodeScheduleN[nNode].begin ();
            it != m_nodeScheduleN[nNode].end (); ++it)
         {
+          // information extraction from NodeInfo
           uint32_t slot = it->first;
           NodeInfo nInfo = it->second;
-          nodeSchedule.slotSched.push_back (slot);
-
           DlLinkType slotType = nInfo.slotType;
-          // [LPL] low-power listening
-          if (lplEnabled && nInfo.slotType == SHARED)
-            {
-              if (m_mainSchedule[slot][nInfo.channelSched][1] == nNode)
-                {
-                  slotType = LPL;
-                }
-              else
-                {
-                  slotType = TRANSMIT; // This is not necessary SHARED type is also support.
-                }
-            }
 
+          nodeSchedule.slotSched.push_back (slot);
           nodeSchedule.slotType.push_back (slotType);
           hoppingPattern.push_back (nInfo.channelSched);
 
+          // Populating the graph table
           if (m_tableList[nNode][nInfo.graphID].neighborList.size () > 0)
             {
               // populate the current graph -> next graph and next node MacAddress mapping
@@ -570,7 +563,6 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph (OptimizerSelect optSel
               netDevice_next = baseDevice_next->GetObject<Isa100NetDevice>();
               netDevice_next->GetDl ()->GetAttribute ("Address",address_next);
               graphTable[nInfo.graphID] = address_next.Get ();
-
             }
 
           if (nInfo.pathSource == nNode && optSelect == TDMA_GRAPH)   // only applicable for graph routing
@@ -607,40 +599,51 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph (OptimizerSelect optSel
       Ptr<Isa100RoutingAlgorithm> routingAlgorithm;
       if (optSelect == TDMA_GRAPH)
         {
-          routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm> (tableForRouting[nNode]);
+          routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm> (tableForRouting[nNode], graphTable);
         }
       else if (optSelect == TDMA_MIN_LOAD)
         {
-          tableForRouting[nNode] = m_tableList2[nNode];
-          routingAlgorithm = CreateObject<Isa100MinLoadRoutingAlgorithm> (tableForRouting[nNode]);
+          tableForRouting[nNode] = m_tableListMinLoad[nNode];
+          routingAlgorithm = CreateObject<Isa100MinLoadRoutingAlgorithm> (tableForRouting[nNode], graphTable, m_tableListBackup[nNode]);
         }
 
-      NS_LOG_UNCOND("Here");
-      for (map<uint32_t, vector<vector<Mac16Address>>>::const_iterator it = tableForRouting[nNode].begin ();
-                 it != tableForRouting[nNode].end (); ++it)
-          {
-            NS_LOG_UNCOND("Here tableForRouting");
-            NS_LOG_UNCOND("tableForRouting ****** node: "<<nNode<<" dst: "<<it->first);
-            for(int j = 0; j < it->second.size(); j++)
-              {
-                vector<Mac16Address> path = it->second[j];
-                NS_LOG_UNCOND(" panID: "<<j);
-                for(int k = 0; k < path.size(); k++)
-                  {
-                    NS_LOG_UNCOND(path[k]);
-                  }
-              }
-          }
+//      NS_LOG_UNCOND("Here");
+//      for (map<uint32_t, vector<vector<Mac16Address>>>::const_iterator it = tableForRouting[nNode].begin ();
+//                 it != tableForRouting[nNode].end (); ++it)
+//          {
+//            NS_LOG_UNCOND("Here tableForRouting");
+//            NS_LOG_UNCOND("tableForRouting ****** node: "<<nNode<<" dst: "<<it->first);
+//            for(unsigned int j = 0; j < it->second.size(); j++)
+//              {
+//                vector<Mac16Address> path = it->second[j];
+//                NS_LOG_UNCOND(" panID: "<<j);
+//                for(unsigned int k = 0; k < path.size(); k++)
+//                  {
+//                    NS_LOG_UNCOND(path[k]);
+//                  }
+//              }
+//          }
+//
+//      NS_LOG_UNCOND("Here graphTable");
+//      for (map<Mac16Address, Mac16Address >::const_iterator it = graphTable.begin ();
+//                 it != graphTable.end (); ++it)
+//          {
+//            NS_LOG_UNCOND("node: "<<nNode<<" graph ID "<<it->first<<" neighbor "<<it->second);
+//          }
+//
+//      NS_LOG_UNCOND("Here Backup graphTable");
+//      for (map<Mac16Address, vector<Mac16Address> >::const_iterator it = m_tableListBackup[nNode].begin ();
+//                 it != m_tableListBackup[nNode].end (); ++it)
+//          {
+//            NS_LOG_UNCOND("node: "<<nNode<<" graph ID "<<it->first);
+//            vector<Mac16Address> backupPath = it->second;
+//            for(unsigned int k = 0; k < backupPath.size(); k++)
+//              {
+//                NS_LOG_UNCOND(backupPath[k]);
+//              }
+//          }
 
-      NS_LOG_UNCOND("Here");
-      for (map<Mac16Address, Mac16Address >::const_iterator it = graphTable.begin ();
-                 it != graphTable.end (); ++it)
-          {
-            NS_LOG_UNCOND("Here graphTable");
-            NS_LOG_UNCOND("node: "<<nNode<<" graph ID "<<it->first<<" neighbor "<<it->second);
-          }
-
-      routingAlgorithm->SetGraphTable (graphTable);
+//      routingAlgorithm->SetGraphTable (graphTable);
       netDevice->GetDl ()->SetRoutingAlgorithm (routingAlgorithm);
       Mac16AddressValue address;
       netDevice->GetDl ()->GetAttribute ("Address",address);
