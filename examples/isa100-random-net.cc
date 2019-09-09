@@ -248,7 +248,7 @@ static void LogReportRetx(Ptr<OutputStreamWrapper> stream, Mac16Address addr )
   int nodeInd = ( (uint)buff[0] << 8 ) + (uint)buff[1];
 
   reportRetxNum[nodeInd]++;
-  NS_LOG_UNCOND("ReTx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr);
+  NS_LOG_DEBUG("ReTx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr);
 //  *stream->GetStream() << "Rx: "<< Simulator::Now().GetMilliSeconds() << ", " << addr << std::endl;
 }
 
@@ -349,7 +349,7 @@ int main (int argc, char *argv[])
 
 
 //	  LogComponentEnable("ZigbeePhy",LOG_LEVEL_LOGIC);
-//	  LogComponentEnable("Isa100Battery",LOG_LEVEL_LOGIC);
+//	  LogComponentEnable("Isa100Battery",LOG_ALL);
 //	  LogComponentEnable("Isa100Routing",LOG_ALL);
 //    LogComponentEnable("Isa100Application",LOG_ALL);
 //    LogComponentEnable("RandomNetworkTdma",LOG_ALL);
@@ -370,7 +370,7 @@ int main (int argc, char *argv[])
   int maxTxPower = MAX_TX_POWER;
 //  unsigned int numSensorNodes=0; //Rajith changed to global variable
 //  uint8_t numAccessPoints=2;
-
+  int8_t lplEnabled = 0;  // low-power listening is enabled (0 or 1)
   int iter = -1;
 
   CommandLine cmd;
@@ -388,6 +388,7 @@ int main (int argc, char *argv[])
   cmd.AddValue("numfailNodes","Fail Node.",numOfFailNodes); //Rajith added
   cmd.AddValue("maxTxPwr","Maximum allowable Transmission Power.",maxTxPower); //Rajith added7
   cmd.AddValue("factor","Area Expansion Factor.",factor); //Rajith added
+  cmd.AddValue("lplEnabled","Low-power listening is enabled.",lplEnabled); //Rajith added
 
   cmd.Parse (argc, argv);
 
@@ -741,36 +742,35 @@ int main (int argc, char *argv[])
 	Ptr<Isa100NetDevice> netDevice;
 	for (int16_t i = 3; i < numNodes; i++)
 	{
-//	  if (count(nodeMap.begin(),nodeMap.end(),i) == 0)
-//	    {
-	      Ptr<Isa100FieldNodeApplication> sensorNodeULApp = CreateObject<Isa100FieldNodeApplication>();
+    Ptr<Isa100FieldNodeApplication> sensorNodeULApp = CreateObject<Isa100FieldNodeApplication>();
 
-        // Sensor application attributes
-        netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
-        netDevice->GetDl()->GetAttribute("Address",address);
-        sensorNodeULApp->SetAttribute("SrcAddress",address);
-        sensorNodeULApp->SetAttribute("DestAddress",Mac16AddressValue(SINK_ADDR));
-        sensorNodeULApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
-        sensorNodeULApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
-        sensorNodeULApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
+    // Sensor application attributes
+    netDevice = devContainer.Get(i)->GetObject<Isa100NetDevice>();
+    netDevice->GetDl()->GetAttribute("Address",address);
+    sensorNodeULApp->SetAttribute("SrcAddress",address);
+    sensorNodeULApp->SetAttribute("DestAddress",Mac16AddressValue(SINK_ADDR));
+    sensorNodeULApp->SetAttribute("PacketSize",UintegerValue(PACKET_DATA_BYTES));
+    sensorNodeULApp->SetAttribute("StartTime",TimeValue(Seconds(0.0)));
+    sensorNodeULApp->TraceConnectWithoutContext ("ReportTx", MakeBoundCallback (&LogReportTx, reportStream));
 
-//        netDevice->GetDl()->TraceConnectWithoutContext ("DlFirstTxTrace", MakeBoundCallback (&LogReportTx, reportStream)); //Rajith Changed
-        netDevice->GetDl()->TraceConnectWithoutContext ("RetrxTrace", MakeBoundCallback (&LogReportRetx, reportStream));
+    //        netDevice->GetDl()->TraceConnectWithoutContext ("DlFirstTxTrace", MakeBoundCallback (&LogReportTx, reportStream)); //Rajith Changed
+    netDevice->GetDl()->TraceConnectWithoutContext ("RetrxTrace", MakeBoundCallback (&LogReportRetx, reportStream));
 
-        // Hook the application and sensor together
-        sensorNodeULApp->SetSensor(netDevice->GetSensor());
-        sensorNodeULApp->SetProcessor(netDevice->GetProcessor());
-        netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sensorNodeULApp));
+    // Hook the application and sensor together
+    sensorNodeULApp->SetSensor(netDevice->GetSensor());
+    sensorNodeULApp->SetProcessor(netDevice->GetProcessor());
+    netDevice->GetSensor()->SetSensingCallback(MakeCallback (&Isa100FieldNodeApplication::SensorSampleCallback, sensorNodeULApp));
 
-        // Install application
-        isaHelper->InstallApplication(nc,i,sensorNodeULApp);
-//	    }
+    // Install application
+    isaHelper->InstallApplication(nc,i,sensorNodeULApp);
 
-	if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
-	    {
-	      NS_LOG_UNCOND("Failed Node: "<<i);
-	      Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
-	      netDevice->GetDl()->SetAttribute("WorkingStatus",BooleanValue (false));
+    netDevice->GetDl()->SetAttribute("DlSleepEnabled",BooleanValue (true));
+
+    if(count(nodeMap.begin(),nodeMap.end(),i) != 0 && totPktsToNodeFail == 0)
+      {
+        NS_LOG_UNCOND("Failed Node: "<<i);
+        Simulator::Schedule(nodeFailingTime,&Isa100FieldNodeApplication::SetFault,sensorNodeULApp);
+        netDevice->GetDl()->SetAttribute("WorkingStatus",BooleanValue (false));
 	    }
 	}
 
@@ -855,10 +855,15 @@ int main (int argc, char *argv[])
 
     netDevice->GetPhy()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
     netDevice->GetDl()->TraceConnectWithoutContext ("InfoDropTrace", MakeBoundCallback (&PrintDropPacket, packetDropStream));
-    if (optString == "Graph" || optString == "MinLoad")
-      netDevice->GetDl()->SetAttribute("IsGraph", BooleanValue(true));
+//    if (optString == "Graph" || optString == "MinLoad")
+//      netDevice->GetDl()->SetAttribute("IsGraph", BooleanValue(true));
 
     netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
+
+    if(lplEnabled)
+      {
+        netDevice->GetDl()->SetAttribute("LplEnabled",BooleanValue (true));
+      }
   }
 
   // ******************************************** TDMA OPTIMIZATION *********************************************
@@ -938,7 +943,8 @@ int main (int argc, char *argv[])
   	totDelay += reportTotalDelay[i];
   	totReportReTx += reportRetxNum[i];
 
-    NS_LOG_UNCOND("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "<<reportRetxNum[i]);
+    NS_LOG_UNCOND("Node: "<<i<<"reportTxNum: "<<reportTxNum[i]<<" reportRxNum: "<<reportRxNum[i]<<" reportRetxNum: "
+                  <<reportRetxNum[i]<<" drops: "<<(reportTxNum[i] - reportRxNum[i]));
 
   	if(reportRxNum[i] == 0){
   		NS_LOG_UNCOND("*Starved Node*: " << i);
