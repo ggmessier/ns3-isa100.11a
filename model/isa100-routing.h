@@ -78,9 +78,7 @@ public:
    */
   virtual Mac16Address AttemptAnotherLink (uint8_t destInd, std::vector<Mac16Address> attemptedLinks);
 
-  virtual void SetGraphTable (std::map<Mac16Address, Mac16Address > graphTable) = 0;
-
-  virtual Mac16Address NextNeighbor (Mac16Address graphID) = 0;
+  virtual void PrepReTxPacketHeader (Isa100DlHeader &header) = 0;
 
 protected:
   Mac16Address m_address;       ///< Address of this node.
@@ -119,9 +117,7 @@ public:
    */
   void ProcessRxPacket (Ptr<Packet> packet, bool &forwardPacketOn);
 
-  void SetGraphTable (std::map<Mac16Address, Mac16Address > graphTable);
-
-  Mac16Address NextNeighbor (Mac16Address graphID);
+  void PrepReTxPacketHeader (Isa100DlHeader &header);
 
 private:
   Mac16Address **m_table;
@@ -144,7 +140,7 @@ public:
    * @param initNumDests The number of destinations the node can reach using source routing.
    * @param initTable Array of strings containing the multi-hop paths to reach each destination.  Each address is a string in XX:XX format.
    */
-  Isa100GraphRoutingAlgorithm (std::map<uint32_t, std::vector<std::vector<Mac16Address> > > initTable);
+  Isa100GraphRoutingAlgorithm (std::map<uint32_t, std::vector<std::vector<Mac16Address> > > initTable, std::map<Mac16Address, Mac16Address > graphTable);
 
   ~Isa100GraphRoutingAlgorithm ();
 
@@ -164,11 +160,12 @@ public:
    */
   void ProcessRxPacket (Ptr<Packet> packet, bool &forwardPacketOn);
 
-  void SetGraphTable (std::map<Mac16Address, Mac16Address > graphTable);
+  void PrepReTxPacketHeader (Isa100DlHeader &header);
+
+private:
 
   Mac16Address NextNeighbor (Mac16Address graphID);
 
-private:
   std::map<uint32_t, std::vector<std::vector<Mac16Address> > > m_table;    ///<  map <destination ID, vector<vector<graphIDs>>
   std::map<Mac16Address, Mac16Address > m_graphTable;   // graph ID -> Next Neighbor
   uint8_t m_nextSeqNum;
@@ -188,7 +185,8 @@ public:
    * @param initNumDests The number of destinations the node can reach using source routing.
    * @param initTable Array of strings containing the multi-hop paths to reach each destination.  Each address is a string in XX:XX format.
    */
-  Isa100MinLoadRoutingAlgorithm (std::map<uint32_t, std::vector<std::vector<Mac16Address> > > initTable);
+  Isa100MinLoadRoutingAlgorithm (std::map<uint32_t, std::vector<std::vector<Mac16Address> > > initTable,
+                                 std::map<Mac16Address, Mac16Address > graphTable, std::map<Mac16Address, std::vector<Mac16Address> > graphBackupTable);
 
   ~Isa100MinLoadRoutingAlgorithm ();
 
@@ -208,13 +206,17 @@ public:
    */
   void ProcessRxPacket (Ptr<Packet> packet, bool &forwardPacketOn);
 
-  void SetGraphTable (std::map<Mac16Address, Mac16Address > graphTable);
+  void PrepReTxPacketHeader (Isa100DlHeader &header);
+
+private:
 
   Mac16Address NextNeighbor (Mac16Address graphID);
 
-private:
+  std::vector<Mac16Address> NextBackupGraphSequence (Mac16Address graphID);
+
   std::map<uint32_t, std::vector<std::vector<Mac16Address> > > m_table;    ///<  map <destination ID, vector<vector<graphIDs>>
   std::map<Mac16Address, Mac16Address > m_graphTable;   // graph ID -> Next Neighbor
+  std::map<Mac16Address, std::vector<Mac16Address> > m_graphBackupTable;   // graph ID -> backup vector (vector<graphIDs>)
   uint8_t m_nextSeqNum;
 };
 

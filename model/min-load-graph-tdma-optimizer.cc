@@ -143,7 +143,7 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
 
       for (uint32_t nNode = 1; nNode < numNodes; nNode++)
         {
-          if (parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] < m_maxTxPowerDbm)
+          if (parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
             {
               m_graph->AddEdge (parent, nNode);
 //              NS_LOG_UNCOND("Edge: "<<parent<<" "<<nNode);
@@ -153,10 +153,6 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
 
   // UPLINK routes creation
   std::map<uint32_t, MinLoadVertex> vertex;
-//  double maxLoad = 0;     // maximum normalized load of an iteration
-//  double minLoadThreshold = 0;  // threshold of maximum normalized load decrease
-//  double preMaxLoad;  // maximum normalized load of previous iteration
-//  bool initialIter = true;  // initial iteration
 
   map<uint32_t, vector<uint32_t> > primaryPath;
   map<uint32_t, vector<vector<uint32_t> > > backupPath;
@@ -167,35 +163,24 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
   //!!!!! minimum threshold need to be calculated using the minimum rate and the maximum initial battery value
   // since power consumption of gateway and access points considered as zero, used node 3 values
   double minLoadThreshold = m_vertexVector[1].m_flowRate * m_rxEnergyBackupGeneralExpected / m_vertexVector[1].m_initialBatteryEnergy;
-//  preMaxLoad = minLoadThreshold + 1;    // for the initial run pre max load need to be higher than max load + min load threshold
 
   std::map<uint32_t, MinLoadVertex> tempVertex = m_vertexVector;
-//  vector<bool> optFound (numNodes, false);
-//  uint32_t optNodes = 3;  // excluding gateway and APs
-//  vector<double> maxNodeLoads (numNodes, 0);
 
   double maxLoad = INF_DOUBLE;
   double preMaxLoad = 0;
   bool optSolFound = false;
 
-//  double totLoad = 0;
-//  double preTotLoad = 0;
   int countEq = 0;
   // iterative algorithm stops if the maximum normalized load increases or the decrease of maximum normalized load
   // is less than a threshold
-//  while (maxLoad <= preMaxLoad && (preMaxLoad - maxLoad) > minLoadThreshold)
-//  while (optNodes < numNodes)
   while (!optSolFound)
     {
       primaryPath = tempPrimaryPath;
       backupPath = tempBackupPath;
 
-//      maxLoad = 0;
       //!!!!! this need to be run for the highest rate to the lowest rate - here all rates consider same
       for (uint32_t i = 3; i < numNodes; i++)
         {
-//          if (optFound[i])
-//            continue;
           // remove the previously allocated normalized load prior to calculate the new load
           for (uint32_t k = 0; k < primaryPath[i].size (); k++)
             {
@@ -203,8 +188,6 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
                 {
                   tempVertex[primaryPath[i][k]].m_normalizedLoad -= load[i][primaryPath[i][k]];
                 }
-
-//              NS_LOG_UNCOND("tempVertex[primaryPath[i][k]].m_normalizedLoad: "<<tempVertex[primaryPath[i][k]].m_normalizedLoad);
             }
 
           vertex = MinLoadGraphRoute (tempVertex, m_routeIndexIt, i, gwID);
@@ -221,8 +204,6 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
                   tempPrimaryPath[i].push_back (hop);
                   NS_LOG_DEBUG (hop);
 
-                  //              NS_LOG_UNCOND("vertex[hop].m_normalizedLoad: "<<vertex[hop].m_normalizedLoad);
-                  //              NS_LOG_UNCOND("pre tempVertex[hop].m_normalizedLoad: "<<tempVertex[hop].m_normalizedLoad);
                   // track the load incremented
                   load[i][hop] = vertex[hop].m_normalizedLoad - tempVertex[hop].m_normalizedLoad;
 
@@ -254,8 +235,6 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
 
       preMaxLoad = maxLoad;
       maxLoad = 0;
-//      preTotLoad = totLoad;
-//      totLoad = 0;
       for (uint32_t i = 3; i < numNodes; i++)
         {
           if (tempVertex[i].m_normalizedLoad > maxLoad)
@@ -263,11 +242,9 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
               maxLoad = tempVertex[i].m_normalizedLoad;
             }
 
-//          totLoad += tempVertex[i].m_normalizedLoad;
           NS_LOG_DEBUG ("m_normalizedLoad: " << tempVertex[i].m_normalizedLoad);
         }
       NS_LOG_DEBUG ("Max Load: " << maxLoad << " Pre Max: " << preMaxLoad);
-//      NS_LOG_UNCOND("Max totLoad: "<<totLoad<<" Pre tot: "<<preTotLoad);
       double diff = maxLoad - preMaxLoad;
       NS_LOG_DEBUG ("diff: " << diff);
 
@@ -285,10 +262,6 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
           optSolFound = true;
         }
 
-
-//      if ((maxLoad > preMaxLoad && preMaxLoad > 0) || (preMaxLoad - maxLoad < minLoadThreshold && maxLoad <= preMaxLoad))
-//        optSolFound = true;
-
       m_vertexVector = tempVertex;
     }
 
@@ -297,52 +270,6 @@ void MinLoadGraphTdmaOptimzer::GraphCreation (NodeContainer c)
       primaryPath = tempPrimaryPath;
       backupPath = tempBackupPath;
     }
-//      for(uint32_t i = 3; i < numNodes; i++)
-//        {
-//          double tempLoad = tempVertex[i].m_normalizedLoad;
-//          NS_LOG_UNCOND("Load for max check: "<<tempLoad);
-//          if (tempLoad != INF_DOUBLE && maxLoad < tempLoad)
-//            maxLoad = tempLoad;
-//        }
-//      NS_LOG_UNCOND("MaxLoad: "<<maxLoad);
-//
-//      for(uint32_t i = 3; i < numNodes; i++)
-//        {
-//          double maxLoad = tempVertex[i].m_normalizedLoad;
-//          double preMaxLoad = maxNodeLoads[i];
-//          NS_LOG_UNCOND("Load for max check current: "<<maxLoad<<" max: "<<preMaxLoad<<" opt: "<<optFound[i]);
-////          if (!optFound[i])
-////            {
-////          if((maxLoad <= preMaxLoad) || preMaxLoad == 0)
-////            {
-//          primaryPath[i] = tempPrimaryPath[i];
-//          backupPath[i] = tempBackupPath[i];
-//          maxNodeLoads[i] = maxLoad;
-////            }
-//
-//          if ((maxLoad > preMaxLoad && preMaxLoad > 0) || (preMaxLoad - maxLoad < minLoadThreshold && maxLoad <= preMaxLoad))
-//            {
-//              if (!optFound[i])
-//                optNodes++;
-//              optFound[i] = true;
-//              NS_LOG_UNCOND("optFound: "<<i);
-//            }
-////            }
-//        }
-//
-//      NS_LOG_UNCOND()
-//      if (initialIter)
-//        preMaxLoad = maxLoad + minLoadThreshold + 1;
-//
-//      initialIter = false;
-//
-//    }
-//
-//  if (maxLoad < preMaxLoad)
-//    {
-//      primaryPath = tempPrimaryPath;
-//      backupPath = tempBackupPath;
-//    }
 
   for (uint32_t i = 3; i < numNodes; i++)
     {
@@ -487,17 +414,12 @@ map<uint32_t, MinLoadVertex> MinLoadGraphTdmaOptimzer::MinLoadGraphRoute (map<ui
 
                   double newNormLoad = vertexVect[neighborV].m_normalizedLoad  +
                     vertex[neighborV].m_flowRate * (Et + Er) / vertex[neighborV].m_initialBatteryEnergy;
-//                NS_LOG_UNCOND(neighborV<<" newNormLoad "<<newNormLoad<<" Et: "<<Et<<" Er: "<<Er);
                   double alt = max (vertex[u].m_normalizedLoad, max (newNormLoad, vertexBackup[neighborV].m_normalizedLoad ));
-//                NS_LOG_UNCOND("neighborV: "<<neighborV<<" alt: "<<alt<<" m_vertex load: "<<m_vertexVector[neighborV].m_normalizedLoad);
-//                if (alt < m_vertexVector[neighborV].m_normalizedLoad || (m_vertexVector[neighborV].m_normalizedLoad == 0
-//                    && alt < vertex[neighborV].m_normalizedLoad))
                   if (alt < vertex[neighborV].m_normalizedLoad)
                     {
                       vertex[neighborV].m_normalizedLoad = alt;
                       vertex[neighborV].m_lastHop = u;
                       vertex[neighborV].m_backupPath = tempBackupPath;
-//                    NS_LOG_UNCOND(neighborV<<" Load: "<<alt<<" LastHop: "<<u);
                     }
                 }
             }

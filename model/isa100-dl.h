@@ -551,6 +551,8 @@ private:
 
   void PrintQueue ();
 
+  void BackingRetransmissionsInQueue (unsigned int QueueSize);
+
   // ------- Trace Functions --------
   /** Trace source for all packets entering transmitter.
    */
