@@ -289,10 +289,79 @@ void TdmaOptimizerBase::SetupOptimization (NodeContainer c, Ptr<PropagationLossM
 
 }
 
-void TdmaOptimizerBase::SetEdgeWeights (std::vector<std::pair<uint32_t,uint32_t> > edgeWeight)
+void TdmaOptimizerBase::PopulateBackup (std::vector< std::vector<int> > flows)
 {
-  (this)->m_edgeWeightTDMA = edgeWeight;
+  NS_FATAL_ERROR ("PopulateBackup needs to be redefined in a derived class");
 }
 
+void TdmaOptimizerBase::GraphCreation (NodeContainer c)
+{
+  NS_LOG_FUNCTION (this);
+
+  m_graph = CreateObject<IsaGraph> (c);
+  uint32_t gwID = 0;
+  uint32_t ap1ID = 1;
+  uint32_t ap2ID = 2;
+
+  m_graph->AddGateway (gwID);
+
+  // Rajith:: code required to modify to support any number of access points
+  m_graph->AddAccessPoint (ap1ID);
+  m_graph->AddAccessPoint (ap2ID);
+
+  uint32_t numNodes = c.GetN ();
+  TimeValue slotDurationV;
+  UintegerValue tempNumSlotsV;
+  uint32_t numSlotsV;
+
+  rowUInt_t routeIndexRw (numNodes,0);
+  m_routeIndexMat.resize (numNodes, routeIndexRw);
+
+  for (uint32_t nNode = 0; nNode < numNodes; nNode++)
+    {
+      m_graph->AddNode (c.Get (nNode));
+    }
+
+  m_graph->AddEdge (gwID, ap1ID);
+  m_graph->AddEdge (gwID, ap2ID);
+//  m_graph->AddEdge(ap1ID, ap2ID);   // not necessary for UL graph
+
+  m_graph->AddEdge (ap1ID, gwID);
+  m_graph->AddEdge (ap2ID, gwID);
+//  m_graph->AddEdge(ap2ID, ap1ID);   // not necessary for UL graph
+
+  m_graph->SetHopCount (gwID,0);
+  m_graph->SetHopCount (ap1ID,1);
+  m_graph->SetHopCount (ap2ID,1);
+
+  for (uint32_t parent = 0; parent < numNodes; parent++)
+    {
+      Ptr<Isa100NetDevice> devPtr = c.Get (parent)->GetDevice (0)->GetObject<Isa100NetDevice>();
+      devPtr->GetDl ()->GetAttribute ("SuperFrameSlotDuration", slotDurationV);
+      m_slotDuration = slotDurationV.Get ();
+
+      devPtr->GetDl ()->GetAttribute ("SuperFramePeriod", tempNumSlotsV);
+      numSlotsV = tempNumSlotsV.Get ();
+
+      // populate vertex vector and normalized load vector - Wu's Algorithm
+      m_rawVertex[parent].m_head = c.Get (parent);
+      m_rawVertex[parent].m_initialBatteryEnergy = devPtr->GetBattery ()->GetEnergy ();
+      m_rawVertex[parent].m_flowRate = 1 / (numSlotsV * m_slotDuration.GetSeconds ());
+      m_rawVertex[parent].m_normalizedLoad = 0;
+
+      m_vertexVector[parent] = m_rawVertex[parent];
+      m_rawVertex[parent].m_normalizedLoad = INF_DOUBLE;
+
+      m_graph->SetTimeSlots (parent, numSlotsV);
+
+      for (uint32_t nNode = 1; nNode < numNodes; nNode++)
+        {
+          if (parent != 0 && parent != nNode && m_txPowerDbm[parent][nNode] <= m_maxTxPowerDbm)
+            {
+              m_graph->AddEdge (parent, nNode);
+            }
+        }
+    }
+}
 
 } // namespace ns3

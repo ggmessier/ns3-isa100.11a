@@ -30,19 +30,19 @@ using namespace std;
 
 namespace ns3 {
 
-/** Defining Node information structure for graph routing.
- *
- */
-typedef struct
-{
-  Ptr<Node> m_head;                  ///< Pointer for the node.
-  double m_normalizedLoad;        ///< LAMDA - temporary normalized load
-  uint32_t m_lastHop;    ///< (H) - track the last hop devices
-  vector<uint32_t> m_backupPath;      ///< (P) - backup paths
-  double m_flowRate;    ///< flow rate of the node
-  double m_initialBatteryEnergy;  ///< initial battery energy value
-
-} MinLoadVertex;
+///** Defining Node information structure for graph routing.
+// *
+// */
+//typedef struct
+//{
+//  Ptr<Node> m_head;                  ///< Pointer for the node.
+//  double m_normalizedLoad;        ///< LAMDA - temporary normalized load
+//  uint32_t m_lastHop;    ///< (H) - track the last hop devices
+//  vector<uint32_t> m_backupPath;      ///< (P) - backup paths
+//  double m_flowRate;    ///< flow rate of the node
+//  double m_initialBatteryEnergy;  ///< initial battery energy value
+//
+//} MinLoadVertex;
 
 const double INF_DOUBLE = std::numeric_limits<double>::max ();
 
@@ -75,28 +75,13 @@ public:
    */
   virtual std::vector< std::vector< int > > SolveTdma (void);
 
-  /** Set Edge Weights to Han's Graph Algorithms (Not Required)
-   *
-   * @param edgeWeight information of the edge. i.e., source and destination node ID pairs
-   */
-  void SetEdgeWeights (vector<pair<uint32_t,uint32_t> > edgeWeight);
-
 private:
-  /** Create a graph from the container information..
-     *
-     * @param c node container with all nodes
-     */
-  void GraphCreation (NodeContainer c);
+
+//  void MinLoadPopulate (NodeContainer c);
 
   map<uint32_t, MinLoadVertex>  MinLoadGraphRoute (map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
 
   map<uint32_t, MinLoadVertex>  MinLoadSourceRoute (map<uint32_t, MinLoadVertex> vertexVect, uint32_t routeIndexIt, uint32_t src, uint32_t dst);
-
-  std::map<uint32_t, MinLoadVertex> m_vertexVector;   ///< vertex information for the algorithm; map<nodeID, MinLoadVertex>
-  std::map<uint32_t, MinLoadVertex> m_rawVertex;   ///< vertex information for the algorithm; map<nodeID, MinLoadVertex> with normLoad INF
-  std::map<uint32_t, double> m_normalizedLoadMap;   ///< temporary normalized load vector; map<m_routeIndexIt, Load>
-  uint32_t m_routeIndexIt;        //< route index iterator
-  matrixUInt_t m_routeIndexMat;     //< route index iterator is stored in a matrix. (i -> j)
 
 };
 

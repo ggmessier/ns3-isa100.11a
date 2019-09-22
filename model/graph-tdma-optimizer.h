@@ -57,19 +57,6 @@ public:
    */
   virtual std::vector< std::vector< int > > SolveTdma (void);
 
-  /** Set Edge Weights to Han's Graph Algorithms (Not Required)
-   *
-   * @param edgeWeight information of the edge. i.e., source and destination node ID pairs
-   */
-  void SetEdgeWeights (vector<pair<uint32_t,uint32_t> > edgeWeight);
-
-private:
-  /** Create a graph from the container information..
-     *
-     * @param c node container with all nodes
-     */
-  void GraphCreation (NodeContainer c);
-
 };
 
 

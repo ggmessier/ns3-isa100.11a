@@ -22,6 +22,7 @@
 
 #include "ns3/boolean.h"
 #include "ns3/integer.h"
+#include "ns3/double.h"
 #include "ns3/log.h"
 
 #include "ns3/zigbee-trx-current-model.h"
@@ -33,6 +34,9 @@
 
 #include <ilcplex/ilocplex.h>
 #include <algorithm>
+#include <vector>
+
+#include "ns3/isa-graph.h"
 
 ILOSTLBEGIN
 
@@ -76,6 +80,8 @@ void ConvexIntTdmaOptimizer::SetupOptimization (NodeContainer c, Ptr<Propagation
   // Setup the common base properties
   TdmaOptimizerBase::SetupOptimization (c, propModel);
 
+  // initial graph creation based on all available links
+  TdmaOptimizerBase::GraphCreation (c);
 
   // Indicate that optimization has been setup
   m_isSetup = true;
@@ -100,7 +106,7 @@ std::vector< std::vector<int> > ConvexIntTdmaOptimizer::SolveTdma (void)
   // Solve a schedule for 'numMultiFrames' frames
   for (m_currMultiFrame = 0; m_currMultiFrame < m_numMultiFrames; m_currMultiFrame++)
     {
-      NS_LOG_UNCOND ("---------------- Solving Frame " << (uint16_t)m_currMultiFrame << " ----------------");
+      NS_LOG_DEBUG ("---------------- Solving Frame " << (uint16_t)m_currMultiFrame << " ----------------");
 
       tdmaSchedule currFrameSchd;
 
@@ -266,7 +272,7 @@ std::vector< std::vector<int> > ConvexIntTdmaOptimizer::SolveTdma (void)
 
           NS_LOG_DEBUG (" Solution status = " << cplex.getStatus ());
           NS_LOG_DEBUG (" Solution value, Lifetime Inverse  = " << objVal);
-          NS_LOG_UNCOND (std::fixed << std::setprecision (2) << " Calculated lifetime value   = " << lifetimeResult);
+          NS_LOG_DEBUG (std::fixed << std::setprecision (2) << " Calculated lifetime value   = " << lifetimeResult);
 
           for (int i = 0; i < m_numNodes; i++)
             {
@@ -297,11 +303,11 @@ std::vector< std::vector<int> > ConvexIntTdmaOptimizer::SolveTdma (void)
 
         }
       catch (IloAlgorithm::CannotExtractException& e) {
-        NS_LOG_UNCOND ("CannotExtractExpection: " << e);
+        NS_LOG_DEBUG ("CannotExtractExpection: " << e);
         IloExtractableArray failed = e.getExtractables ();
         for (IloInt i = 0; i < failed.getSize (); i++)
           {
-            NS_LOG_UNCOND ("\t" << failed[i]);
+            NS_LOG_DEBUG ("\t" << failed[i]);
           }
         NS_FATAL_ERROR ("Concert Fatal Error.");
       }
@@ -347,6 +353,432 @@ std::vector< std::vector<int> > ConvexIntTdmaOptimizer::SolveTdma (void)
 
 
   return flows;
+}
+
+void ConvexIntTdmaOptimizer::PopulateBackup (std::vector< std::vector<int> > flows)
+{
+  NS_LOG_FUNCTION (this);
+  NS_ASSERT_MSG (m_isSetup, "TDMA Optimizer: Must setup optimization before calling PopulateBackup!");
+
+  uint32_t gwID = m_graph->GetGateway()->GetId();
+  uint32_t numNodes = m_graph->GetNumofNodes();
+
+  // Flow matrix to primaryPath Vector conversion (including vertex loading)
+  std::map<uint32_t, std::vector<uint32_t> > primaryPath = FlowMatrixToPath (flows);
+
+  // populate the primary paths and their normalized loads
+  double Et, Er;
+  m_routeIndexIt = 0;
+  rowUInt_t routeIndexRw (numNodes,0);
+  m_routeIndexMat.resize (numNodes, routeIndexRw);
+
+  for (uint32_t i = 0; i < numNodes; i++)
+    {
+      if (i >= 3)
+        {
+          m_ULEx.push_back (primaryPath[i]);   // primary UPLINK paths included.
+          m_routeIndexIt++;
+          // source -> destination route index
+          m_routeIndexMat[i][gwID] = m_routeIndexIt;
+        }
+
+      uint32_t txNode, nextNode;
+
+      for (uint32_t j = 0; j < primaryPath[i].size (); j++)
+        {
+          if (j == 0)
+            {
+              txNode = primaryPath[i][j];
+              NS_LOG_DEBUG ("************ PRIMARY PATH ************" << txNode );
+              continue;
+            }
+          nextNode = primaryPath[i][j];
+          NS_LOG_DEBUG (nextNode);
+
+          // node 0, 1 and 2 powered by external power source. Therefore, power consumption is not considered.
+          if (txNode == 0 || txNode == 1 || txNode == 2)
+            {
+              Et = 0;
+            }
+          else
+            {
+              Et = m_txEnergyExpected[txNode][nextNode];
+              m_vertexVector[txNode].m_normalizedLoad = m_vertexVector[txNode].m_normalizedLoad  +
+                  m_vertexVector[txNode].m_flowRate * Et / m_vertexVector[txNode].m_initialBatteryEnergy;
+            }
+
+          if (nextNode == 0 || nextNode == 1 || nextNode == 2)
+            {
+              Er = 0;
+            }
+          else
+            {
+              Er = m_rxEnergyExpected[txNode][nextNode];
+              m_vertexVector[nextNode].m_normalizedLoad = m_vertexVector[nextNode].m_normalizedLoad  +
+                  m_vertexVector[nextNode].m_flowRate * Er / m_vertexVector[nextNode].m_initialBatteryEnergy;
+            }
+
+          txNode = nextNode;
+        }
+    }
+
+  // populate the backup paths
+  std::map<uint32_t, MinLoadVertex> vertex;
+
+  std::map<uint32_t, std::vector<std::vector<uint32_t> > > backupPath;
+  std::map<uint32_t, std::vector<std::vector<uint32_t> > > tempBackupPath;
+  // backup path route index -> node -> load
+  std::map<uint32_t, std::map<uint32_t, double> > load;
+
+  //!!!!! minimum threshold need to be calculated using the minimum rate and the maximum initial battery value
+  // since power consumption of gateway and access points considered as zero, used node 3 values
+  double minLoadThreshold = m_vertexVector[1].m_flowRate * m_rxEnergyBackupGeneralExpected / m_vertexVector[1].m_initialBatteryEnergy;
+
+  std::map<uint32_t, MinLoadVertex> tempVertex = m_vertexVector;
+
+  double maxLoad = INF_DOUBLE;
+  double preMaxLoad = 0;
+  bool optSolFound = false;
+
+  int countEq = 0;
+  // iterative algorithm stops if the maximum normalized load increases or the decrease of maximum normalized load
+  // is less than a threshold
+  while (!optSolFound)
+    {
+      backupPath = tempBackupPath;
+
+      uint32_t srcNodePrimaryPath;
+
+      // iterate over the primary path
+      for (std::map<uint32_t, std::vector<uint32_t> >::const_iterator it = primaryPath.begin ();
+          it != primaryPath.end (); ++it)
+        {
+          srcNodePrimaryPath = it->first;
+
+          // root index of the route source -> destination
+          uint32_t rootIndex = m_routeIndexMat[srcNodePrimaryPath][gwID];
+
+          // remove the previously allocated normalized load prior to calculate the new load
+          for (uint32_t j = 0; j < backupPath[srcNodePrimaryPath].size (); j++)
+            {
+              for (uint32_t k = 0; k < backupPath[srcNodePrimaryPath][j].size (); k++)
+                {
+                  if (!load[rootIndex].empty ())
+                    {
+                      // node of the backup path
+                      uint32_t nodeInBPath = backupPath[srcNodePrimaryPath][j][k];
+                      tempVertex[nodeInBPath].m_normalizedLoad -= load[rootIndex][nodeInBPath];
+                    }
+                }
+            }
+
+          std::vector<uint32_t> primaryPath = it->second;
+          tempBackupPath[srcNodePrimaryPath].clear ();
+          uint32_t nodeInPrimaryPath;
+
+          // iterate over the primary paths
+          for (uint32_t i = 0; i < primaryPath.size (); i++)
+            {
+              // node of primary path
+              nodeInPrimaryPath = primaryPath[i];
+
+              // this is to avoid finding a backup path for gateway node (destination)
+              if (nodeInPrimaryPath == gwID)
+                {
+                  continue;
+                }
+
+              std::vector<uint32_t>  tempBPathVect;
+              // generate the respective backup path
+              vertex = BackupPath (tempVertex, primaryPath, nodeInPrimaryPath, gwID);
+
+              // last Hop parameter of the vertex (.m_lastHop) is the backup path of nodeInPPath
+              if (vertex[nodeInPrimaryPath].m_normalizedLoad != INF_DOUBLE)
+                {
+                  NS_LOG_DEBUG("********** Path of: "<<nodeInPrimaryPath);
+                  // initial node of the backup path
+                  uint32_t hop = nodeInPrimaryPath;
+
+                  while (true)
+                    {
+                      NS_LOG_DEBUG (hop);
+
+                      // track the load incremented
+                      load[rootIndex][hop] = vertex[hop].m_normalizedLoad -
+                          tempVertex[hop].m_normalizedLoad;
+
+                      tempVertex[hop].m_normalizedLoad = vertex[hop].m_normalizedLoad;
+
+                      tempBPathVect.push_back (hop);
+
+                      if (hop == gwID)
+                        {
+                          break;
+                        }
+
+                      hop = vertex[hop].m_lastHop;
+                    }
+                }
+              tempBackupPath[srcNodePrimaryPath].push_back (tempBPathVect);
+            }
+
+        }
+
+      preMaxLoad = maxLoad;
+      maxLoad = 0;
+      for (uint32_t i = 3; i < numNodes; i++)
+        {
+          if (tempVertex[i].m_normalizedLoad > maxLoad)
+            {
+              maxLoad = tempVertex[i].m_normalizedLoad;
+            }
+
+          NS_LOG_DEBUG ("m_normalizedLoad: " << tempVertex[i].m_normalizedLoad);
+        }
+      NS_LOG_DEBUG ("Max Load: " << maxLoad << " Pre Max: " << preMaxLoad);
+      double diff = maxLoad - preMaxLoad;
+      NS_LOG_DEBUG ("diff: " << diff);
+
+      if (diff == 0)
+        {
+          countEq++;
+        }
+      else
+        {
+          countEq = 0;
+        }
+
+      if ((diff > 0 && diff > minLoadThreshold) || (diff < 0 && (-1) * diff < minLoadThreshold) || countEq > 3)
+        {
+          optSolFound = true;
+        }
+
+      m_vertexVector = tempVertex;
+    }
+
+  if (maxLoad < preMaxLoad)
+    {
+      backupPath = tempBackupPath;
+    }
+
+  for (uint32_t i = 3; i < numNodes; i++)
+    {
+//      m_routeIndexMat[i][gwID] = m_routeIndexIt;
+      m_ULSh.push_back (backupPath[i]);
+
+      NS_LOG_DEBUG ("CONVEX: ****** BACKUP PATH ******" << i << " -> " << gwID);
+      for (uint32_t k = 0; k < backupPath[i].size (); k++)
+        {
+          NS_LOG_DEBUG ("SUB "<< backupPath[i][k][0] << " -> " << gwID);
+          for (uint32_t m = 0; m < backupPath[i][k].size (); m++)
+            {
+              NS_LOG_DEBUG (backupPath[i][k][m]);
+            }
+        }
+    }
+}
+
+map<uint32_t, vector<uint32_t> > ConvexIntTdmaOptimizer::FlowMatrixToPath (std::vector< std::vector<int> > packetFlows)
+{
+  int numNodes = packetFlows.size ();
+
+  map<int, int> txSum;
+  vector<vector<int>> rxNodes (numNodes);
+//  vector<vector<int>> flows = packetFlows;
+
+  for (int i = 0; i < numNodes; i++)
+    {
+      txSum[i] = 0;
+      for (int j = 0; j < numNodes; j++)
+        {
+          if (packetFlows[i][j] > 0)
+            {
+              txSum[i] += packetFlows[i][j];
+              rxNodes[i].push_back(j);
+            }
+        }
+      NS_LOG_DEBUG(" txSum: "<<i<<" "<<txSum[i]);
+    }
+
+  map<uint32_t, vector<uint32_t> > primaryPath;
+
+  int node;
+  int txSumZeroCount = 0;
+  while (txSumZeroCount < numNodes)
+    {
+      for (int i = 0; i < numNodes; i++)
+        {
+          if (txSum[i] == 1)
+            {
+              int dst = -1;
+              int src = i;
+              node = src;
+
+              primaryPath[src].push_back(node);
+
+              while (dst != 0)
+                {
+                  dst = rxNodes[node].back();
+
+                  packetFlows[node][dst]--;            // Indicate this edge has been scheduled
+
+                  txSum[node]--;
+                  if (packetFlows[node][dst] == 0)
+                    rxNodes[node].pop_back();
+
+                  node = dst;
+                  primaryPath[src].push_back(node);
+
+                  txSumZeroCount = 0;
+                }
+            }
+          else if (txSum[i] == 0)
+            {
+              txSumZeroCount++;
+            }
+        }
+    }
+
+  return primaryPath;
+}
+
+map<uint32_t, MinLoadVertex> ConvexIntTdmaOptimizer::BackupPath (std::map<uint32_t, MinLoadVertex> vertexVect,
+                                                                      std::vector<uint32_t> primaryPath, uint32_t src, uint32_t dst)
+{
+  NS_LOG_DEBUG(" primary path First "<<primaryPath[0]<<" src "<<src<<" dst "<<dst);
+
+  NS_LOG_FUNCTION (this);
+  map<uint32_t, MinLoadVertex> vertex = vertexVect;
+  vector<uint32_t> queue;
+
+  // gateway (node 0) and Access points (node 1 & 2) do not consume battery energy for packet reception
+  // connections are wired
+  double Erb = m_rxEnergyBackupGeneralExpected;
+  if (dst == 0 || dst == 1 || dst == 2)
+    {
+      Erb = 0;
+    }
+
+  // add v to Q (ALG1 of Wu's)
+  for (map<uint32_t, MinLoadVertex>::const_iterator it = vertex.begin (); it != vertex.end (); ++it)
+    {
+      vertex[it->first].m_normalizedLoad = INF_DOUBLE;       // set temporary normalized load to infinity
+      vertex[it->first].m_lastHop = 0;                       // set last hop to NULL
+      queue.push_back (it->first);
+    }
+
+  std::map<uint32_t, MinLoadVertex> tempVertex =  vertex;
+
+  // LAMDA_d = GAMMA_d + r * E_r/ B_d (ALG1 of Wu's)
+  vertex[dst].m_normalizedLoad = vertexVect[dst].m_normalizedLoad +
+    vertex[dst].m_flowRate * Erb / vertex[dst].m_initialBatteryEnergy;
+
+  uint32_t u; // node with the minimum normalized load (LAMDA)
+
+  // while Q is not empty do (ALG1 of Wu's)
+  while (!queue.empty ())
+    {
+      // iterate over the vertices to find the minimum normalized load
+      double min = INF_DOUBLE;
+      int index_min = 0;  //index of the node with minimum normalized load in the Queue
+
+      for (uint32_t index = 0; index < queue.size (); index++)
+        {
+          if (vertex[queue[index]].m_normalizedLoad < min)
+            {
+              min = vertex[queue[index]].m_normalizedLoad;
+              u = queue[index];
+              index_min = index;
+            }
+        }
+
+      // if no node found with finite value check for a minimum load in temporary vertex vector
+      if (min == INF_DOUBLE)
+        {
+          for (uint32_t index = 0; index < queue.size (); index++)
+            {
+              if (tempVertex[queue[index]].m_normalizedLoad < min)
+                {
+                  min = tempVertex[queue[index]].m_normalizedLoad;
+                  u = queue[index];
+                  index_min = index;
+                }
+            }
+
+          //set the last hop nodes vertex vector
+          if (min != INF_DOUBLE)
+            {
+              uint32_t index = index_min;
+              uint32_t lastHop;
+              double normalizedLoadLastHop = INF_DOUBLE;
+
+              while (normalizedLoadLastHop == INF_DOUBLE)
+                {
+                  vertex[queue[index]].m_normalizedLoad = tempVertex[queue[index]].m_normalizedLoad;
+                  lastHop = tempVertex[queue[index]].m_lastHop;
+                  vertex[queue[index]].m_lastHop = lastHop;
+                  normalizedLoadLastHop = vertex[lastHop].m_normalizedLoad;
+                }
+            }
+        }
+      double K1 = vertex[u].m_normalizedLoad*100000;
+      double K2 = tempVertex[u].m_normalizedLoad*100000;
+      uint32_t hopK1 = vertex[u].m_lastHop;
+      uint32_t hopK2 = tempVertex[u].m_lastHop;
+
+      NS_LOG_DEBUG("u: "<<u<<" Load "<<K1<<" tempLoad "<<K2<<" Hop "<<hopK1<<" tempHop "<<hopK2);
+      // remove u from the Q
+      queue.erase (queue.begin () + index_min);
+
+      // minimum normalized load is INF or u is the source node return the normalized load information
+      if (min == INF_DOUBLE || u == src)
+        {
+          return vertex;
+        }
+
+      // iterate over neighbor v of u (minimum load node) within the Q
+      vector <Ptr<Node> > neighborsOfU = m_graph->GetGraphNodeMap ()[u].m_neighbors;
+      for (vector<Ptr<Node> >::const_iterator it = neighborsOfU.begin (); it != neighborsOfU.end (); ++it)
+        {
+          uint32_t neighborV = it->operator -> ()->GetId ();
+          NS_LOG_DEBUG("neighborV "<<neighborV);
+          if (count (queue.begin (),queue.end (),neighborV) > 0)
+            {
+              // gateway (node 0) and Access points (node 1 & 2) do not consume battery energy for packet reception
+              // connections are wired
+              double Erbv = m_rxEnergyBackupExpected[neighborV][u];
+              if (dst == 0 || dst == 1 || dst == 2)
+                {
+                  Erbv = 0;
+                }
+
+              double newNormLoad = vertexVect[neighborV].m_normalizedLoad +
+                vertex[neighborV].m_flowRate * Erbv / vertex[neighborV].m_initialBatteryEnergy;
+              double alt = max (vertex[u].m_normalizedLoad, newNormLoad);
+
+              bool inPPath = count (primaryPath.begin (),primaryPath.end (),neighborV);
+
+              double K = alt*100000;  // temporary
+
+              if (alt < vertex[neighborV].m_normalizedLoad && !inPPath)
+                {
+                  vertex[neighborV].m_normalizedLoad = alt;
+                  vertex[neighborV].m_lastHop = u;
+
+                  NS_LOG_DEBUG(" Condition 1: "<<K<<" Hop "<<u);
+                }
+              else if (alt < vertex[neighborV].m_normalizedLoad && alt < tempVertex[neighborV].m_normalizedLoad)
+                {
+                  tempVertex[neighborV].m_normalizedLoad = alt;
+                  tempVertex[neighborV].m_lastHop = u;
+
+                  NS_LOG_DEBUG(" Condition 2: "<<K<<" Hop "<<u);
+                }
+            }
+        }
+    }
+
+  return vertex;
 }
 
 } // namespace ns3

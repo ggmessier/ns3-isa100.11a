@@ -52,8 +52,23 @@ typedef enum
   TDMA_CONVEX_INT = 2,
   TDMA_CONVEX_SLOT_C = 3,
   TDMA_GRAPH = 4,
-  TDMA_MIN_LOAD = 5
+  TDMA_MIN_LOAD = 5,
+  TDMA_CONVEX_MINLOAD = 6
 } OptimizerSelect;
+
+/** Defining Node information structure for graph routing.
+ *
+ */
+typedef struct
+{
+  Ptr<Node> m_head;                  ///< Pointer for the node.
+  double m_normalizedLoad;        ///< LAMDA - temporary normalized load
+  uint32_t m_lastHop;    ///< (H) - track the last hop devices
+  std::vector<uint32_t> m_backupPath;      ///< (P) - backup paths
+  double m_flowRate;    ///< flow rate of the node
+  double m_initialBatteryEnergy;  ///< initial battery energy value
+
+} MinLoadVertex;
 
 typedef std::vector<std::vector<NetworkLink> > tdmaSchedule;
 
@@ -79,12 +94,17 @@ public:
    */
   virtual std::vector< std::vector<int> > SolveTdma (void);
 
-  void SetEdgeWeights (std::vector<std::pair<uint32_t,uint32_t> > edgeWeight);
+  /** Create a graph from the container information..
+     *
+     * @param c node container with all nodes
+     */
+  void GraphCreation (NodeContainer c);
+
+  virtual void PopulateBackup (std::vector< std::vector<int> > flows);
 
   // Attributes for the HAN's Graph Algorithm
   std::map <uint32_t, Ptr<IsaGraph> > m_graphMap;  // all the graphs
   Ptr<IsaGraph> m_graph;        // pointer for the main graph (initial)
-  std::vector<std::pair<uint32_t,uint32_t> > m_edgeWeightTDMA;   // edge weight graph if necessary
 
   // Attributes for Wu's Algorithm
   std::vector<std::vector<uint32_t> > m_ULEx;  //< UL paths vector; Exclusive; vector< path source -> destination >
@@ -136,6 +156,12 @@ protected:
   double m_rxEnergyGeneralExpected; ///< General value based on the Wu's Expected RX energy for any link.
   double m_rxEnergyBackupGeneralExpected; ///< General value based on the Wu's Expected RX energy for any link of backup paths.
 
+  // min load related attributes
+  std::map<uint32_t, MinLoadVertex> m_vertexVector;   ///< vertex information for the algorithm; map<nodeID, MinLoadVertex>
+  std::map<uint32_t, MinLoadVertex> m_rawVertex;   ///< vertex information for the algorithm; map<nodeID, MinLoadVertex> with normLoad INF
+  std::map<uint32_t, double> m_normalizedLoadMap;   ///< temporary normalized load vector; map<m_routeIndexIt, Load>
+  uint32_t m_routeIndexIt;        //< route index iterator
+  matrixUInt_t m_routeIndexMat;     //< route index iterator is stored in a matrix. (i -> j)
 };
 
 

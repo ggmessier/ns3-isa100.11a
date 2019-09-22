@@ -62,7 +62,14 @@ public:
    */
   virtual std::vector< std::vector<int> > SolveTdma (void);
 
+  virtual void PopulateBackup (std::vector< std::vector<int> > flows);
+
 private:
+
+  std::map<uint32_t, MinLoadVertex> BackupPath (std::map<uint32_t, MinLoadVertex> vertexVect,
+                                                std::vector<uint32_t> primaryPath, uint32_t src, uint32_t dst);
+
+  std::map<uint32_t, std::vector<uint32_t> > FlowMatrixToPath (std::vector< std::vector<int> > packetFlows);
   typedef std::vector<double> row_t;
   typedef std::vector<row_t> matrix_t;
 
