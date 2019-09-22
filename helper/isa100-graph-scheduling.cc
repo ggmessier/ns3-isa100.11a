@@ -601,7 +601,7 @@ SchedulingResult Isa100Helper::ScheduleAndRouteTDMAgraph (OptimizerSelect optSel
         {
           routingAlgorithm = CreateObject<Isa100GraphRoutingAlgorithm> (tableForRouting[nNode], graphTable);
         }
-      else if (optSelect == TDMA_MIN_LOAD)
+      else if (optSelect == TDMA_MIN_LOAD || optSelect == TDMA_CONVEX_MINLOAD)
         {
           tableForRouting[nNode] = m_tableListMinLoad[nNode];
           routingAlgorithm = CreateObject<Isa100MinLoadRoutingAlgorithm> (tableForRouting[nNode], graphTable, m_tableListBackup[nNode]);

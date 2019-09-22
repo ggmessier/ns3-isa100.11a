@@ -140,14 +140,16 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr
     case TDMA_GRAPH:
       {
         tdmaOptimizer = CreateObject<GraphTdmaOptimzer> ();
-//        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
-//      m_graphType = true;
         break;
       }
     case TDMA_MIN_LOAD:
       {
         tdmaOptimizer = CreateObject<MinLoadGraphTdmaOptimzer> ();
-//        devPtr->GetDl ()->SetAttribute ("IsGraph", BooleanValue (true));
+        break;
+      }
+    case TDMA_CONVEX_MINLOAD:
+      {
+        tdmaOptimizer = CreateObject<ConvexIntTdmaOptimizer> ();
         break;
       }
     default:
@@ -157,11 +159,6 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr
   // Set the attributes
   SetTdmaOptimizerAttributes (tdmaOptimizer);
 
-  if (!(this)->m_edgeWeight.empty ())
-    {
-      tdmaOptimizer->SetEdgeWeights ((this)->m_edgeWeight);
-    }
-
   // Pass network information to setup the optimizer
   tdmaOptimizer->SetupOptimization (c, propModel);
 
@@ -170,16 +167,16 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr
 
   IntegerValue intV;
 
+  // Solve the optimization to create flow matrix
+  vector< vector<int> > slotFlows;
+  slotFlows = tdmaOptimizer->SolveTdma ();
+
   switch (optSelect)
     {
     case TDMA_MIN_HOP:
     case TDMA_GOLDSMITH:
     case TDMA_CONVEX_INT:
       {
-        // Solve the optimization to create flow matrix
-        vector< vector<int> > slotFlows;
-        slotFlows = tdmaOptimizer->SolveTdma ();
-
         tdmaOptimizer->GetAttribute ("PacketsPerSlot", intV);
 
         return ScheduleAndRouteTdma (slotFlows,intV.Get ());
@@ -209,6 +206,23 @@ SchedulingResult Isa100Helper::CreateOptimizedTdmaSchedule (NodeContainer c, Ptr
           {
             return schedResult;
           }
+      }
+    case TDMA_CONVEX_MINLOAD:
+      {
+        tdmaOptimizer->PopulateBackup (slotFlows);
+
+        schedResult =  ConstructDataCommunicationScheduleMinLoad (tdmaOptimizer->m_ULEx, tdmaOptimizer->m_ULSh,
+                                                                  tdmaOptimizer->m_DLEx, tdmaOptimizer->m_DLSh, m_numTimeslots);
+
+        if (schedResult == SCHEDULE_FOUND)
+          {
+            return ScheduleAndRouteTDMAgraph (optSelect);
+          }
+        else
+          {
+            return schedResult;
+          }
+        break;
       }
     default:
       NS_FATAL_ERROR ("Invalid selection of optimizer!");
