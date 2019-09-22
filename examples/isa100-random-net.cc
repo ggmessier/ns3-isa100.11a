@@ -379,7 +379,7 @@ int main (int argc, char *argv[])
   cmd.AddValue("nnodes", "Number of sensor nodes.",numSensorNodes);
 //  cmd.AddValue("APs", "Number of access points.",numAccessPoints); // Rajith
   cmd.AddValue("optType","Optimization type: MinHop10ms, MinHopPckt, Goldsmith10ms, GoldsmithPckt, "
-      "ConvInt10ms, ConvIntPckt, Graph, MinLoad",optString); //Rajith changed
+      "ConvInt10ms, ConvIntPckt, Graph, MinLoad, ConvMinLoad",optString); //Rajith changed
   cmd.AddValue("failNodeTime","Fail Node Time.",tempNodeFailTime); //Rajith added
   cmd.AddValue("failTotPkts","Number of packets need to exceed to fail the nodes.",totPktsToNodeFail); //Rajith added
   cmd.AddValue("simDuration","Simulation Duration.",simDuration); //Rajith added
@@ -431,6 +431,11 @@ int main (int argc, char *argv[])
   else if(optString == "MinLoad")
     {
       optimizerType = TDMA_MIN_LOAD;
+      slotDuration = MilliSeconds(10);
+    }
+  else if(optString == "ConvMinLoad")
+    {
+      optimizerType = TDMA_CONVEX_MINLOAD;
       slotDuration = MilliSeconds(10);
     }
   else
