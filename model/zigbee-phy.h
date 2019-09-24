@@ -627,8 +627,6 @@ private:
   BatteryDecrementCallback m_batteryDecrementCallback;
 
 
-
-
   double m_rxEdPeakPower;
   double m_rxTotalPower;
   uint32_t m_rxTotalNum;

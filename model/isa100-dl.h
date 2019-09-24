@@ -625,6 +625,7 @@ private:
   Mac16Address m_address;   ///< DL 16 bit address for this node.
   uint16_t m_sfPeriod;  ///< Superframe period (number of timeslots).
   Time m_sfSlotDuration; ///< Duration of timeslot within a superframe (ms)
+  Time m_tsRxWait;    ///< minimum time to start receiving
 
   uint32_t m_dlHopIndex;  ///< Index of current channel in the hopping pattern.
   uint32_t m_dlLinkIndex; ///< Index of current link activity in the superframe.
@@ -657,6 +658,7 @@ private:
   Time m_xmitEarliest;                  ///< Earliest time a transmitter sends a packet after the start of a frame.
 
   Time m_tsRxOffset;    // TsRxOffset - start of the slot when transceiver must be listening
+  Time m_bmacSlotOffset; // offset for the slot duration when M-BMAC implemented.
 
   // Variables to help with generating results/stats
   uint32_t m_numFramesSent;   ///< Total number of transmitted frames

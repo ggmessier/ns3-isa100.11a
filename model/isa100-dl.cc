@@ -209,7 +209,7 @@ TypeId Isa100Dl::GetTypeId (void)
                   MakeBooleanChecker ())
 
     .AddAttribute ("MaxCCAtries","[LPL] The max number of retries for LPL listening.",
-                   UintegerValue (3),
+                   UintegerValue (2),
                    MakeUintegerAccessor (&Isa100Dl::m_maxCCAtries),
                    MakeUintegerChecker<uint8_t> (0,7))
 
@@ -324,9 +324,12 @@ Isa100Dl::Isa100Dl ()
   // Timing values from ISA100.11a
   m_clockError = Seconds (1.0 / 32000);
 //  m_xmitEarliest = Seconds (2.212e-3);
-  m_xmitEarliest = Seconds (2.12e-3);
+  m_xmitEarliest = Seconds (2.212e-3);
 
   m_tsRxOffset = Seconds (1.12e-3);
+  m_tsRxWait = Seconds (2.2e-3);
+  m_bmacSlotOffset = Seconds (0.8e-3);
+
   m_processor = 0;
   m_dlSleepEnabled = false;
   m_ackEnabled = false;
@@ -523,6 +526,29 @@ void Isa100Dl::ProcessLink ()
       Simulator::Schedule (m_xmitEarliest,&Isa100Dl::CallPlmeCcaRequest,this);
     }
 
+  if (linkType == LPL)    // [LPL] condition
+    {
+      NS_LOG_LOGIC (" Setting PHY to TRX OFF, and toggle with SLEEP.");
+
+      ZigbeePibAttributeIdentifier id = phyCCAMode;
+      ZigbeePhyPIBAttributes attribute;
+
+      attribute.phyCCAMode = 1;
+
+      if (!m_plmeSetAttribute.IsNull ())
+        {
+          m_plmeSetAttribute (id,&attribute);
+        }
+      else
+        {
+          NS_FATAL_ERROR ("m_plmeSetAttribute null.");
+        }
+
+      m_CCAtries = 0;
+      m_isCCAListening = true;
+      Simulator::Schedule (m_tsRxWait,&Isa100Dl::BMACListening,this);
+    }
+
   if (linkType == TRANSMIT && m_txQueue.size ())
     {
       NS_LOG_LOGIC (" Setting PHY to Tx On.");
@@ -543,31 +569,10 @@ void Isa100Dl::ProcessLink ()
 
           // if the transmission queue size has not changed at the end of the slot period. pop front and push it back to the end.
           // This need to be less than the m_sfSlotDuration. So need to find the exact timeout.
-          Simulator::Schedule (m_sfSlotDuration - Seconds (1e-3), &Isa100Dl::BackingRetransmissionsInQueue, this,m_txQueue.size ());
+          Simulator::Schedule (m_sfSlotDuration - m_bmacSlotOffset, &Isa100Dl::BackingRetransmissionsInQueue, this,m_txQueue.size ());
+
 //          BackingRetransmissionsInQueue (unsigned int QueueSize)
 //        }
-    }
-
-  if (linkType == LPL)    // [LPL] condition
-    {
-      NS_LOG_LOGIC (" Setting PHY to TRX OFF, and toggle with SLEEP.");
-
-      ZigbeePibAttributeIdentifier id = phyCCAMode;
-      ZigbeePhyPIBAttributes attribute;
-
-      attribute.phyCCAMode = 1;
-
-      if (!m_plmeSetAttribute.IsNull ())
-        {
-          m_plmeSetAttribute (id,&attribute);
-        }
-      else
-        {
-          NS_FATAL_ERROR ("m_plmeSetAttribute null.");
-        }
-
-      m_CCAtries = 0;
-      Simulator::Schedule (m_xmitEarliest,&Isa100Dl::BMACListening,this);
     }
 
 
@@ -680,7 +685,7 @@ void Isa100Dl::PlmeCcaConfirm (ZigbeePhyEnumeration status)
 
   if (status == IEEE_802_15_4_PHY_IDLE)
     {
-      NS_LOG_LOGIC (" CCA indicates idle channel, turning Tx on.");
+      NS_LOG_LOGIC (" CCA indicates idle channel, turning Tx on. (if CCA Listening, schedule BMAC listening)");
 
       m_dlTaskTrace (m_address, "CCA reported an idle channel");
 
@@ -712,14 +717,14 @@ void Isa100Dl::PlmeCcaConfirm (ZigbeePhyEnumeration status)
       // if RX_ON while LPL listening then turning off LPL Listening
       if (m_isCCAListening)
         {
+          NS_LOG_DEBUG("CCA detection");
           m_isCCAListening = false;
-          Simulator::Schedule (m_tsRxOffset,&Isa100Dl::ProcessTrxStateRequest,this,(ZigbeePhyEnumeration)IEEE_802_15_4_PHY_RX_ON);
+          Simulator::Schedule (m_sfSlotDuration - m_bmacSlotOffset,&Isa100Dl::ProcessTrxStateRequest,this,(ZigbeePhyEnumeration)PHY_SLEEP);
         }
-      else
-        {
-          // Put the transceiver into RX while in backoff
-          ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_RX_ON);
-        }
+
+        // Put the transceiver into RX while in backoff
+        ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_RX_ON);
+
     }
 }
 
@@ -745,7 +750,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
       TxQueueElement *txQElement = m_txQueue.front ();
 
       // Print the information of the packets in the queue.
-      PrintQueue();
+//      PrintQueue();
 
       Mac16Address nextNodeAddr;
       uTwoBytes_t buffer;
@@ -834,7 +839,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
         }
 
       // We're using ACKs but we have no attempts remaining.
-      if (m_ackEnabled && txQElement->m_txAttemptsRem == 0 && !m_lplEnabled)   // [LPL] Condition modified.
+      if (m_ackEnabled && txQElement->m_txAttemptsRem == 0)   // [LPL] Condition modified.
         {
 
           NS_LOG_LOGIC (" Packet could not be transmitted after " << m_maxFrameRetries << " retries. Drop packet.");
@@ -913,7 +918,7 @@ void Isa100Dl::PlmeSetTrxStateConfirm (ZigbeePhyEnumeration status)
         }
 
       // This is the first attempt of an ACK packet
-      else if ( IsAckPacket (txQElement->m_packet) )
+      else if (IsAckPacket (txQElement->m_packet) )
         {
           NS_LOG_DEBUG (" ACK packet sent. " << std::to_string (txQElement->m_txAttemptsRem) << " attempts remaining.");
 
@@ -1021,6 +1026,7 @@ void Isa100Dl::PdDataConfirm (ZigbeePhyEnumeration status)
           // Check if packet is an awake packet
           if (IsAWakeBeaconPacket (txQElement->m_packet))
             {
+              NS_LOG_DEBUG(" Success of awake packet transmission.");
               txQElement->m_packet = 0;
               delete txQElement;
               m_txQueue.pop_front ();
@@ -1035,12 +1041,12 @@ void Isa100Dl::PdDataConfirm (ZigbeePhyEnumeration status)
       params.m_dsduHandle = txQElement->m_dsduHandle;
       params.m_status = SUCCESS;
 
+      Isa100DlHeader dataHdr;
+      txQElement->m_packet->PeekHeader (dataHdr);
+
       txQElement->m_packet = 0;
       delete txQElement;
       m_txQueue.pop_front ();
-
-      Isa100DlHeader dataHdr;
-      txQElement->m_packet->PeekHeader (dataHdr);
 
       // Only confirm to higher layer if the packet originated at this node
       if (dataHdr.GetDaddrSrcAddress () == m_address)
@@ -1678,14 +1684,19 @@ int8_t Isa100Dl::GetTxPowerDbm (uint8_t destNodeI)
 
 void Isa100Dl::BMACListening ()     // [LPL] Function
 {
+  NS_LOG_FUNCTION (this);
+  // CCA tries start from 0
   if(m_isCCAListening && m_CCAtries < m_maxCCAtries)
     {
+      NS_LOG_DEBUG("CCA listening "<<to_string(m_CCAtries));
       ProcessTrxStateRequest ((ZigbeePhyEnumeration)IEEE_802_15_4_PHY_RX_ON);
       CallPlmeCcaRequest();
       m_CCAtries++;
     }
-  if (m_CCAtries == m_maxCCAtries)
+  if (m_CCAtries >= m_maxCCAtries)
     {
+      m_isCCAListening = false;
+      NS_LOG_DEBUG("CCA done. going to sleep.");
       ProcessTrxStateRequest ((ZigbeePhyEnumeration)PHY_SLEEP);
     }
 }
@@ -1739,57 +1750,81 @@ void Isa100Dl::PrintQueue ()
 
         }
       std::string msgTemp = ssTemp.str ();
-      NS_LOG_DEBUG (msgTemp);
+      NS_LOG_DEBUG(msgTemp);
     }
 }
 
 void Isa100Dl::BackingRetransmissionsInQueue (unsigned int QueueSize)
 {
+  NS_LOG_FUNCTION (this << QueueSize << m_txQueue.size ());
+
+  if (!m_lplEnabled)
+    {
+      return;
+    }
+
   if (QueueSize == m_txQueue.size ())
     {
       // txQ element that need to retransmit taking out from the queue
       TxQueueElement *txQElement = m_txQueue.front ();
 
-      if (m_lplEnabled && !IsAckPacket (txQElement->m_packet) && !IsAWakeBeaconPacket (txQElement->m_packet)
-          && txQElement->m_txAttemptsRem > 0)
+      if (IsAckPacket (txQElement->m_packet) || IsAWakeBeaconPacket (txQElement->m_packet))
+        {
+          m_txQueue.pop_front ();
+          return;
+        }
+
+      if (txQElement->m_txAttemptsRem > 1)
         {
           Isa100DlHeader header;
           txQElement->m_packet->PeekHeader (header);
-          Mac16Address nextNodeAddr = header.GetShortDstAddr ();
+
+          // ACK request original packet set to 0
+          DhdrFrameControl frameCtrl = header.GetDhdrFrameControl ();
+          frameCtrl.ackReq = 0;
+          header.SetDhdrFrameControl (frameCtrl);
+          // Assumed the last retransmission attempt use the backup path
+        }
+      else if (m_routingAlgorithm && txQElement->m_txAttemptsRem == 1)
+        {
+          // prepare the transmission header of Backup
+          Isa100DlHeader header;
+          txQElement->m_packet->RemoveHeader(header);
 
           // ACK request original packet set to 0
           DhdrFrameControl frameCtrl = header.GetDhdrFrameControl ();
           frameCtrl.ackReq = 0;
           header.SetDhdrFrameControl (frameCtrl);
 
-          // Assumed the last retransmission attempt use the backup path
-          if (m_routingAlgorithm && txQElement->m_txAttemptsRem == 1)
-            {
-              // Construct the awake Packet
-              Ptr<Packet> awake = Create<Packet> (15);
-              Isa100DlAWakeBeaconHeader awakeHdr;
+          m_routingAlgorithm->PrepReTxPacketHeader (header);
+          // get the next node address of the backup path
+          Mac16Address nextNodeAddr = header.GetShortDstAddr ();
 
-              // Set the destination address
-              awakeHdr.SetShortDstAddr (nextNodeAddr);
+          // change the header of the txQueue element
+          txQElement->m_packet->AddHeader (header);
 
-              awake->AddHeader (awakeHdr);
-              NS_LOG_LOGIC (" awake ready: " << *awake);
+          // Construct the awake Packet
+          Ptr<Packet> awake = Create<Packet> (15);
+          Isa100DlAWakeBeaconHeader awakeHdr;
 
-              m_dlTxTrace (m_address,awake);
+          // Set the destination address
+          awakeHdr.SetShortDstAddr (nextNodeAddr);
 
-              // Add the ACK to the queue and transmit it
-              TxQueueElement *txQElementAwake = new TxQueueElement;
-              txQElementAwake->m_packet = awake;
-              txQElementAwake->m_txAttemptsRem = 1;            // Attempt to send the awake just once
+          awake->AddHeader (awakeHdr);
+          NS_LOG_LOGIC (" awake ready: " << *awake);
 
-              m_txQueue.push_back (txQElementAwake);
+          m_dlTxTrace (m_address,awake);
 
-              // prepare the transmission header of Backup
-              m_routingAlgorithm->PrepReTxPacketHeader (header);
-            }
-          // add the txQ element back to the queue and pop the front element
-          m_txQueue.push_back(txQElement);
+          // Add the ACK to the queue and transmit it
+          TxQueueElement *txQElementAwake = new TxQueueElement;
+          txQElementAwake->m_packet = awake;
+          txQElementAwake->m_txAttemptsRem = 1;            // Attempt to send the awake just once
+
+          m_txQueue.push_back (txQElementAwake);
         }
+
+      // add the txQ element back to the queue and pop the front element
+      m_txQueue.push_back(txQElement);
       // removing the top packet from the queue.
       m_txQueue.pop_front ();
     }
