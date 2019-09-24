@@ -370,7 +370,7 @@ int main (int argc, char *argv[])
   int maxTxPower = MAX_TX_POWER;
 //  unsigned int numSensorNodes=0; //Rajith changed to global variable
 //  uint8_t numAccessPoints=2;
-  int8_t lplEnabled = 0;  // low-power listening is enabled (0 or 1)
+  int lplEnabled = 0;  // low-power listening is enabled (0 or 1)
   int iter = -1;
 
   CommandLine cmd;
@@ -865,7 +865,7 @@ int main (int argc, char *argv[])
 
     netDevice->GetDl()->SetAttribute("AckEnabled", BooleanValue(true));
 
-    if(lplEnabled)
+    if(lplEnabled>0)
       {
         netDevice->GetDl()->SetAttribute("LplEnabled",BooleanValue (true));
       }
