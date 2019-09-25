@@ -275,10 +275,10 @@ static void PrintTxPower(Ptr<OutputStreamWrapper> stream, int sNode, int dNode, 
   *stream->GetStream() << "sNode: " << sNode << " dNode: " << dNode << ": " << power << std::endl;
 }
 
-static void PrintSchedule(Ptr<OutputStreamWrapper> stream, int slot, int sNode, int dNode, int channel)
+static void PrintSchedule(Ptr<OutputStreamWrapper> stream, int slot, int sNode, int dNode, int channel, double power)
 {
 //  *stream->GetStream() << "Slot: " << slot <<" sNode: " << sNode << " dNode: " << dNode << std::endl;
-  *stream->GetStream() << slot <<" " <<channel<<" "<< sNode << " " << dNode << std::endl;
+  *stream->GetStream() << slot <<" " <<channel<<" "<< sNode << " " << dNode << " "<< power <<std::endl;
 }
 
 static void PrintAvgHops(Ptr<OutputStreamWrapper> stream, int node, double avgHops)
