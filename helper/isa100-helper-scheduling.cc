@@ -513,7 +513,8 @@ void Isa100Helper::PopulateNodeSchedule (int src, int dst, int weight, vector<No
       schedules[dst].slotType.insert (schedules[dst].slotType.begin (), RECEIVE);
 
       int carrier = 11;           //Rajith Temporary
-      m_scheduleTrace (nSlot + 1,src,dst,carrier);
+      double txPwr = m_txPwrDbm[src][dst];
+      m_scheduleTrace (nSlot + 1,src,dst,carrier, txPwr);
 
       NS_LOG_DEBUG ( " (" << src << ")->(" << dst << ") in slot " << (nSlot + 1) );
     }
@@ -707,8 +708,10 @@ SchedulingResult Isa100Helper::FlowMatrixToTdmaScheduleRevised (vector<NodeSched
                   schedules[dst].slotType.push_back(RECEIVE);
 
                   int carrier = 11;           //Rajith Temporary
+                  double txPwr = m_txPwrDbm[src][dst];
+
                   NS_LOG_DEBUG("Slot "<<slot<<" src "<<src<<" dst "<<dst);
-                  m_scheduleTrace (slot,src,dst,carrier);
+                  m_scheduleTrace (slot,src,dst,carrier,txPwr);
 
                   packetFlows[src][dst]--;            // Indicate this edge has been scheduled
 

@@ -486,6 +486,9 @@ void Isa100Helper::PrintGraphSchedule ()
 {
   NS_LOG_FUNCTION (this);
 
+  int src, dst, carrier;
+  double txPwr;
+
   NS_LOG_DEBUG ("size: " << (this)->m_mainSchedule.size ());
   for (uint32_t j = 0; j < (this)->m_mainSchedule.size (); j++)
     {
@@ -493,7 +496,11 @@ void Isa100Helper::PrintGraphSchedule ()
         {
           if ((this)->m_mainSchedule[j][k][0] != 0xFFFF)
             {
-              m_scheduleTrace (j,(this)->m_mainSchedule[j][k][0],(this)->m_mainSchedule[j][k][1],(this)->m_carriers[k]);
+              src = (this)->m_mainSchedule[j][k][0];
+              dst = (this)->m_mainSchedule[j][k][1];
+              carrier = (this)->m_carriers[k];
+              txPwr = m_txPwrDbm[src][dst];
+              m_scheduleTrace (j,src,dst,carrier, txPwr);
             }
         }
     }

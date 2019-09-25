@@ -115,7 +115,7 @@ typedef enum
  */
 typedef TracedCallback<int, double, double, double> HelperLocationTracedCallback;
 
-typedef TracedCallback<int, int, int, int> HelperScheduleTracedCallback;
+typedef TracedCallback<int, int, int, int, double> HelperScheduleTracedCallback;
 
 typedef TracedCallback<int, int, double> HelperTxPowerTracedCallback;
 
