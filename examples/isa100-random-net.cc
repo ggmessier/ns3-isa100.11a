@@ -34,8 +34,8 @@
 
 // Defines for channel
 #define PATH_LOSS_EXP 2.91                  // Path loss exponent from jp measurements
-#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
-//#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
+//#define SHADOWING_STD_DEV_DB 0.0           // Shadowing standard deviation from jp measurements (dB)
+#define SHADOWING_STD_DEV_DB 4.58           // Shadowing standard deviation from jp measurements (dB)
 
 // Topology
 //#define SENSOR_DENSITY 0.0185  // Nodes/m^2
@@ -580,7 +580,7 @@ int main (int argc, char *argv[])
 //	*(reportStream->GetStream()) << "Iter," << iter << ",--------------\n";   //Rajith new Report
 	*(locationStream->GetStream()) << "#" << iter << "#\n";
 //	*(scheduleStream->GetStream()) << "#" << iter << "#\n";
-	*(scheduleStream->GetStream()) << "-1 " << "-1 " << seed <<" "<<factor<<"\n";
+	*(scheduleStream->GetStream()) << "-1 " << "-1 " << seed <<" "<<factor<<" "<<iter<<"\n";
 //  *(scheduleStream->GetStream()) << "-1 -1 -1 -1" << "\n";
 	*(txPowerStream->GetStream()) << "#" << iter << "#\n";
 	*(avgHopsStream->GetStream()) << "-1 " << iter << "\n";
@@ -968,7 +968,7 @@ int main (int argc, char *argv[])
   else{
       //Rajith new Report
       *(reportStream->GetStream()) << seed << " "<<numNodes<<" "<<factor<<" "<<totReportTx<<" "<<totReportRx<<" "<<totReportReTx<<" "
-          <<totDelay.GetSeconds()/totReportRx << " "<< networkLifetime << " "<<exHaustedNode<<" "<<starvedCount<<"\n";
+          <<totDelay.GetSeconds()/totReportRx << " "<< networkLifetime << " "<<exHaustedNode<<" "<<starvedCount<<" "<<optTime<<"\n";
 //      *(reportStream->GetStream()) << "Lifetime," << networkLifetime << "\n";
 //  	*(reportStream->GetStream()) << "TotalTx," << totReportTx << "\n";
 //  	*(reportStream->GetStream()) << "TotalRx," << totReportRx << "\n";
